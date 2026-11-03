@@ -1,0 +1,49 @@
+{
+  "name": "jebo-2026-backend",
+  "version": "1.0.0",
+  "description": "JEBO 2026 - Sistema Administrativo de Torneos Deportivos (Backend)",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "test": "jest --forceExit --detectOpenHandles",
+    "test:watch": "jest --watch --forceExit",
+    "test:coverage": "jest --coverage --forceExit",
+    "lint": "eslint src/",
+    "migrate": "node node_modules/knex/bin/cli.js migrate:latest",
+    "migrate:rollback": "node node_modules/knex/bin/cli.js migrate:rollback",
+    "migrate:status": "node node_modules/knex/bin/cli.js migrate:list",
+    "db:seed": "node scripts/seed.js",
+    "db:seed-gimnasia": "node scripts/demo-gimnasia.js"
+  },
+  "keywords": [
+    "torneos",
+    "deportes",
+    "jebo"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.2.10",
+    "morgan": "^1.12.0",
+    "multer": "1.4.5-lts.1",
+    "pg": "^8.11.3",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "pm2": "^7.0.1",
+    "supertest": "^6.3.3"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

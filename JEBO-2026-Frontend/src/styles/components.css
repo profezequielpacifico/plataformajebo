@@ -1,0 +1,531 @@
+/* MATCH LIST PAGE */
+
+.match-page {
+  padding: 24px;
+}
+
+.match-section {
+  margin-bottom: 24px;
+}
+
+.match-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+
+.summary-icon {
+  margin-bottom: 8px;
+  color: #2563eb;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.tabs-container {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.tab-button {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: -2px;
+}
+
+.tab-active {
+  color: #3b82f6;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.tab-inactive {
+  color: #6b7280;
+  border-bottom: 2px solid transparent;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-input,
+.filter-select {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  background-color: white;
+}
+
+.filter-input {
+  min-width: 200px;
+  flex: 1;
+}
+
+.view-buttons {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.view-button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.view-button-active {
+  border: 2px solid #3b82f6;
+  background-color: #eff6ff;
+  color: #3b82f6;
+}
+
+.view-button-inactive {
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  color: #6b7280;
+}
+
+.content-empty {
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.bold {
+  font-weight: 500;
+}
+
+.score {
+  font-weight: bold;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+.card {
+  background-color: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-gray);
+  padding: var(--spacing-lg);
+  margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.card-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  color: var(--color-text-dark);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.table-header {
+  background-color: var(--color-background-light);
+  border-bottom: 1px solid #ddd;
+}
+
+.table-header-cell {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-dark);
+}
+
+.table-row {
+  border-bottom: 1px solid #ddd;
+  transition: background-color var(--transition-normal);
+  height: 45px;
+}
+
+.table-row:hover {
+  background-color: #fafafa;
+}
+
+.table-cell {
+  padding: 12px 16px;
+  font-size: var(--font-size-base);
+  color: var(--color-text-dark);
+}
+
+.table-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* STANDINGS TABLE */
+
+.standings-table-header {
+  background-color: #1f2937;
+  color: white;
+  font-weight: 700;
+  padding: 16px 12px;
+}
+
+.standings-table-header-cell {
+  background-color: #eaf1f1;
+  color: white;
+  font-weight: 700;
+  padding: 16px 12px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.standings-table-row {
+  transition: background-color 0.2s ease;
+}
+
+/* Alternar colores de fila */
+.standings-table-row:nth-child(odd) {
+  background-color: #f9fafb;
+}
+
+.standings-table-row:nth-child(even) {
+  background-color: white;
+}
+
+.standings-table-row:hover {
+  background-color: #e5e7eb;
+}
+
+.standings-table-cell {
+  padding: 14px 12px;
+  font-size: 14px;
+}
+
+.standings-region-cell {
+  background-color: #eaf1f1;
+color: white;
+font-weight: 600;
+}
+
+.standings-highlight-cell {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.standings-table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.standings-input {
+  width: 50px;
+  text-align: center;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  background-color: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.standings-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.standings-input:hover {
+  border-color: #d1d5db;
+}
+
+/* GYMNASTICS EVALUATION TABLE */
+
+.gymnastics-evaluation-container {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+}
+
+.gymnastics-main-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gymnastics-sidebar {
+    width: 220px;
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+.gymnastics-header {
+  margin-bottom: 8px;
+}
+
+.gymnastics-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.gymnastics-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.gymnastics-navigation {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.gymnastics-nav-button {
+  flex: none;
+  width: auto;
+  padding: 8px 12px;
+  white-space: nowrap;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+
+.gymnastics-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.gymnastics-filter-select {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  background-color: white;
+}
+
+.gymnastics-table-card {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+/* la barra horizontal de la tabla */
+.gymnastics-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.gymnastics-table-container table {
+  min-width: 1200px;
+}
+/* el   header de la tabla  */
+.gymnastics-header-cell {
+  background-color: #c2ccdb; 
+  color: black;
+  font-weight: 700;
+  padding: 10px 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gymnastics-table-row {
+  transition: background-color 0.2s ease;
+}
+
+.gymnastics-table-row:nth-child(odd) {
+  background-color: #f9fafb;
+}
+
+.gymnastics-table-row:nth-child(even) {
+  background-color: white;
+}
+
+.gymnastics-table-row:hover {
+  background-color: #e5e7eb;
+}
+
+.gymnastics-number-cell {
+  width: 60px;
+  min-width: 60px;
+  padding: 14px 12px;
+  vertical-align: top;
+}
+
+.gymnastics-number-indicator {
+  width: 32px;
+  height: 32px;
+  background-color: #95accf; /* azul claro */
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.gymnastics-description-cell {
+  padding: 8px;
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.gymnastics-control-cell {
+  min-width: 90px;
+  padding: 8px;
+}
+
+.gymnastics-select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  background-color: white;
+}
+
+.gymnastics-observation-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  max-width: 180px;
+}
+
+.gymnastics-observation-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.gymnastics-legend {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.gymnastics-legend-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 12px 0;
+}
+
+.gymnastics-legend-items {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.gymnastics-legend-item {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.gymnastics-summary-card {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.gymnastics-summary-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.gymnastics-summary-block {
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.gymnastics-summary-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gymnastics-summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.gymnastics-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gymnastics-action-button {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}

@@ -1,0 +1,597 @@
+================================================================================
+  JEBOS 2026 — REGISTRO DE TAREAS / ÓRDENES
+================================================================================
+  Estado: [COMPLETA] | [EN PROGRESO] | [PENDIENTE]
+================================================================================
+
+--- FECHA: 2026-09-15 -----------------------------------------------------------
+
+[COMPLETA] Levantar stack Docker (db + api + web + pgadmin) y corregir bugs de
+           arranque:
+           - PGDATA / volumen Postgres 18 (docker-compose.yml).
+           - Bind init SQL roto por symlink Desktop -> /srv/shared/Desktop.
+           - Migración 004 incompleta (etapa: descripcion, uq, chk; torneo:
+             fecha_inscripcion*); absorbidas init 02/03.
+           - Migración 014 data-safe (reasignar usuarios antes de eliminar roles).
+           Stack verificado: /health OK, login OK, esquema completo.
+
+[COMPLETA] En creación/edición de partidos, solo participan equipos inscriptos
+           en el torneo:
+           - Backend: partido.service.validar que id_equipo_local/Visitante estén
+             en posicion para id_torneo (create y update); error si no inscripto.
+           - Frontend: MatchFormPage carga /teams/enrolled/list con id_torneo y
+             los ComboBox solo muestran equipos inscriptos (depende del torneo).
+           Verificado: POST /matches con equipo no inscripto -> rechazado;
+           con ambos inscriptos -> OK (id 27); /teams/enrolled/list?id_torneo=1
+           devuelve solo los 4 inscriptos.
+
+[COMPLETA] Verificación de tests de integración: baseline con PKs/FKs/UNIQUE,
+            seed.js adaptado al esquema territorial, setup.js con credenciales de
+            BD y territorial.test.js autocontenido. 6 suites / 42 tests OK.
+
+[COMPLETA] Opciones Avanzadas -> "Auto Seleccion Partidos":
+           - Pagina AutoFixturePage: combobox torneo + boton Confirmar + modal
+             de 2da confirmacion con advertencia (no repetible hasta vencimiento).
+           - Backend: migracion 20260915130000 (partido_ronda, fixture_generado);
+             fixtures/fixture.service.js (round-robin, fechas, canchas, horarios);
+             POST /fixture/generate (requireAdmin), GET /fixture/status/:id,
+             GET /fixture/audit; bitacora.
+           - Bloqueo por torneo (unique id_torneo). Verificado: generacion torneos
+             1, 2, 3; rechazo de repetir; audit OK.
+
+[COMPLETA] Barra lateral: nuevo apartado "Opciones Avanzadas" en el menú
+           (grupo propio, icono IconSettings). Navega a /advanced-options
+           (AdvancedOptionsPage: página en blanco provisional dentro del layout).
+           Agregado: ROUTES.ADVANCED_OPTIONS, case en app.js, página y menú.
+           Verificado: build web OK.
+
+[COMPLETA] Dashboard Equipos Inscriptos sin columnas Pts/PJ/PG:
+           EnrolledTeamsPage solo muestra Equipo/Torneo/Deporte/Institución/Estado
+           (colSpan 9->5). Rebuild aplicado y verificado.
+
+[COMPLETA] Al vencer el periodo de inscripción, los equipos pasan a la siguiente
+           fase y dejan el dashboard de Inscriptos (van a Clasificación):
+           - inscripcion.service.cerrarVencidas(): torneos con fecha_inscripcion_fin
+             vencida y estado Programado/Activo -> equipos estado_torneo
+             'Inscripto'->'16avos' y torneo 'Programado'->'En Progreso'.
+           - enroll/enrollBatch ahora insertan posicion con estado_torneo='Inscripto'.
+           - POST /inscripcion/cerrar-vencidas (requireAdmin, bitacora); además se
+             ejecuta automáticamente al abrir el dashboard de inscriptos.
+           - /teams/enrolled/list filtra pos.estado_torneo='Inscripto' salvo que se
+             pida include_cerradas=true (usado por el formulario de partidos).
+           Verificado end-to-end: inscribir -> aparece en dashboard -> vencer
+           inscripción -> cerrar-vencidas -> sale del dashboard, entra a standings
+           con sus stats, el torneo queda En Progreso; include_cerradas=true sigue
+           listándolo.
+
+[COMPLETA] Limpieza de datos (Regiones, Localidades, Instituciones, Equipos,
+           Torneos, Inscriptos, Distritos y dependientes: partidos, partido_ronda,
+           fixtures, etapas, canchas, disponibilidades, fecha_horario,
+           equipo_alumno, staff_partido, usuario_institucion) en orden de FK.
+           Siembra demo: Region Demo -> Distrito Demo -> Localidad Demo ->
+           Institucion Demo A/B -> 5 equipos (Equipo Demo A-E) -> Torneo Demo 2026
+           (Programado, inscripción abierta hasta +7 días) con los 5 equipos en
+           estado 'Inscripto'. Verificado: /teams/enrolled/list devuelve 5 filas;
+           torneo listado en inscripciones abiertas.
+
+[COMPLETA] Cargar seed_territorial.js (dataset real de la provincia de Buenos
+           Aires):
+           - Origen: /srv/shared/Documents/Districtos y localidades.txt
+             (135 partidos x 629 localidades, pipe-delimited).
+           - Ejecutado dentro del contenedor jebo-api:
+             node scripts/seed_territorial.js /tmp/Districtos\ y\ localidades.txt.
+           - Resultado: 25 regiones, 135 distritos, 629 localidades.
+           - Requirió eliminar antes las instituciones/equipos demo (el seed borra
+             todo el bloque territorial y las FKs lo bloqueaban); luego se recrearon
+             Institucion Demo A/B + 5 equipos + Torneo Demo 2026 (id 19, inscripción
+             abierta) apuntando a datos reales (Region 1, Distrito La Plata,
+Localidad La Plata); 5 posiciones en estado 'Inscripto'. Verificado por
+           API: /teams/enrolled/list = 5.
+
+[COMPLETA] Bloqueo progresivo de login por IP con cronómetro en el frontend:
+           - Backend: nuevo src/middleware/login-lockout.js (sustituye al loginLimiter
+             de express-rate-limit en POST /auth/login). Escalera por IP (req.ip):
+             intento fallido nº5 -> bloqueo 5 min; nº8 -> 15 min; nº11 -> 30 min;
+             nº14 -> bloqueo permanente con mensaje "Comuníquese con el servicio
+             técnico". El contador de fallos aumenta con credenciales inválidas o
+             usuario inactivo (401) y se resetea al loguear correctamente.
+           - Respuestas 429 con { error, retryAfterSeconds, bloqueoPermanente,
+             etapa }; GET /auth/loginStatus (público) devuelve el estado actual
+             (bloqueado, retryAfterSeconds, mensaje) para restaurar el cronómetro
+             al recargar la página.
+           - Frontend: LoginPage muestra el bloqueo con cronómetro MM:SS en vivo,
+             deshabilita el formulario mientras bloqueado y cartel permanente de
+             contacto con servicio técnico; api client enriquece los errores con
+             retryAfterSeconds/bloqueoPermanente.
+- Verificado: 5x401 -> 6º intento 429 con retryAfterSeconds=300 y etapa 1;
+              login correcto también bloqueado durante la ventana; GET
+              /auth/loginStatus reporta el bloqueo; tras reinicio api, login OK.
+            - Persistencia: la migración 20260915200000_login_lockout_persistencia
+              crea la tabla login_intentos; el middleware ya lee/escribe en BD, por
+              lo que el bloqueo sobrevive al reinicio del contenedor.
+
+[COMPLETA] Commit integrador de todo el trabajo pendiente (branch devops):
+            - Commit af4f2be: fixture auto, inscripciones, login-lockout, seeds,
+              migraciones, roles, validators, docker-compose y docs/tareas.txt.
+            - Verificación de tests con BD de test (jebo_2026_test):
+              * Baseline 001 completo con PRIMARY KEYs, UNIQUEs y FKs que el backup
+                real tenía (las migraciones fallaban en BD fresca sin ellas).
+              * seed.js actualizado al esquema territorial actual (distrito ya no
+                tiene id_region; la región se asocia vía localidad).
+              * tests/setup.js ahora configura host/puerto/usuario/contraseña de
+                BD (el puerto real es 15432 mapeado por docker-compose).
+              * territorial.test.js autocontenido (crea su rol/administrador en
+                beforeAll, usa accessToken en vez de token).
+            - Resultado: 6 suites / 42 tests OK (auth, health, territorial + unit).
+            - Nota: el puerto por defecto para tests es 15432 (BD docker).
+
+--- FECHA: 2026-10-03 -----------------------------------------------------------
+
+[COMPLETA] Correcciones del area Usuarios (Fase 0 de docs/modelo-roles.md):
+           - Email unico sin distinguir mayusculas. El indice era UNIQUE (email),
+             que en Postgres distingue mayusculas, asi que ADMIN@jebo2026.com creo
+             un segundo usuario que autenticaba (medido: 201 + dos logins 200).
+             Ahora: indice UNIQUE (lower(email)) (migracion
+             20261003123000_usuario_email_unico_sin_caja) + normalizarEmail() en los
+             7 puntos de entrada (POST/PUT /users, login, recover, register, y los
+             servicios). La migracion aborta nombrando las cuentas en conflicto si
+             ya hay duplicados por caja; nunca borra un usuario.
+           - El rol se valida contra la tabla `rol` (rolExisteValidator) en vez de la
+             lista fija ['Administrador','Editor','Profesor','Arbitro'] escrita en la
+             ruta. Medido antes: 'Juez' daba 400 (no estaba en la lista) y 'Editor'
+             daba 500 (no existe en la base desde 20260907115000).
+           - PUT /users/:id con password sube token_version (invalidarTodo). Antes el
+             cambio de clave no revocaba nada: el refresh seguia renovando 7 dias.
+             Se registra como CAMBIAR_PASSWORD_USUARIO en la bitacora, con detalle
+             sesion_cortada. Editar sin tocar la password NO corta la sesion.
+           - Documentos invalidos corregidos en el origen: scripts/demo-gimnasia.js
+             usaba 'DEMO-500' y la validacion es 1-8 digitos.
+           - Frontend: RegisterPage no mandaba `documento`, que POST /auth/register
+             exige: el alta publica devolvia 400 en el 100% de los casos.
+           - Frontend: la hoja de evaluacion se valida entera antes de enviar. Antes
+             guardaba trio por trio y con el tercero incompleto dejaba media hoja
+             escrita y un 400 que no decia de que trio era.
+           - Tests: +5 casos en usuario-password-sesion.test.js (sesion cortada al
+             cambiar la clave, la nueva entra y la vieja no, bitacora, edicion sin
+             clave no corta sesion, cambio de rol tampoco) y +10 en
+             usuarios-email-rol.test.js, todos verificados fallando contra el codigo
+             previo. Ademas se corrigio una carrera preexistente en
+             aislamiento-institucion.test.js (conteo global tombracketado antes y
+             despues del request; fallaba ~1 de cada 4 corridas completas).
+           - Resultado: backend 535/535 en 29 suites; frontend 432/432 en 22 archivos.
+
+[COMPLETA] F0 — Modelo de roles: decisiones tomadas y documentadas.
+            MODELO APROBADO (reemplaza la propuesta de "tres capas y multi-rol",
+            que quedo descartada):
+              SUPERADMIN -> todo: sistema + competencia + usuarios + seguridad.
+              ADMIN      -> la competencia.
+              ARBITRO    -> operacion del PARTIDO en vivo (reloj, eventos,
+                            comenzar, finalizar, cancelar, cerrar resultado).
+              JUEZ       -> PRESENTACIONES y evaluaciones, solo si esta en el
+                            jurado de esa presentacion. No interviene en partido.
+              PROFESOR   -> sus propios equipos e inscripciones.
+              INVITADO   -> NO es un rol: es el estado de quien no esta
+                            autenticado. Sin fila en `rol` ni constante.
+            Decisiones que fijan el modelo:
+              1. El Arbitro conserva la operacion del partido (no queda sin
+                 permisos). El Admin crea y configura el partido; el Arbitro lo opera.
+              2. Juez y Arbitro NO se unifican: son dos unidades operativas
+                 distintas (partido / presentacion) con un responsable cada una.
+              3. La visibilidad publica se define por reglas de negocio derivadas
+                 del estado y tipo de recurso. NO hay columna `publicado`, y si
+                 hiciera falta mas adelante seria `publicado_at` + `publicado_by`.
+              4. El endpoint publico es una superficie separada (`/api/public/*`)
+                 que filtra explicitamente y nunca reutiliza un endpoint
+                 administrativo.
+            Decisiones derivadas, confirmadas:
+              a) El valor en base de `Profesor` no cambia. "Entrenador" queda como
+                 nombre de presentacion en la UI.
+              b) Geografia (regiones/distritos/localidades) a SuperAdmin;
+                 estructura competitiva a Admin. Un Admin lee la geografia pero no
+                 la modifica.
+              c) Los guards nuevos no son todos "mas de X": hay cuatro que exigen
+                 rol + recurso + alcance + estado + asignacion.
+              d) Cambiar de rol bumpea `token_version`: si no, el JWT anterior
+                 conserva el rol viejo hasta 1 hora.
+              e) Los 5 permisos de Profesor NO son endpoints nuevos: son endpoints
+                 ya dentro de los 70 que admiten alcance adicional. El conteo sigue
+                 siendo 70, no 75.
+            Reparto medido de los 70 endpoints con gate de rol:
+              15 SuperAdmin exclusivo (usuarios 3, geografia 9, seguridad 2,
+                 auditoria 1) + 45 Admin/SuperAdmin + 6 Arbitro + 4 Juez.
+            Migracion pendiente (F1): agregar el rol SuperAdmin a la tabla `rol`
+            con id explicito, para no renumerar los ids existentes.
+            Cambios ya aplicados en esta fase:
+            - src/constants/roles.js: se agrega SUPERADMIN y se exporta
+              ROLES_GLOBALES. Se documenta por que EDITOR sigue declarado (lo
+              borra la migracion 20260907115000 pero requireEditorOrAbove lo
+              referencia) y por que INVITADO no debe agregarse nunca.
+            - src/constants/index.js y src/services/alcance.service.js: la lista
+              de roles globales estaba duplicada; ahora sale de un solo lugar y
+              se unifico por identity comparison en un chequeo.
+            - README.md y docs/README.md: se documenta el rol Juez (faltaba) y se
+              avisa que SuperAdmin todavia no existe en la base.
+            - Verificacion: backend 535/535 en 29 suites.
+
+[COMPLETA] F1.1 — Endpoints de usuarios (backend), la primera unidad cerrada de F1.
+            Orden real de ejecucion: la migracion de SuperAdmin se hizo ANTES de
+            tocar las rutas, no despues. `GET /users/:id -> requireSuperAdmin`
+            sin rol SuperAdmin en la base es un lockout: nadie podria leer un
+            usuario y UserFormPage en modo edicion quedaria sin funcionar. La
+            migracion es idempotente y de 15 lineas, asi que se adelanto.
+            Cambios:
+            - migrations/20261004120000_add_rol_superadmin.js (nueva): inserta
+              SuperAdmin con id_rol explicito = 20. No renumera nada. Idempotente:
+              si ya existe con cualquier id, no inserta. `down` se niega a borrar
+              si hay usuarios con ese rol. Se corrigio un bug propio en el mismo
+              archivo: `knex.schema.hasTable` devuelve booleano, no `{exists}`.
+              Verificado con rollback + re-aplicar.
+            - src/middleware/auth.js: se definen requireSuperAdmin y
+              requireAdminOrAbove (SUPERADMIN + ADMIN). requireArbitroOrAdmin y
+              requireJuezOrAdmin ahora incluyen SUPERADMIN. requireAdmin y
+              requireEditorOrAbove quedan como @deprecated con el comportamiento
+              viejo (los 37+ gates migran en F1.4; sacarlos ahora rompe el arranque
+              porque las rutas los importan).
+            - src/middleware/index.js: exporta los guards nuevos y ademas
+              requireJuezOrAdmin, que faltaba (presentacion.routes.js lo importaba
+              directo de auth.js).
+            - src/services/alcance.service.js: `resolver` ahora adjunta `rol` al
+              alcance y devuelve un objeto nuevo en vez del singleton GLOBAL (el
+              singleton compartido no puede cargar el rol de cada request).
+              Se agrega ROLES_USUARIOS = [SUPERADMIN, ADMIN] y
+              puedeAdministrarUsuarios(alcance).
+            - src/repositories/usuario.repository.js: `completo` y
+              `puedeVerCompleto` pasan de `alcance.global` a
+              `puedeAdministrarUsuarios`. Esto CIERRA UN BUG: un Arbitro (global
+              por rol) recibia con `GET /users?rol=Arbitro` la fila completa
+              (email, documento, estado) de todos los arbitros del sistema.
+              Se quita `estado` de COLUMNAS_REDUCIDAS. findAll lanza si no
+              administra usuarios y no hay `?rol=`.
+            - src/controllers/usuario.controller.js: traduce esa invariante a un
+              403 (ForbiddenError) en vez de un 500.
+            - src/routes/usuario.routes.js: GET /users/:id -> requireSuperAdmin.
+              POST/PUT/DELETE quedan en requireAdminOrAbove A PROPOSITO: pasarlos
+              a SuperAdmin hoy es lockout (no existe la cuenta) y sin poder crear
+              la primera. El recorte a SuperAdmin-only va con el alta del primer
+              SuperAdmin al final de F1.6, junto con el frontend.
+            - tests/integration/aislamiento-institucion.test.js: la suite X-16
+              codificaba el contrato viejo; se reescribio para el nuevo (Profesor
+              y Admin -> 403 en /users/:id; SuperAdmin -> fila completa; sin rol
+              -> 403; con rol -> proyeccion reducida sin estado). Se agregaron
+              fixtures de Arbitro y SuperAdmin.
+            Decision abierta y explicitada: el Admin sigue leyendo el padron
+            completo (ROLES_USUARIOS lo incluye) porque todavia puede escribir
+            usuarios. La lista "solo SuperAdmin" es el estado objetivo y va junto
+            con el alta del primer SuperAdmin.
+            Bootstrap (nuevo dead-end que abre F1.1): GET /users/:id ya es
+            SuperAdmin-only, y el entrypoint de docker corre las migraciones
+            solo, asi que al reconstruir la imagen el rol existe pero
+            admin@jebo2026.com sigue siendo Administrador y la pantalla de
+            edicion queda en 403. Se soluciona en dos lados:
+            - scripts/seed.js: la cuenta dueña se siembra como SuperAdmin (antes
+              Administrador), y se agrega SuperAdmin a roleNames. Instalaciones
+              nuevas quedan bien.
+            - Instalaciones existentes (incluida la base viva): promover a mano
+              con el UPDATE documentado en docs/modelo-roles.md seccion 8.1. NO
+              se hace por migracion: promover por email hardcodeado le daria
+              god-mode silencioso a cualquier instalacion con ese email.
+            Verificacion: backend 540/540 en 29 suites (535 + 5 netos).
+
+[COMPLETA] F1.2 — Migracion aplicada a la base viva + bootstrap, con una
+            correccion de rumbo importante.
+            Hecho:
+            - Migracion 20261004120000_add_rol_superadmin aplicada a jebo_2026
+              (Batch 21). Verificado: `rol` tiene 20|SuperAdmin; los ids 1,6,10,11
+              quedaron intactos.
+            - La migracion es la unica pendiente que habia: no se aplico nada mas.
+            Hallazgo que cambio el plan (no estaba en la lista original): promover
+            admin@jebo2026.com a SuperAdmin ROMPE el frontend viejo. El login
+            devuelve `user.rol` y MainLayout decide el menu con
+            `user.rol === 'Administrador' || user.id_rol === 1` (mismo patron en
+            MisPartidosPage, MatchLivePage, GymPresentacionesPage, GymScoringPage).
+            Con rol='SuperAdmin' e id_rol=20 las dos condiciones son falsas: la
+            cuenta dueña pierde el menu de admin en el proximo login. Y no hace
+            falta desplegar nada: /auth/login lee el rol de la base.
+            Decision (elegida por el usuario): NO dejar produccion parcialmente
+            funcional ni desplegar un frontend a mitad de refactor. Se aplica una
+            REVERSION OPERATIVA, no arquitectonica:
+            - La migracion QUEDA aplicada (SuperAdmin=20 es parte del modelo).
+            - admin@jebo2026.com vuelve temporalmente a Administrador. Verificado:
+              login devuelve user.rol="Administrador" y /auth/me
+              rol_descripcion="Administrador"; el frontend viejo queda compatible.
+            - Los otros Administradores (ids 11,12,16) nunca se tocaron.
+            - La promocion definitiva es el ULTIMO paso de F1.6, junto con el
+              helper de rol del frontend y el rebuild de jebo-web.
+            - No se creo ninguna cuenta SuperAdmin temporal: los guards se
+              verifican en tests de integracion contra Postgres real, no contra el
+              contenedor. El `jebo-api` desplegado queda en codigo viejo a
+              proposito (no se despliega a mitad de F1).
+            Escenario post-F1.2 verificado por tests (no en vivo):
+              Admin      -> GET /users sin filtro 200 full; POST/PUT siguen OK.
+              SuperAdmin -> GET /users sin filtro 200 full; GET /users/:id 200.
+              Arbitro    -> GET /users 403 sin rol; ?rol=Arbitro -> reducida.
+            Verificacion: backend 540/540 en 29 suites.
+
+[COMPLETA] F1.3 — Guards de recurso (backend). La parte que no se resuelve con
+            requireRole: la regla es rol + fila + estado + asignacion.
+            Hecho:
+            - src/services/autorizacion.service.js (nuevo): la decision, en un
+              solo lugar. `esAdministrador` (SuperAdmin o Admin, mismo criterio que
+              requireAdminOrAbove), `esJuezDelJurado`, `assertOperarPartido`,
+              `assertEvaluarPresentacion` (con `exigirEnCurso` para escrituras) y
+              `assertGestionarEquipoPropio` (dueño = equipo.id_usuario, el que lo
+              dio de alta). Compara ids como string para no fallar por tipo.
+            - src/middleware/autorizacion.js (nuevo): los 4 guards como middleware.
+              Sin `:id` (endpoints de coleccion como /matches/mios o
+              GET /presentaciones) solo filtran por nivel; con `:id` delegan en el
+              servicio. `evaluarPresentacion` exige EN_CURSO en no-GET.
+              `gestionarPresentacion` es SuperAdmin/Admin: no se le inventan
+              permisos al Juez.
+            - src/middleware/index.js: exporta los 4 guards desde el barril.
+            - partido.service._assertArbitroAsignado se GENERALIZA: delega en
+              assertOperarPartido, asi que ahora SuperAdmin tambien opera cualquier
+              partido. No se duplico la regla.
+            - El chequeo de jurado inline de presentacion.service.getDetalleEvaluacion
+              y de evaluacion.service.guardarHoja pasa a usar `esJuezDelJurado`.
+            Bugs de SuperAdmin cerrados de paso (el rol es nuevo y nadie lo habia
+            recorrido):
+            - findMios trataba a SuperAdmin como arbitro y le devolvia solo los
+              partidos donde figura en el staff (ninguno).
+            - guardarHoja comparaba `context.rol === 'Administrador'`: un SuperAdmin
+              no podia cargar una hoja que si puede cargar un Admin.
+            Test: tests/unit/autorizacion.service.test.js (24) y
+            tests/unit/middleware-autorizacion.test.js (16).
+            Los gates de las rutas se aplican en F1.4 (no se toco ninguna ruta aca).
+            Verificacion: backend 580/580 en 31 suites.
+
+[COMPLETA] F1.4 — Los gates de las rutas, conectados a los guards de F1.3. Es el
+            70% del valor: sin esto cualquier dashboard o portal publico se
+            construye sobre permisos que despues hay que rehacer.
+            Reparto real, verificado por test mecanico (no por conteo a mano):
+              13 -> requireSuperAdmin (geografia 9 + seguridad 2 + auditoria 1 +
+                    GET /users/:id, que ya venia de F1.1)
+              36 -> requireAdminOrAbove (competencia + fixture + inscripciones +
+                    las 3 escrituras de usuarios)
+               8 -> gestionarPresentacion
+               6 -> operarPartido (GET /matches/mios, PATCH /:id/status,
+                    PATCH /:id/result, POST /:id/clock, POST /:id/events,
+                    PATCH /:id/events/:idEvento/anular)
+               4 -> evaluarPresentacion (GET /presentaciones,
+                    GET /:id/detalle-evaluacion, GET+POST /:id/evaluaciones)
+               4 -> gestionarEquipoPropio (POST /:id/enroll, PUT /:id,
+                    DELETE /:id, POST /enroll-batch)
+              71 total. El inventario original contaba 70; el endpoint 71 es
+              GET /users/:id, que estaba en `authenticate` y subio en F1.1.
+            - Renombrados requireAdmin/requireEditorOrAbove -> requireAdminOrAbove.
+              Retirados del barril requireArbitroOrAdmin, requireJuezOrAdmin y
+              ROLES.EDITOR (Editor no existe en la tabla `rol` desde 20260907).
+              Los 6 comentarios que citaban los nombres viejos se actualizaron.
+            - `POST /teams/enroll-batch` (el pendiente de diseño de F1.3),
+              resuelto con la regla acordada: el permiso depende de la
+              PROPIEDAD de los equipos del body, no de que exista `:id`.
+              `autorizacion.service.assertGestionarEquiposPropiosBatch` valida
+              TODOS los ids antes de cualquier validacion de negocio y en bloque:
+              un solo equipo ajeno -> 403 y cero escrituras. Nunca filtrado
+              silencioso (un 200 parcial es indistinguible de un bug) y nunca
+              409 por un equipo ajeno ya inscripto (filtraria datos de un torneo
+              que no es del Profesor). Ids inexistentes -> 404 nombrandolos.
+              Las altas del lote van en knex.transaction.
+            - DECISION: `POST /teams` (alta de equipo) queda en
+              requireAdminOrAbove, NO en gestionarEquipoPropio. La institucion de
+              un Profesor sale de usuario_institucion, que se deriva de los
+              equipos que el mismo creo: abrir el alta al Profesor es circular
+              para el primero (no tiene institucion) y abre autoasignacion de
+              tenant. El desbloqueo correcto es la pantalla de usuario_institucion
+              (F2).
+            - BUG preexistente corregido de paso: `_assertRegistration` cacheaba
+              la regla "un entrenador, un equipo por torneo" por `id_usuario`
+              solo, sin el torneo. Hacía que un Profesor no pudiera llevar sus
+              dos equipos a dos torneos distintos en el mismo lote, algo que
+              `POST /:id/enroll` acepta de a uno: la regla quedava mas estricta
+              en el lote que en la base. Llave ahora `id_usuario-id_torneo`,
+              alineada con `_coachConflict`.
+            - tests nuevos: tests/helpers/rutas-gates.js (parser que ignora
+              comentarios y strings: un grep contaba como endpoint los ejemplos
+              de rutas de los JSDoc), tests/unit/rutas-permisos.test.js (11:
+              snapshot de los 71, distribucion, guards retirados, y 4 casos del
+              propio parser), 12 casos de batch en
+              autorizacion.service.test.js, y
+              tests/integration/equipo-enroll-batch.test.js (14, extremo a
+              extremo con tokens reales).
+            - tests ajustados por el cambio, no por acomodar: territorial.test.js
+              ahora escribe geografia con token de SuperAdmin y ademas prueba que
+              un Administrador recibe 403 (antes afirmaba lo contrario);
+              presentacion-evaluacion-admin.test.js espera el mensaje del guard de
+              recurso.
+            - BUG latent de test encontrado: mass-assignment comparaba `creado_en`
+              contra un SELECT que no lo pedia (contra `undefined`). Pasaba solo
+              porque cuando corre aislado no hay partidos en la base de test y el
+              `return` temprano lo saltea; en corrida completa fallaba.
+            - El propio arreglo revelo una clase de colision: las fixtures se
+              buscan por `documento` y se actualizan en el lugar, asi que dos
+              suites con el mismo documento se pisan el rol. Salio al darle
+              90000002 (ya usado por mass-assignment) al SuperAdmin de
+              territorial. Nuevo test documentos-de-fixture.test.js (2) que
+              falla si dos suites comparten un documento fijo.
+            Verificacion: backend 620/620 en 34 suites, tres corridas seguidas.
+
+[COMPLETA] F1.5 — Estado de usuario y sesion (seccion 8 de modelo-roles.md).
+            F1.5.1 — `estado` escribible.
+            - `estado` entra en CAMPOS_USUARIO y se valida contra ESTADOS_USUARIO en
+              la ruta (400) y en el servicio (ValidationError). Cerró el ciclo: la
+              comprobacion de auth.service.js:31 existia sin ninguna forma de
+              dispararla.
+            - HALLAZGO: al habilitar la columna, el mensaje "Usuario inactivo" que
+              devuelve el login dejo de ser codigo muerto y paso a ser un oraculo del
+              padron (alcanza con probar un correo y cualquier contrasena para saber
+              si la cuenta existe y si esta dada de baja). Ahora devuelve el mismo
+              texto que una contrasena incorrecta; el motivo real queda en la
+              bitacora.
+            - No se puede desactivar la propia cuenta (409). El login bloquea al
+              Inactivo, asi que era un cierre de sesion sin vuelta, y en una
+              instalacion con una sola cuenta administrativa deja el sistema sin
+              nadie. Desactivar a terceros sigue igual de permitido.
+            - No se toco COLUMNAS_SISTEMA de utils/columnas.js, que lista `estado`
+              como columna de sistema: no la aplica ningun middleware (la frontera
+              real es la allowlist del controller). Se dejo intacto a proposito
+              (fail-closed) y el conflicto quedo documentado en el controller.
+
+            F1.5.2 — token_version, atomico con el cambio.
+            - El bump va en el MISMO UPDATE que escribe el rol o el estado
+              (UsuarioRepository.actualizarSeguridad). Antes eran dos statements y
+              entre los dos quedaba la ventana que el cambio de rol vino a cerrar:
+              rol nuevo escrito, token viejo sirviendo.
+            - El incremento va en la query (COALESCE(token_version,1)+1), no
+              calculado en JS: dos admins editando a la vez no se pisen.
+            - Solo bumpea si el valor CAMBIO. El formulario de edicion manda todos
+              los campos; sin esta comparacion, guardar sin tocar nada expulsaba al
+              usuario de la aplicacion.
+            - Bitacora: CAMBIAR_ROL_USUARIO y CAMBIAR_ESTADO_USUARIO propias, con
+              sesion_cortada y la lista de campos tocados.
+            - El comentario de `authenticate` que documentaba la ventana de 1 h
+              quedo actualizado: lo que queda es el residuo de los tokens emitidos
+              antes de que este codigo existiera.
+            - Test invertido a proposito: `usuario-password-sesion.test.js` afirmaba
+              que un cambio de rol NO cortaba la sesion. Era una decision consciente
+              y documentada; F1.5.2 la invierte y el test ahora afirma lo contrario
+              con la razon escrita.
+            - Contraprueba del 409 de autodesactivacion: desactivar a un tercero SI
+              funciona, para que el guard no se lea al reves como "el estado no lo
+              puede cambiar nadie".
+
+            F1.5.3 — la identidad sale del token, no del request.
+            - `GET /presentaciones/:id/evaluaciones` saco `?id_juez=` del contrato.
+              El guard evaluarPresentacion filtra por nivel y por jurado, y un juez
+              DEL jurado pasaba de sobra: despues elegia de quien quiere ver la hoja
+              con el mismo query string.
+            - Se borro `evaluacion.service.getHoja`: sin caller en src, tests ni
+              scripts, y con la firma exacta del agujero (id_juez como argumento).
+            - Test mecanico nuevo (tests/unit/identidad-desde-el-token.test.js +
+              tests/helpers/identidad-cliente.js): ninguna query pide identidad de
+              persona en los 17 routers, y ningun controlador o servicio lee una
+              identidad de req.query/req.body. Las dos designaciones legitimas
+              (dueno del equipo en su alta, jurado en el alta y la edicion de una
+              presentacion) estan enumeradas con motivo, y el test verifica que las
+              rutas que las cubren siguen con guard de nivel administrativo.
+              El detector tiene 20 casos propios: sin ellos, un lector roto pasa
+              todo en verde.
+            - Al escribir el detector aparecio que `validarPresentacion` esta
+              compartido por el alta y la edicion, y que el service update SI
+              reescribe `staff_presentacion`. La excepcion lo cubre en las dos.
+
+            Alcance deliberado: NO se cierro la ventana de 1 h del access token ya
+            emitido. Su validez la decide la firma y no la base; matarlo antes
+            exige un hit a la base en el camino caliente de los 121 endpoints. Es el
+            mismo compromiso que ya se aceptaba para el cambio de contrasena, y lo
+            que se corta de inmediato es la renovacion. Queda escrito en §8.4.
+
+            F1.5.4 — tests.
+            - usuario-rol-estado-sesion.test.js (18): ciclo del estado, cambios de
+              rol en las dos direcciones, atomicidad del UPDATE (contando statements
+              con knex.on('query')), autodesactivacion 409 y contraprueba de
+              desactivar a un tercero, y la bitacora de cada caso.
+            - El test que se oponia a F1.5.2 quedo invertido a proposito, con la
+              razon escrita en el cuerpo del test.
+            - Los casos de `?id_juez=` van en presentacion-evaluacion-admin.test.js.
+              Verificado que fallan con el codigo anterior: 3 de 5. Los otros dos no
+              fallan porque ya cubrian el rol y el default del parametro.
+            - identidad-desde-el-token.test.js con 20 casos del propio detector: sin
+              ellos, un lector roto pasa todo en verde.
+
+            HALLAZGO AL VERIFICAR (preexistente, no es de F1.5).
+            mass-assignment.test.js fallaba una de cada ~10 corridas:
+            - El bloque `PUT /matches/:id` tomaba `SELECT ... FROM partido JOIN
+              torneo LIMIT 1`: un partido AJENO. `partido.id_equipo_*` tiene ON DELETE
+              CASCADE y `aislamiento-institucion` borra sus equipos en el afterAll, asi
+              que el partido desaparecia ENTRE las dos SELECT y el test reventaba con
+              un TypeError sobre undefined.
+            - Peor todavia: cuando no habia partidos de nadie, el `return` de guarda lo
+              salteaba en silencio y daba verde sin comprobar nada. El test pasaba
+              por dos motivos distintos segun cuando corriera.
+            - La fixture ahora es propia y completa: disciplina de tipo MARCADOR (el
+              trigger `partido_requiere_marcador` rechaza partidos de disciplinas
+              EVALUACION, y en la base de test solo quedan EVALUACION), 2 equipos,
+              torneo y partido, todo con TAG propio y limpieza en afterAll. Las claves
+              foraneas aseguran que ninguna limpieza ajena lo alcance.
+            - El `if (!idPartido) return` quedo como `expect(idPartido).toBeDefined()`:
+              una fixture que no se pudo armar tiene que romper el test, no hacerlo
+              pasar en verde.
+            - Verificado que el test no es decorativo: al romper la cadena completa
+              (allowlist del controller + exclusion de crud) falla. Con una sola capa
+              rota sigue en verde, que es defensa en profundidad funcionando, no un
+              test vacio.
+
+            Verificacion: backend 672/672 en 36 suites, once corridas completas
+            seguidas sin un solo rojo.
+            Nota de despliegue: el mensaje del login cambio. Si algo del lado del
+            cliente matchea "Usuario inactivo", deja de matchear (ahora es
+            "Credenciales invalidas").
+
+[PENDIENTE] F1.6 — Frontend + cierre de la transicion de usuarios.
+            - Helper unico de rol (esAdmin/esSuperAdmin/esArbitro/esJuez); eliminar
+              los 7 `id_rol ===` (MainLayout x2, MisPartidosPage, MatchLivePage,
+              GymPresentacionesPage, GymScoringPage) y USER_ROLES.
+            - Promocion definitiva del primer SuperAdmin Y recorte de `GET /users`
+              a SuperAdmin-only, en el mismo cambio y junto con el rebuild de
+              jebo-web: si se recorta el padron antes de arreglar el frontend, la
+              cuenta dueña queda sin menu de admin (paso en F1.2 y se revirtio).
+
+[PENDIENTE] F2 — Deuda funcional critica (logout que no revoca, reglamentos
+            404, usuario_institucion sin router, TeamFormPage sin id_distrito y
+            con id_* como string que rompen con 400).
+
+[PENDIENTE] HIGIENE — uploads/ se llena de basura de prueba (NO es parte de F1,
+            no tiene que ver con la frontera de autorizacion).
+            Sintoma: upload-contenido.test.js deja ~2 archivos por corrida en
+            uploads/reglamentos. Hoy hay 520 en disco, 114 trackeados por git y
+            408 sin trackear. Sin regla en .gitignore para uploads/.
+            De donde viene: el test usa un directorio temporal para SUS fixtures
+            (fs.mkdtempSync), pero el endpoint que ejercita escribe en el
+            REGLAMENTOS_DIR real —y el test incluso cuenta los archivos de ahi
+            (enReglamentos). O sea que la basura la produce la prueba del upload
+            real, no la preparacion del test.
+            Investigado antes de borrar (distinguiendo fixture de generado):
+            - Los 114 archivos trackeados tienen TODOS nombre con timestamp
+              (<13 digitos>-<nombre>.<ext>), que es el formato del endpoint. No hay
+              ni un solo archivo de fixture a mano en uploads/.
+            - El unico `reglamento` que referencia la base viva es
+              `/uploads/reglamentos/1790689957729-real.pdf`, y ese archivo NO esta
+              en disco ni trackeado. O sea que la referencia ya esta rota (es el
+              404 de reglamentos de F2) y borrar uploads/ no rompe nada que la
+              base apunte.
+            - La base de test tiene 3 disciplinas con `reglamento =
+              'Reglamento de prueba'`: texto plano, no una ruta.
+            Conclusion: no hay fixture que preservar. Aun asi NO se borro nada
+            aca: es una decision que cambia que carga el repo, y el volumen de
+            Docker puede estar montado sobre ese directorio.
+            Que hay que hacer, en este orden:
+            1. Confirmar con quien despliega si el volumen de jebo-api monta
+               uploads/ (si lo monta, hay que decidir si el repo lo provee o si
+               se crea vacio en el arranque).
+            2. .gitignore para uploads/, conservando solo lo que de verdad se
+               versione (hoy: nada).
+            3. `git rm --cached` de los 114 trackeados, en commit propio para que
+               se pueda revertir.
+            4. afterAll en upload-contenido.test.js que borre lo que el endpoint
+               escribio, no solo el directorio temporal.
+            5. Recien ahi limpiar los 408 sin trackear del arbol de trabajo.
+
+[PENDIENTE] F3 — Los 5 dashboards con componentes compartidos. /statistics/
+            dashboard hoy devuelve 4 contadores y no alcanza para ninguno.
+
+[PENDIENTE] F4 — Portal publico: /api/public/{tournaments,teams,matches,
+            standings,results,finals,disciplines} + 7 paginas.
+
+[PENDIENTE] F5 — Dominio: etapas truncadas a 10 filas, FinalPage stub,
+            getStandings() sin usar, desinscripcion inexistente, inscripcion
+            multiple, UI para editar el jurado, y el dominio de participantes
+            (equipo_alumno / equipo_integrante, hoy sin ningun endpoint).
+
+[FUERA DE ALCANCE] Decidido no implementar: noticias/comunicados, tareas
+            arbitrales (incidencias, sanciones, decisiones), publicado_at /
+            publicado_by, marcador en vivo publico. Quedan anotados como
+            extensiones naturales del modelo en docs/modelo-roles.md.
+
+================================================================================
+  FIN DEL ARCHIVO
+================================================================================

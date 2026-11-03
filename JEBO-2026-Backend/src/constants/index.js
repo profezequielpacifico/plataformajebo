@@ -1,0 +1,28 @@
+const HTTP_STATUS = require('./http-status');
+const { ROLES, ROLES_GLOBALES } = require('./roles');
+const {
+  ESTADOS_TORNEO,
+  ESTADOS_PARTIDO,
+  ESTADOS_PRESENTACION,
+  ESTADOS_RELOJ,
+  ESTADOS_EVENTO,
+  TIPOS_EVENTO,
+  ROLES_ARBITRO,
+  ESTADOS_USUARIO
+} = require('./estados');
+const MENSAJES = require('./mensajes');
+
+module.exports = {
+  HTTP_STATUS,
+  ROLES,
+  ROLES_GLOBALES,
+  ESTADOS_TORNEO,
+  ESTADOS_PARTIDO,
+  ESTADOS_PRESENTACION,
+  ESTADOS_RELOJ,
+  ESTADOS_EVENTO,
+  TIPOS_EVENTO,
+  ROLES_ARBITRO,
+  ESTADOS_USUARIO,
+  MENSAJES
+};

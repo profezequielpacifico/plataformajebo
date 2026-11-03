@@ -1,0 +1,639 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 2200" font-family="Consolas, monospace">
+  <defs>
+    <filter id="s"><feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.12"/></filter>
+    <marker id="cf" markerWidth="12" markerHeight="8" refX="12" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8" fill="none" stroke="#64748b" stroke-width="1.2"/></marker>
+    <marker id="one" markerWidth="8" markerHeight="12" refX="0" refY="6" orient="auto"><line x1="8" y1="0" x2="8" y2="12" stroke="#64748b" stroke-width="1.5"/></marker>
+    <!-- Column header colors -->
+    <linearGradient id="c1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#2563eb"/></linearGradient>
+    <linearGradient id="c2"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#059669"/></linearGradient>
+    <linearGradient id="c3"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#d97706"/></linearGradient>
+    <linearGradient id="c4"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient>
+    <linearGradient id="c5"><stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="#dc2626"/></linearGradient>
+    <linearGradient id="c6"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#0891b2"/></linearGradient>
+    <linearGradient id="c7"><stop offset="0%" stop-color="#ec4899"/><stop offset="100%" stop-color="#db2777"/></linearGradient>
+    <linearGradient id="c8"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4f46e5"/></linearGradient>
+  </defs>
+
+  <rect width="1920" height="2200" fill="#f8fafc"/>
+
+  <!-- TITLE BAR -->
+  <rect width="1920" height="60" fill="#1e293b"/>
+  <text x="960" y="26" text-anchor="middle" font-size="18" font-weight="bold" fill="white" font-family="Segoe UI, Arial, sans-serif">JEBO 2026 — Diagrama Entidad-Relacion</text>
+  <text x="960" y="46" text-anchor="middle" font-size="11" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif">PostgreSQL 18 | 22 tablas | 3 junction N:M | 1 vista | 1 funcion</text>
+
+  <!-- ========================================== -->
+  <!-- COLUMN HEADERS                             -->
+  <!-- ========================================== -->
+  <text x="115" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#3b82f6" font-family="Segoe UI, Arial, sans-serif">TERRITORIO</text>
+  <text x="350" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#10b981" font-family="Segoe UI, Arial, sans-serif">USUARIOS</text>
+  <text x="585" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#f59e0b" font-family="Segoe UI, Arial, sans-serif">INSTITUCIONES</text>
+  <text x="840" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#8b5cf6" font-family="Segoe UI, Arial, sans-serif">COMPETENCIA</text>
+  <text x="1140" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#ef4444" font-family="Segoe UI, Arial, sans-serif">PARTIDOS / POSICIONES</text>
+  <text x="1500" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#06b6d4" font-family="Segoe UI, Arial, sans-serif">CANCHAS / DISPONIBILIDAD</text>
+  <text x="1810" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#ec4899" font-family="Segoe UI, Arial, sans-serif">ARCHIVOS / AUDIT</text>
+
+  <!-- Column separator lines -->
+  <line x1="0" y1="100" x2="1920" y2="100" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- ========================================== -->
+  <!-- MACRO for table: header + rows             -->
+  <!-- Each table: width=210, row_h=22            -->
+  <!-- ========================================== -->
+
+  <!-- ===== COLUMN 1: TERRITORIO ===== -->
+
+  <!-- region -->
+  <g transform="translate(10,115)" filter="url(#s)">
+    <rect width="210" height="86" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c1)"/><rect y="20" width="210" height="4" fill="url(#c1)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">region</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_region</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">nombre</text><text x="168" y="56" font-size="8" fill="#94a3b8">varchar(150)</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">descripcion</text><text x="168" y="74" font-size="8" fill="#94a3b8">text</text>
+  </g>
+
+  <!-- zona -->
+  <g transform="translate(10,215)" filter="url(#s)">
+    <rect width="210" height="102" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c1)"/><rect y="20" width="210" height="4" fill="url(#c1)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">zona</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_zona</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_region</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ region</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">nombre</text><text x="168" y="74" font-size="8" fill="#94a3b8">varchar(150)</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">descripcion</text><text x="168" y="92" font-size="8" fill="#94a3b8">text</text>
+  </g>
+
+  <!-- distrito -->
+  <g transform="translate(10,331)" filter="url(#s)">
+    <rect width="210" height="114" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c1)"/><rect y="20" width="210" height="4" fill="url(#c1)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">distrito</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_distrito</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_region</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ region</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="74" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="74" font-size="9" fill="#334155">id_zona</text><text x="168" y="74" font-size="8" fill="#94a3b8">→ zona?</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">nombre</text><text x="168" y="92" font-size="8" fill="#94a3b8">varchar(150)</text>
+    <line x1="4" y1="98" x2="206" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">codigo</text><text x="168" y="110" font-size="8" fill="#94a3b8">varchar(20)</text>
+  </g>
+
+  <!-- localidad -->
+  <g transform="translate(10,459)" filter="url(#s)">
+    <rect width="210" height="102" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c1)"/><rect y="20" width="210" height="4" fill="url(#c1)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">localidad</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_localidad</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_distrito</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ distrito</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">nombre</text><text x="168" y="74" font-size="8" fill="#94a3b8">varchar(100)</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">codigo</text><text x="168" y="92" font-size="8" fill="#94a3b8">varchar(20)?</text>
+  </g>
+
+  <!-- ===== COLUMN 2: USUARIOS ===== -->
+
+  <!-- rol -->
+  <g transform="translate(240,115)" filter="url(#s)">
+    <rect width="210" height="68" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c2)"/><rect y="20" width="210" height="4" fill="url(#c2)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">rol</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_rol</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">descripcion</text><text x="168" y="56" font-size="8" fill="#94a3b8">varchar(100)</text>
+  </g>
+
+  <!-- usuario -->
+  <g transform="translate(240,197)" filter="url(#s)">
+    <rect width="210" height="148" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c2)"/><rect y="20" width="210" height="4" fill="url(#c2)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">usuario</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_usuario</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_rol</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ rol</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">nombre</text><text x="168" y="74" font-size="8" fill="#94a3b8">varchar(200)</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">password_hash</text><text x="168" y="92" font-size="8" fill="#94a3b8">varchar(255)</text>
+    <line x1="4" y1="98" x2="206" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">email</text><text x="168" y="110" font-size="8" fill="#94a3b8">UNIQUE</text>
+    <line x1="4" y1="116" x2="206" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="128" font-size="9" fill="#334155">estado</text><text x="168" y="128" font-size="8" fill="#94a3b8">varchar(20)</text>
+    <line x1="4" y1="134" x2="206" y2="134" stroke="#f1f5f9"/>
+    <text x="28" y="143" font-size="8" fill="#94a3b8">ultimo_acceso, creado_en, actualizado_en</text>
+  </g>
+
+  <!-- ===== COLUMN 3: INSTITUCIONES ===== -->
+
+  <!-- institucion -->
+  <g transform="translate(470,115)" filter="url(#s)">
+    <rect width="210" height="138" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c3)"/><rect y="20" width="210" height="4" fill="url(#c3)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">institucion</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_institucion</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_distrito</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ distrito</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="74" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="74" font-size="9" fill="#334155">id_localidad</text><text x="168" y="74" font-size="8" fill="#94a3b8">→ localidad?</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">nombre</text><text x="168" y="92" font-size="8" fill="#94a3b8">varchar(200)</text>
+    <line x1="4" y1="98" x2="206" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">tipo</text><text x="168" y="110" font-size="8" fill="#94a3b8">varchar(50)</text>
+    <line x1="4" y1="116" x2="206" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="128" font-size="9" fill="#334155">direccion</text><text x="168" y="128" font-size="8" fill="#94a3b8">varchar(300)</text>
+    <line x1="4" y1="134" x2="206" y2="134" stroke="#f1f5f9"/>
+    <text x="28" y="143" font-size="8" fill="#94a3b8">telefono, creado_en, actualizado_en</text>
+  </g>
+
+  <!-- disciplina -->
+  <g transform="translate(470,267)" filter="url(#s)">
+    <rect width="210" height="122" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c3)"/><rect y="20" width="210" height="4" fill="url(#c3)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">disciplina</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_disciplina</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">nombre</text><text x="168" y="56" font-size="8" fill="#94a3b8">varchar(150)</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">reglamento</text><text x="168" y="74" font-size="8" fill="#94a3b8">varchar(255)</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">jugadores_por_equipo</text><text x="168" y="92" font-size="8" fill="#94a3b8">int</text>
+    <line x1="4" y1="98" x2="206" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">descripcion</text><text x="168" y="110" font-size="8" fill="#94a3b8">text</text>
+  </g>
+
+  <!-- usuario_institucion (junction) -->
+  <g transform="translate(470,403)" filter="url(#s)">
+    <rect width="210" height="86" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="3"/>
+    <rect width="210" height="22" rx="4" fill="#f59e0b"/><rect y="18" width="210" height="4" fill="#f59e0b"/>
+    <text x="105" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="white">usuario_institucion</text>
+    <text x="6" y="36" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="36" font-size="9" fill="#334155">id_usuario_institucion</text><text x="168" y="36" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="42" x2="206" y2="42" stroke="#f1f5f9"/>
+    <text x="6" y="54" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="54" font-size="9" fill="#334155">id_usuario</text><text x="168" y="54" font-size="8" fill="#94a3b8">→ usuario</text>
+    <line x1="4" y1="60" x2="206" y2="60" stroke="#f1f5f9"/>
+    <text x="6" y="72" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="72" font-size="9" fill="#334155">id_institucion</text><text x="168" y="72" font-size="8" fill="#94a3b8">→ institucion</text>
+    <line x1="4" y1="78" x2="206" y2="78" stroke="#f1f5f9"/>
+    <text x="6" y="54" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="54" font-size="9" fill="#334155">id_usuario</text><text x="168" y="54" font-size="8" fill="#94a3b8">→ usuario</text>
+  </g>
+
+  <!-- ===== COLUMN 4: COMPETENCIA ===== -->
+
+  <!-- instancia -->
+  <g transform="translate(700,115)" filter="url(#s)">
+    <rect width="210" height="68" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c4)"/><rect y="20" width="210" height="4" fill="url(#c4)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">instancia</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_instancia</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">descripcion_instancia</text><text x="168" y="56" font-size="8" fill="#94a3b8">varchar(150)</text>
+  </g>
+
+  <!-- equipo -->
+  <g transform="translate(700,197)" filter="url(#s)">
+    <rect width="210" height="126" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c4)"/><rect y="20" width="210" height="4" fill="url(#c4)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">equipo</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_equipo</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_institucion</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ institucion</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="74" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="74" font-size="9" fill="#334155">id_disciplina</text><text x="168" y="74" font-size="8" fill="#94a3b8">→ disciplina</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="6" y="92" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="92" font-size="9" fill="#334155">id_usuario</text><text x="168" y="92" font-size="8" fill="#94a3b8">→ usuario</text>
+    <line x1="4" y1="98" x2="206" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">nombre</text><text x="168" y="110" font-size="8" fill="#94a3b8">varchar(200)</text>
+    <line x1="4" y1="116" x2="206" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="125" font-size="8" fill="#94a3b8">colores, creado_en, actualizado_en</text>
+  </g>
+
+  <!-- equipo_alumno (junction) -->
+  <g transform="translate(700,337)" filter="url(#s)">
+    <rect width="210" height="86" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="3"/>
+    <rect width="210" height="22" rx="4" fill="#f59e0b"/><rect y="18" width="210" height="4" fill="#f59e0b"/>
+    <text x="105" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="white">equipo_alumno</text>
+    <text x="6" y="36" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="36" font-size="9" fill="#334155">id_equipo_alumno</text><text x="168" y="36" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="42" x2="206" y2="42" stroke="#f1f5f9"/>
+    <text x="6" y="54" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="54" font-size="9" fill="#334155">id_equipo</text><text x="168" y="54" font-size="8" fill="#94a3b8">→ equipo</text>
+    <line x1="4" y1="60" x2="206" y2="60" stroke="#f1f5f9"/>
+    <text x="6" y="72" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="72" font-size="9" fill="#334155">id_usuario</text><text x="168" y="72" font-size="8" fill="#94a3b8">→ usuario</text>
+  </g>
+
+  <!-- torneo -->
+  <g transform="translate(700,437)" filter="url(#s)">
+    <rect width="210" height="164" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c4)"/><rect y="20" width="210" height="4" fill="url(#c4)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">torneo</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_torneo</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_disciplina</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ disciplina</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="74" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="74" font-size="9" fill="#334155">id_instancia</text><text x="168" y="74" font-size="8" fill="#94a3b8">→ instancia</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">nombre</text><text x="168" y="92" font-size="8" fill="#94a3b8">varchar(200)</text>
+    <line x1="4" y1="98" x2="206" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">categoria</text><text x="168" y="110" font-size="8" fill="#94a3b8">varchar(100)</text>
+    <line x1="4" y1="116" x2="206" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="128" font-size="9" fill="#334155">fecha_inicio / fin</text><text x="168" y="128" font-size="8" fill="#94a3b8">date</text>
+    <line x1="4" y1="134" x2="206" y2="134" stroke="#f1f5f9"/>
+    <text x="28" y="146" font-size="9" fill="#334155">estado</text><text x="168" y="146" font-size="8" fill="#94a3b8">varchar(20)</text>
+    <line x1="4" y1="152" x2="206" y2="152" stroke="#f1f5f9"/>
+    <text x="28" y="160" font-size="8" fill="#94a3b8">descripcion, reglamento, creado_en, actualizado_en</text>
+  </g>
+
+  <!-- etapa -->
+  <g transform="translate(700,615)" filter="url(#s)">
+    <rect width="210" height="126" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c4)"/><rect y="20" width="210" height="4" fill="url(#c4)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">etapa</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_etapa</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_torneo</text><text x="168" y="56" font-size="8" fill="#94a3b8">→ torneo</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">nombre</text><text x="168" y="74" font-size="8" fill="#94a3b8">varchar(150)</text>
+    <line x1="4" y1="80" x2="206" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">orden</text><text x="168" y="92" font-size="8" fill="#94a3b8">int</text>
+    <line x1="4" y1="98" x2="206" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">estado</text><text x="168" y="110" font-size="8" fill="#94a3b8">varchar(50)</text>
+    <line x1="4" y1="116" x2="206" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="125" font-size="8" fill="#94a3b8">fecha_inicio, fecha_fin</text>
+  </g>
+
+  <!-- configuracion_puntaje -->
+  <g transform="translate(700,755)" filter="url(#s)">
+    <rect width="210" height="86" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="210" height="24" rx="4" fill="url(#c4)"/><rect y="20" width="210" height="4" fill="url(#c4)"/>
+    <text x="105" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">config_puntaje</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_configuracion</text><text x="168" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="206" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">nombre</text><text x="168" y="56" font-size="8" fill="#94a3b8">varchar(150)</text>
+    <line x1="4" y1="62" x2="206" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">tipo / configuracion_json</text><text x="168" y="74" font-size="8" fill="#94a3b8">jsonb</text>
+  </g>
+
+  <!-- ===== COLUMN 5: PARTIDOS / POSICIONES ===== -->
+
+  <!-- partido -->
+  <g transform="translate(940,115)" filter="url(#s)">
+    <rect width="220" height="164" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c5)"/><rect y="20" width="220" height="4" fill="url(#c5)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">partido</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_partido</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_torneo</text><text x="175" y="56" font-size="8" fill="#94a3b8">→ torneo</text>
+    <line x1="4" y1="62" x2="216" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="74" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="74" font-size="9" fill="#334155">id_etapa</text><text x="175" y="74" font-size="8" fill="#94a3b8">→ etapa?</text>
+    <line x1="4" y1="80" x2="216" y2="80" stroke="#f1f5f9"/>
+    <text x="6" y="92" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="92" font-size="9" fill="#334155">id_disponibilidad</text><text x="175" y="92" font-size="8" fill="#94a3b8">→ disponibilidad</text>
+    <line x1="4" y1="98" x2="216" y2="98" stroke="#f1f5f9"/>
+    <text x="6" y="110" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="110" font-size="9" fill="#334155">id_equipo_local</text><text x="175" y="110" font-size="8" fill="#94a3b8">→ equipo</text>
+    <line x1="4" y1="116" x2="216" y2="116" stroke="#f1f5f9"/>
+    <text x="6" y="128" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="128" font-size="9" fill="#334155">id_equipo_visitante</text><text x="175" y="128" font-size="8" fill="#94a3b8">→ equipo</text>
+    <line x1="4" y1="134" x2="216" y2="134" stroke="#f1f5f9"/>
+    <text x="28" y="146" font-size="9" fill="#334155">goles_local / goles_visitante</text><text x="175" y="146" font-size="8" fill="#94a3b8">int</text>
+    <line x1="4" y1="152" x2="216" y2="152" stroke="#f1f5f9"/>
+    <text x="28" y="160" font-size="8" fill="#94a3b8">estado, creado_en, actualizado_en</text>
+  </g>
+
+  <!-- staff_partido (junction) -->
+  <g transform="translate(940,293)" filter="url(#s)">
+    <rect width="220" height="86" rx="4" fill="#fecaca" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="3"/>
+    <rect width="220" height="22" rx="4" fill="#ef4444"/><rect y="18" width="220" height="4" fill="#ef4444"/>
+    <text x="110" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="white">staff_partido</text>
+    <text x="6" y="36" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="36" font-size="9" fill="#334155">id_partido_usuario</text><text x="175" y="36" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="42" x2="216" y2="42" stroke="#f1f5f9"/>
+    <text x="6" y="54" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="54" font-size="9" fill="#334155">id_partido</text><text x="175" y="54" font-size="8" fill="#94a3b8">→ partido</text>
+    <line x1="4" y1="60" x2="216" y2="60" stroke="#f1f5f9"/>
+    <text x="6" y="72" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="72" font-size="9" fill="#334155">id_usuario</text><text x="175" y="72" font-size="8" fill="#94a3b8">→ usuario</text>
+  </g>
+
+  <!-- posicion -->
+  <g transform="translate(940,393)" filter="url(#s)">
+    <rect width="220" height="172" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c5)"/><rect y="20" width="220" height="4" fill="url(#c5)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">posicion</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_posicion</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_equipo</text><text x="175" y="56" font-size="8" fill="#94a3b8">→ equipo</text>
+    <line x1="4" y1="62" x2="216" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="74" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="74" font-size="9" fill="#334155">id_torneo</text><text x="175" y="74" font-size="8" fill="#94a3b8">→ torneo</text>
+    <line x1="4" y1="80" x2="216" y2="80" stroke="#f1f5f9"/>
+    <text x="6" y="92" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="92" font-size="9" fill="#334155">id_etapa</text><text x="175" y="92" font-size="8" fill="#94a3b8">→ etapa?</text>
+    <line x1="4" y1="98" x2="216" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">pj / pg / pe / pp</text><text x="175" y="110" font-size="8" fill="#94a3b8">int</text>
+    <line x1="4" y1="116" x2="216" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="128" font-size="9" fill="#334155">gf / gc / puntos</text><text x="175" y="128" font-size="8" fill="#94a3b8">int</text>
+    <line x1="4" y1="134" x2="216" y2="134" stroke="#f1f5f9"/>
+    <text x="28" y="146" font-size="9" fill="#334155">estado_torneo</text><text x="175" y="146" font-size="8" fill="#94a3b8">varchar(20)</text>
+    <line x1="4" y1="152" x2="216" y2="152" stroke="#f1f5f9"/>
+    <text x="28" y="164" font-size="8" fill="#94a3b8">creado_en, actualizado_en</text>
+  </g>
+
+  <!-- ===== COLUMN 6: CANCHAS / DISPONIBILIDAD ===== -->
+
+  <!-- cancha -->
+  <g transform="translate(1200,115)" filter="url(#s)">
+    <rect width="220" height="138" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c6)"/><rect y="20" width="220" height="4" fill="url(#c6)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">cancha</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_cancha</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_distrito</text><text x="175" y="56" font-size="8" fill="#94a3b8">→ distrito</text>
+    <line x1="4" y1="62" x2="216" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="74" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="74" font-size="9" fill="#334155">id_disciplina</text><text x="175" y="74" font-size="8" fill="#94a3b8">→ disciplina</text>
+    <line x1="4" y1="80" x2="216" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">nombre</text><text x="175" y="92" font-size="8" fill="#94a3b8">varchar(200)</text>
+    <line x1="4" y1="98" x2="216" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">ubicacion</text><text x="175" y="110" font-size="8" fill="#94a3b8">varchar(300)</text>
+    <line x1="4" y1="116" x2="216" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="128" font-size="9" fill="#334155">link_maps</text><text x="175" y="128" font-size="8" fill="#94a3b8">varchar(500)</text>
+    <line x1="4" y1="134" x2="216" y2="134" stroke="#f1f5f9"/>
+    <text x="28" y="143" font-size="8" fill="#94a3b8">creado_en, actualizado_en</text>
+  </g>
+
+  <!-- horarios_cancha -->
+  <g transform="translate(1200,267)" filter="url(#s)">
+    <rect width="220" height="68" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c6)"/><rect y="20" width="220" height="4" fill="url(#c6)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">horarios_cancha</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_horario_cancha</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">hora_inicio / hora_fin</text><text x="175" y="56" font-size="8" fill="#94a3b8">time</text>
+  </g>
+
+  <!-- fecha_cancha -->
+  <g transform="translate(1200,349)" filter="url(#s)">
+    <rect width="220" height="68" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c6)"/><rect y="20" width="220" height="4" fill="url(#c6)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">fecha_cancha</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_fecha_cancha</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">fecha</text><text x="175" y="56" font-size="8" fill="#94a3b8">date</text>
+  </g>
+
+  <!-- fecha_horario (junction) -->
+  <g transform="translate(1200,431)" filter="url(#s)">
+    <rect width="220" height="86" rx="4" fill="#e0f2fe" stroke="#06b6d4" stroke-width="0.8" stroke-dasharray="3"/>
+    <rect width="220" height="22" rx="4" fill="#06b6d4"/><rect y="18" width="220" height="4" fill="#06b6d4"/>
+    <text x="110" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="white">fecha_horario</text>
+    <text x="6" y="36" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="36" font-size="9" fill="#334155">fecha_horario</text><text x="175" y="36" font-size="8" fill="#94a3b8">timestamp</text>
+    <line x1="4" y1="42" x2="216" y2="42" stroke="#f1f5f9"/>
+    <text x="6" y="54" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="54" font-size="9" fill="#334155">id_fecha_cancha</text><text x="175" y="54" font-size="8" fill="#94a3b8">→ fecha_cancha</text>
+    <line x1="4" y1="60" x2="216" y2="60" stroke="#f1f5f9"/>
+    <text x="6" y="72" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="72" font-size="9" fill="#334155">id_horario_cancha</text><text x="175" y="72" font-size="8" fill="#94a3b8">→ horarios_cancha</text>
+  </g>
+
+  <!-- disponibilidad_cancha -->
+  <g transform="translate(1200,531)" filter="url(#s)">
+    <rect width="220" height="86" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c6)"/><rect y="20" width="220" height="4" fill="url(#c6)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">disponibilidad_cancha</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_disponibilidad</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">fecha_horario</text><text x="175" y="56" font-size="8" fill="#94a3b8">→ fecha_horario</text>
+    <line x1="4" y1="62" x2="216" y2="62" stroke="#f1f5f9"/>
+    <text x="6" y="72" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="72" font-size="9" fill="#334155">id_cancha</text><text x="175" y="72" font-size="8" fill="#94a3b8">→ cancha</text>
+  </g>
+
+  <!-- ===== COLUMN 7: ARCHIVOS / AUDIT ===== -->
+
+  <!-- bitacora -->
+  <g transform="translate(1460,115)" filter="url(#s)">
+    <rect width="220" height="138" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c7)"/><rect y="20" width="220" height="4" fill="url(#c7)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">bitacora</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_bitacora</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_usuario</text><text x="175" y="56" font-size="8" fill="#94a3b8">→ usuario?</text>
+    <line x1="4" y1="62" x2="216" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">fecha_hora</text><text x="175" y="74" font-size="8" fill="#94a3b8">timestamp</text>
+    <line x1="4" y1="80" x2="216" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">tipo_accion</text><text x="175" y="92" font-size="8" fill="#94a3b8">varchar(50)</text>
+    <line x1="4" y1="98" x2="216" y2="98" stroke="#f1f5f9"/>
+    <text x="28" y="110" font-size="9" fill="#334155">ip_address</text><text x="175" y="110" font-size="8" fill="#94a3b8">varchar(45)</text>
+    <line x1="4" y1="116" x2="216" y2="116" stroke="#f1f5f9"/>
+    <text x="28" y="128" font-size="9" fill="#334155">user_agent</text><text x="175" y="128" font-size="8" fill="#94a3b8">text</text>
+    <line x1="4" y1="134" x2="216" y2="134" stroke="#f1f5f9"/>
+    <text x="28" y="143" font-size="8" fill="#94a3b8">resultado, detalle</text>
+  </g>
+
+  <!-- imagenes -->
+  <g transform="translate(1460,267)" filter="url(#s)">
+    <rect width="220" height="102" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c7)"/><rect y="20" width="220" height="4" fill="url(#c7)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">imagenes</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_serie</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="28" y="56" font-size="9" fill="#334155">nombre_archivo</text><text x="175" y="56" font-size="8" fill="#94a3b8">varchar(255)</text>
+    <line x1="4" y1="62" x2="216" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">ruta_archivo</text><text x="175" y="74" font-size="8" fill="#94a3b8">varchar(500)</text>
+    <line x1="4" y1="80" x2="216" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">tipo / fecha_subida</text><text x="175" y="92" font-size="8" fill="#94a3b8">varchar/ts</text>
+  </g>
+
+  <!-- reglamento -->
+  <g transform="translate(1460,383)" filter="url(#s)">
+    <rect width="220" height="102" rx="4" fill="white" stroke="#cbd5e1" stroke-width="0.5"/>
+    <rect width="220" height="24" rx="4" fill="url(#c7)"/><rect y="20" width="220" height="4" fill="url(#c7)"/>
+    <text x="110" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="white">reglamento</text>
+    <text x="6" y="38" font-size="9" fill="#7c3aed" font-weight="bold">PK</text><text x="28" y="38" font-size="9" fill="#334155">id_reglamento</text><text x="175" y="38" font-size="8" fill="#94a3b8">serial</text>
+    <line x1="4" y1="44" x2="216" y2="44" stroke="#f1f5f9"/>
+    <text x="6" y="56" font-size="9" fill="#dc2626" font-weight="bold">FK</text><text x="28" y="56" font-size="9" fill="#334155">id_disciplina</text><text x="175" y="56" font-size="8" fill="#94a3b8">→ disciplina</text>
+    <line x1="4" y1="62" x2="216" y2="62" stroke="#f1f5f9"/>
+    <text x="28" y="74" font-size="9" fill="#334155">nombre_archivo</text><text x="175" y="74" font-size="8" fill="#94a3b8">varchar(255)</text>
+    <line x1="4" y1="80" x2="216" y2="80" stroke="#f1f5f9"/>
+    <text x="28" y="92" font-size="9" fill="#334155">ruta_archivo, tipo, fecha</text><text x="175" y="92" font-size="8" fill="#94a3b8">mixed</text>
+  </g>
+
+  <!-- ===== VIEWS / FUNCTIONS (bottom) ===== -->
+  <g transform="translate(940,600)" filter="url(#s)">
+    <rect width="220" height="76" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1"/>
+    <rect width="220" height="22" rx="4" fill="#8b5cf6"/><rect y="18" width="220" height="4" fill="#8b5cf6"/>
+    <text x="110" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="white">VISTA: v_estadisticas_torneo</text>
+    <text x="28" y="36" font-size="9" fill="#334155">id_torneo, nombre, estado</text>
+    <line x1="4" y1="42" x2="216" y2="42" stroke="#c4b5fd"/>
+    <text x="28" y="54" font-size="9" fill="#334155">total_partidos, jugados</text>
+    <line x1="4" y1="60" x2="216" y2="60" stroke="#c4b5fd"/>
+    <text x="28" y="72" font-size="9" fill="#334155">total_equipos, goles, promedio</text>
+  </g>
+
+  <g transform="translate(1200,630)" filter="url(#s)">
+    <rect width="220" height="68" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1"/>
+    <rect width="220" height="22" rx="4" fill="#8b5cf6"/><rect y="18" width="220" height="4" fill="#8b5cf6"/>
+    <text x="110" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="white">FN: actualizar_posiciones()</text>
+    <text x="28" y="36" font-size="9" fill="#334155">p_id_torneo: int</text>
+    <line x1="4" y1="42" x2="216" y2="42" stroke="#c4b5fd"/>
+    <text x="28" y="54" font-size="9" fill="#334155">p_id_etapa: int</text>
+    <line x1="4" y1="60" x2="216" y2="60" stroke="#c4b5fd"/>
+    <text x="28" y="64" font-size="8" fill="#94a3b8">Recalcula posiciones desde resultados</text>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- RELATIONSHIP LINES (orthogonal routing)    -->
+  <!-- ========================================== -->
+  <g stroke="#94a3b8" stroke-width="1" fill="none" opacity="0.55">
+
+    <!-- region → zona -->
+    <line x1="115" y1="201" x2="115" y2="215"/>
+
+    <!-- zona → distrito -->
+    <line x1="115" y1="317" x2="115" y2="331"/>
+
+    <!-- region → distrito -->
+    <path d="M220,170 L240,170 L240,385 L210,385"/>
+
+    <!-- distrito → localidad -->
+    <line x1="115" y1="445" x2="115" y2="459"/>
+
+    <!-- distrito → institucion -->
+    <path d="M210,420 L240,420 L240,190 L470,190"/>
+
+    <!-- distrito → cancha -->
+    <path d="M210,440 L230,440 L230,190 L1200,190"/>
+
+    <!-- localidad → institucion -->
+    <path d="M210,510 L220,510 L220,200 L470,200"/>
+
+    <!-- rol → usuario -->
+    <line x1="345" y1="183" x2="345" y2="197"/>
+
+    <!-- usuario → equipo (owner) -->
+    <path d="M450,270 L460,270 L460,260 L700,260"/>
+
+    <!-- usuario → equipo_alumno -->
+    <path d="M450,300 L460,300 L460,380 L700,380"/>
+
+    <!-- equipo → equipo_alumno -->
+    <line x1="805" y1="323" x2="805" y2="337"/>
+
+    <!-- disciplina → equipo -->
+    <path d="M680,330 L690,330 L690,260 L700,260"/>
+
+    <!-- disciplina → torneo -->
+    <path d="M680,370 L690,370 L690,510 L700,510"/>
+
+    <!-- disciplina → cancha -->
+    <path d="M680,390 L690,390 L690,190 L1200,190"/>
+
+    <!-- disciplina → reglamento -->
+    <path d="M680,400 L690,400 L690,434 L1460,434"/>
+
+    <!-- institucion → equipo -->
+    <line x1="680" y1="190" x2="700" y2="190"/>
+
+    <!-- usuario_institucion → usuario -->
+    <path d="M470,450 L460,450 L460,345"/>
+
+    <!-- usuario_institucion → institucion -->
+    <line x1="575" y1="403" x2="575" y2="253"/>
+
+    <!-- instancia → torneo -->
+    <line x1="910" y1="183" x2="910" y2="197" transform="translate(0,240)"/>
+
+    <!-- torneo → etapa -->
+    <line x1="805" y1="601" x2="805" y2="615"/>
+
+    <!-- torneo → posicion -->
+    <path d="M910,601 L910,620 L950,620 L950,393"/>
+
+    <!-- torneo → partido -->
+    <path d="M910,580 L930,580 L930,180 L940,180"/>
+
+    <!-- etapa → posicion -->
+    <path d="M805,741 L805,755 L930,755 L930,565 L940,565"/>
+
+    <!-- etapa → partido -->
+    <path d="M910,741 L920,741 L920,230 L940,230"/>
+
+    <!-- equipo → posicion -->
+    <path d="M805,323 L815,323 L815,480 L940,480"/>
+
+    <!-- equipo → partido (local) -->
+    <path d="M910,280 L930,280 L930,223 L940,223"/>
+
+    <!-- equipo → partido (visitante) -->
+    <path d="M910,290 L935,290 L935,237 L940,237"/>
+
+    <!-- partido → staff_partido -->
+    <line x1="1050" y1="279" x2="1050" y2="293"/>
+
+    <!-- staff_partido → usuario -->
+    <path d="M1160,339 L1170,339 L1170,340 L460,340"/>
+
+    <!-- disponibilidad → partido -->
+    <path d="M1200,573 L1190,573 L1190,220 L940,220"/>
+
+    <!-- cancha → disponibilidad -->
+    <line x1="1310" y1="253" x2="1310" y2="531"/>
+
+    <!-- horarios_cancha → fecha_horario -->
+    <line x1="1310" y1="335" x2="1310" y2="431"/>
+
+    <!-- fecha_cancha → fecha_horario -->
+    <path d="M1420,383 L1430,383 L1430,474 L1420,474"/>
+
+    <!-- fecha_horario → disponibilidad -->
+    <line x1="1310" y1="517" x2="1310" y2="531"/>
+
+    <!-- bitacora → usuario -->
+    <path d="M1460,187 L1450,187 L1450,340 L460,340"/>
+
+    <!-- reglamento → disciplina -->
+    <!-- already drawn from col3 side -->
+  </g>
+
+  <!-- ========================================== -->
+  <!-- LEGEND (bottom right)                      -->
+  <!-- ========================================== -->
+  <g transform="translate(1460,510)">
+    <rect width="220" height="188" rx="6" fill="white" stroke="#cbd5e1" stroke-width="0.5" filter="url(#s)"/>
+    <text x="110" y="18" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e293b" font-family="Segoe UI, Arial, sans-serif">Leyenda</text>
+    <line x1="10" y1="26" x2="210" y2="26" stroke="#e2e8f0"/>
+
+    <rect x="10" y="34" width="12" height="12" rx="2" fill="url(#c1)"/>
+    <text x="28" y="44" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Territorio</text>
+
+    <rect x="110" y="34" width="12" height="12" rx="2" fill="url(#c2)"/>
+    <text x="128" y="44" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Usuarios</text>
+
+    <rect x="10" y="52" width="12" height="12" rx="2" fill="url(#c3)"/>
+    <text x="28" y="62" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Instituciones</text>
+
+    <rect x="110" y="52" width="12" height="12" rx="2" fill="url(#c4)"/>
+    <text x="128" y="62" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Competencia</text>
+
+    <rect x="10" y="70" width="12" height="12" rx="2" fill="url(#c5)"/>
+    <text x="28" y="80" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Partidos</text>
+
+    <rect x="110" y="70" width="12" height="12" rx="2" fill="url(#c6)"/>
+    <text x="128" y="80" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Canchas</text>
+
+    <rect x="10" y="88" width="12" height="12" rx="2" fill="url(#c7)"/>
+    <text x="28" y="98" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Archivos/Audit</text>
+
+    <rect x="110" y="88" width="12" height="12" rx="2" fill="#ede9fe" stroke="#8b5cf6" stroke-width="0.5"/>
+    <text x="128" y="98" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Vista/Funcion</text>
+
+    <rect x="10" y="110" width="12" height="12" rx="2" fill="#fef3c7" stroke="#f59e0b" stroke-width="0.5" stroke-dasharray="2"/>
+    <text x="28" y="120" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">Tabla N:M (junction)</text>
+
+    <line x1="10" y1="138" x2="210" y2="138" stroke="#e2e8f0"/>
+    <text x="10" y="152" font-size="9" fill="#7c3aed" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">PK</text>
+    <text x="28" y="152" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">= Primary Key</text>
+    <text x="110" y="152" font-size="9" fill="#dc2626" font-weight="bold" font-family="Segoe UI, Arial, sans-serif">FK</text>
+    <text x="128" y="152" font-size="9" fill="#334155" font-family="Segoe UI, Arial, sans-serif">= Foreign Key</text>
+
+    <text x="10" y="170" font-size="9" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif">Lineas = Relaciones 1:N</text>
+    <text x="10" y="184" font-size="9" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif">? despues del tipo = nullable FK</text>
+  </g>
+
+  <!-- Footer -->
+  <rect y="2170" width="1920" height="30" fill="#1e293b"/>
+  <text x="960" y="2190" text-anchor="middle" font-size="10" fill="#64748b" font-family="Segoe UI, Arial, sans-serif">JEBO 2026 | Base de datos: jebo_2026 | PostgreSQL 18 | Generado automaticamente</text>
+
+</svg>
