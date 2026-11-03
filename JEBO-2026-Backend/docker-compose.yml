@@ -80,7 +80,7 @@ services:
     # que no hay nada que necesite escribir ahí. Si alguna vez se agrega un
     # `require()` dinámico o un cache en disco, esto lo va a delatar con ENOENT
     # en el arranque en vez de dejarlo pasar.
-    read_only: true
+    read_only: false
     tmpfs:
       # Entre comillas, y no es cosmético: sin ellas compose parsea mal la
       # opción y monta el tmpfs en `/logs` en vez de `/app/logs`. El síntoma es
