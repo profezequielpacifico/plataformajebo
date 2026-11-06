@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { styles } from '../../styles/theme/index.js';
 import { authService } from '../../services/authService.js';
+import { useResponsive } from '../../hooks/useResponsive.js';
 
 const { createElement: h } = React;
 
@@ -19,6 +20,7 @@ function formatTiempo(segundos) {
 }
 
 export function LoginPage({ onLogin, onNavigate }) {
+    const { lessThan } = useResponsive();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -110,6 +112,9 @@ export function LoginPage({ onLogin, onNavigate }) {
         textAlign: 'center'
     };
 
+    // Debajo de este ancho no hay lugar al costado de la tarjeta.
+    const ocultarMascota = lessThan(860);
+
     const countdownStyle = {
         marginTop: '10px',
         fontSize: '30px',
@@ -121,10 +126,11 @@ export function LoginPage({ onLogin, onNavigate }) {
     return h('div', { style: styles.loginContainer },
         h('div', { style: styles.loginArea },
             h('div', { style: styles.loginColumn },
+            !ocultarMascota && h('img', { src: '/login-assets/mascota.webp', alt: '', style: styles.loginMascot }),
             h('div', { style: styles.loginBox },
                 h('div', { style: styles.loginLogo },
-                    h('div', { style: styles.loginLogoText }, 'JEBO 2026'),
-                    h('div', { style: styles.loginSubtitle }, 'Sistema Administrativo')
+                    h('img', { src: '/login-assets/logo-jebo.webp', alt: 'JEBO', style: styles.loginLogoImage }),
+                    h('div', { style: styles.loginSubtitle }, 'Sistema Administrativo 2026')
                 ),
 
                 bloqueado && h('div', { style: bloqueoBoxStyle },

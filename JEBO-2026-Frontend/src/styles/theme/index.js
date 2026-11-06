@@ -27,18 +27,27 @@ export const theme = {
     zIndex: Z_INDEX
 };
 
+const LOGIN_BACKGROUND_COLOR = '#074155';
+const LOGIN_CORNER_SIZE = 'min(50vw, 88.889vh) auto';
+
 const styles = {
     // Login styles
     loginContainer: {
         height: '100vh',
         overflowY: 'auto',
-        backgroundColor: COLORS.background,
-        // WebP simple, sin image-set/type(): eso no era soportado por Safari
-        // < 17, Firefox 88 ni Chrome < 113, y la declaración completa se
-        // descartaba (sin fallback). WebP es baseline desde 2020.
-        backgroundImage: "url('/login-background.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundColor: LOGIN_BACKGROUND_COLOR,
+        // Una esquina en SVG por cuadrante, ancladas a los bordes: se ven nítidas
+        // en cualquier pantalla y no se recortan como una imagen con `cover`.
+        // El `min()` evita que se pisen en pantallas muy anchas.
+        backgroundImage: [
+            "url('/login-assets/bg-tl.svg')",
+            "url('/login-assets/bg-tr.svg')",
+            "url('/login-assets/bg-bl.svg')",
+            "url('/login-assets/bg-br.svg')",
+            `radial-gradient(ellipse at center, #0a4a60 0, ${LOGIN_BACKGROUND_COLOR} 55%, #053647 100%)`
+        ].join(', '),
+        backgroundSize: `${LOGIN_CORNER_SIZE}, ${LOGIN_CORNER_SIZE}, ${LOGIN_CORNER_SIZE}, ${LOGIN_CORNER_SIZE}, 100% 100%`,
+        backgroundPosition: 'top left, top right, bottom left, bottom right, center',
         backgroundRepeat: 'no-repeat',
         padding: 0,
         boxSizing: 'border-box'
@@ -56,8 +65,16 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        position: 'relative',
         width: '100%',
         maxWidth: '400px'
+    },
+    loginMascot: {
+        position: 'absolute',
+        right: 'calc(100% - 16px)',
+        bottom: '-6px',
+        height: '340px',
+        width: 'auto'
     },
     loginInfo: {
         width: 'calc(100% - 96px)',
@@ -116,6 +133,7 @@ const styles = {
         color: COLORS.textMuted
     },
     loginBox: {
+        position: 'relative',
         backgroundColor: COLORS.surface,
         padding: SPACING.xl,
         borderRadius: RADIUS.lg,
@@ -126,6 +144,13 @@ const styles = {
     loginLogo: {
         textAlign: 'center',
         marginBottom: SPACING.xl
+    },
+    loginLogoImage: {
+        display: 'block',
+        width: '216px',
+        maxWidth: '100%',
+        height: 'auto',
+        margin: `0 auto ${SPACING.sm}`
     },
     loginLogoText: {
         fontSize: TYPOGRAPHY.sizes.xl,
