@@ -7,14 +7,16 @@
     <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,">
     <!--
         El fondo del login se pinta desde un elemento que crea React, asi que sin
-        este preload la imagen no se empieza a bajar hasta que el bundle termino
-        de descargarse, parsearse y montar. Con el preload arranca junto con el
-        documento y las dos descargas van en paralelo.
+        este preload las imagenes no se empiezan a bajar hasta que el bundle termino
+        de descargarse, parsearse y montar. Con el preload arrancan junto con el
+        documento y las descargas van en paralelo.
 
-        Se precarga el WebP, que es la única imagen del fondo del login
-        (antes había un image-set con fallback a un PNG que no existía).
+        Son los cuatro SVG de las esquinas del fondo (ver loginContainer en el tema).
     -->
-    <link rel="preload" as="image" type="image/png" href="/login-background.png" fetchpriority="high">
+    <link rel="preload" as="image" type="image/svg+xml" href="/login-assets/bg-tl.svg">
+    <link rel="preload" as="image" type="image/svg+xml" href="/login-assets/bg-tr.svg">
+    <link rel="preload" as="image" type="image/svg+xml" href="/login-assets/bg-bl.svg">
+    <link rel="preload" as="image" type="image/svg+xml" href="/login-assets/bg-br.svg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { 
