@@ -113,7 +113,8 @@ También hay dos scripts ejecutables en `scripts/`:
 | Script | Uso |
 |--------|-----|
 | `scripts/migrar.sh` | **Doble click** (o `./scripts/migrar.sh`). Aplica *todas* las migraciones pendientes con `knex migrate:latest` y muestra el estado final. Se relanza en una terminal si se abre sin ella, e instala dependencias si falta `node_modules`. |
-| `scripts/seed.js` | `npm run db:seed` (o `node scripts/seed.js [archivo.txt]`). Limpia toda la BD (34 tablas + secuencias), siembra los datos territoriales reales de la provincia de Buenos Aires (25 regiones, ~135 partidos; localidades desde el archivo pipe-delimited `PARTIDO \| LOCALIDAD \| CP` si se pasa o existe en `~/Desktop`), y luego roles, 7 disciplinas, instancias, horarios y el único SuperAdmin (`superadmin@jebo2026.com`, contraseña `SEED_SUPERADMIN_PASSWORD` o `SuperAdmin2026`). |
+| `scripts/seed.js` | `npm run db:seed`. Limpia toda la BD (tablas + secuencias) y siembra roles, 7 disciplinas, instancias, horarios y el único SuperAdmin (`superadmin@jebo2026.com`, contraseña `SEED_SUPERADMIN_PASSWORD` o `SuperAdmin2026`). No carga territorio. |
+| `scripts/seed-territorial.js` | `npm run db:seed-territorial` (`-- --simular` para probar sin guardar). Agrega lo que falte de las 25 regiones educativas, los 135 partidos y sus 966 localidades con código postal, sin borrar nada. |
 
 Flujo típico:
 
@@ -146,6 +147,7 @@ npx pm2 start src/app.js --name jebo-backend
 | `npm run migrate:rollback` | `knex migrate:rollback` |
 | `npm run migrate:status` | `knex migrate:list` |
 | `npm run db:seed` | `node scripts/seed.js` |
+| `npm run db:seed-territorial` | `node scripts/seed-territorial.js` |
 
 ---
 

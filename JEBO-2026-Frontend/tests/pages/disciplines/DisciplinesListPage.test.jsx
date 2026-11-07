@@ -5,9 +5,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DisciplinesListPage } from '../../../src/pages/disciplines/DisciplinesListPage.js';
 import disciplineService from '../../../src/services/disciplineService.js';
 
-// La pagina habla con la API solo a traves de disciplineService, asi que el
-// mock queda en la capa de servicios: los tests ejercitan el render real de la
-// pagina sin tocar fetch.
 vi.mock('../../../src/services/disciplineService.js', () => ({
   default: {
     getAll: vi.fn(),
@@ -49,8 +46,6 @@ describe('DisciplinesListPage', () => {
   });
 
   it('sustituye los campos vacios por un guion', async () => {
-    // Vóley no tiene descripcion: la columna tiene que seguir siendo legible
-    // en vez de quedar en blanco.
     renderPage();
     await screen.findByText('Vóley');
     expect(screen.getByText('-')).toBeInTheDocument();
@@ -69,8 +64,6 @@ describe('DisciplinesListPage', () => {
   });
 
   it('acepta una respuesta envuelta en data', async () => {
-    // La API puede devolver el array plano o envuelto; la pagina normaliza
-    // ambas formas para no romper si el backend cambia la envoltura.
     disciplineService.getAll.mockResolvedValue({ data: DISCIPLINAS });
     renderPage();
     expect(await screen.findByText('Fútbol 5')).toBeInTheDocument();
@@ -102,8 +95,6 @@ describe('DisciplinesListPage', () => {
   it('navega al alta desde el boton Nuevo Deporte', async () => {
     const onNavigate = vi.fn();
     renderPage({ onNavigate });
-    // Hay que esperar a que termine la carga: el boton solo existe cuando la
-    // pagina ya no esta mostrando el spinner.
     await screen.findByText('Fútbol 5');
     await userEvent.click(screen.getByRole('button', { name: /nuevo deporte/i }));
     expect(onNavigate).toHaveBeenCalledWith('sports-new');
@@ -115,7 +106,6 @@ describe('DisciplinesListPage', () => {
     await userEvent.click(fila.querySelectorAll('button')[2]);
 
     expect(await screen.findByText(/¿Eliminar "Fútbol 5"\?/)).toBeInTheDocument();
-    // No debe borrar todavia: el modal solo abre la confirmacion.
     expect(disciplineService.delete).not.toHaveBeenCalled();
   });
 
@@ -129,7 +119,6 @@ describe('DisciplinesListPage', () => {
     await user.click(confirmar);
 
     await waitFor(() => expect(disciplineService.delete).toHaveBeenCalledWith(1));
-    // La fila desaparece sin volver a pedir los datos al backend.
     await waitFor(() => expect(screen.queryByText('Fútbol 5')).not.toBeInTheDocument());
     expect(screen.getByText('Vóley')).toBeInTheDocument();
   });
@@ -161,8 +150,6 @@ describe('DisciplinesListPage', () => {
   });
 
   it('no rompe si onNavigate no viene', async () => {
-    // El componente se monta desde el router, pero tambien se renderiza en
-    // previews sin handlers: no debe reventar al hacer clic.
     disciplineService.getAll.mockResolvedValue([]);
     render(<DisciplinesListPage />);
     expect(await screen.findByText('Sin deportes registrados')).toBeInTheDocument();

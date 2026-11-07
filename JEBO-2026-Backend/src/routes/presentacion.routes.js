@@ -30,7 +30,6 @@ const validate = (req, res, next) => {
   next();
 };
 
-// Validaciones
 const validarPresentacion = [
   body('id_torneo').isInt({ min: 1 }).withMessage('id_torneo requerido'),
   body('id_disciplina').isInt({ min: 1 }).withMessage('id_disciplina requerido'),
@@ -66,32 +65,22 @@ const validarEvaluacion = [
   validate
 ];
 
-// Todas requieren autenticación
 router.use(authenticate);
-
-// Listado. El admin ve la jornada completa; un juez, solo los encuentros donde
 
 router.get('/', evaluarPresentacion, list);
 
-// Admin: crear, actualizar, eliminar
 router.post('/', gestionarPresentacion, validarPresentacion, create);
 router.get('/:id', gestionarPresentacion, getById);
 router.put('/:id', gestionarPresentacion, validarPresentacion, update);
 router.delete('/:id', gestionarPresentacion, remove);
 
-// Estado (Comenzar / Finalizar). Solo administracion: el juez carga su hoja, pero
-
 router.patch('/:id/estado', gestionarPresentacion, validarEstado, updateEstado);
 
-// Resultado - admin
 router.get('/:id/resultado', gestionarPresentacion, getResultado);
 router.post('/:id/calcular-resultado', gestionarPresentacion, calcularResultado);
 router.get('/:id/validar-cierre', gestionarPresentacion, validarCierre);
 
-// Detalle para evaluación - administracion y jueces del jurado de esa presentación
 router.get('/:id/detalle-evaluacion', evaluarPresentacion, getDetalleEvaluacion);
-
-// Evaluaciones - el juez guarda su hoja. `evaluarPresentacion` en modo lectura
 
 router.post('/:id/evaluaciones', evaluarPresentacion, validarEvaluacion, guardarEvaluacion);
 router.get('/:id/evaluaciones', evaluarPresentacion, getEvaluacionesJuez);

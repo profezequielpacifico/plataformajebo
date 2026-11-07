@@ -5,8 +5,6 @@ const { authenticate, operarPartido, validate } = require('../middleware');
 
 const router = Router();
 
-// Reloj del partido. Es un solo endpoint con las tres transiciones porque las
-
 router.post('/:id/clock', authenticate, operarPartido, [
   param('id').isInt().withMessage('Partido inválido'),
   body('accion').isIn(['INICIAR', 'PAUSAR', 'REANUDAR']).withMessage('Acción de reloj inválida')
@@ -15,8 +13,6 @@ router.post('/:id/clock', authenticate, operarPartido, [
 router.get('/:id/clock', authenticate, [
   param('id').isInt().withMessage('Partido inválido')
 ], validate, eventoController.relojEstado);
-
-// Registro de eventos. `id_equipo` se valida como entero aca, pero que
 
 router.post('/:id/events', authenticate, operarPartido, [
   param('id').isInt().withMessage('Partido inválido'),
@@ -30,8 +26,6 @@ router.get('/:id/events', authenticate, [
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 })
 ], validate, eventoController.findByPartido);
-
-// Anular, no borrar. El motivo es obligatorio: una anulacion sin explicacion es
 
 router.patch('/:id/events/:idEvento/anular', authenticate, operarPartido, [
   param('id').isInt().withMessage('Partido inválido'),

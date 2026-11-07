@@ -8,9 +8,6 @@ function baseQuery() {
       'p.*',
       'd.nombre as disciplina_nombre',
       'd.tipo_competencia',
-      // Sin `torneo_nombre` el encabezado de la pantalla de puntuacion caia al
-      // id numérico del torneo, porque `GymScoringPage` lo muestra y no hay otro
-      // lugar del payload de donde sacarlo.
       't.nombre as torneo_nombre',
       'dc.id_cancha',
       'c.nombre as cancha_nombre',
@@ -19,12 +16,9 @@ function baseQuery() {
       'fc.fecha',
       'hc.hora_inicio',
       'hc.hora_fin',
-      // "Participantes" del listado: sin esto se leia siempre 0 porque el
-      // nombre que pide la pagina no venia de ninguna consulta.
       knex.raw(
         '(SELECT count(*)::int FROM presentacion_participante pp WHERE pp.id_presentacion = p.id_presentacion) as participantes_count'
       ),
-      // Columnas de la pantalla que muestra quién se presenta.
       knex.raw(`(
         SELECT e.nombre
           FROM presentacion_participante pp
@@ -57,14 +51,9 @@ module.exports = {
     if (params.id_torneo) q = q.where('p.id_torneo', params.id_torneo);
     if (params.estado) q = q.where('p.estado', params.estado);
     if (params.id_disciplina) q = q.where('p.id_disciplina', params.id_disciplina);
-    // El filtro de `orden` no era opcional: `create` lo usa para rechazar el
-    // orden repetido dentro de un torneo, y sin esto `findAll` devolvía todas las
-    // presentaciones del torneo, el `.length > 0` siempre era verdadero y
-    // ninguna presentación se podía crear desde la aplicación.
     if (params.orden) q = q.where('p.orden', params.orden);
     if (params.fecha_desde) q = q.where('fc.fecha', '>=', params.fecha_desde);
     if (params.fecha_hasta) q = q.where('fc.fecha', '<=', params.fecha_hasta);
-    // Los encuentros donde este usuario esta en el jurado. Lo usa el listado de un
 
     if (params.id_jurado) {
       q = q.whereIn('p.id_presentacion', knex('staff_presentacion')
@@ -87,7 +76,6 @@ module.exports = {
 
   delete: (id) => knex(TABLE).where('id_presentacion', id).del(),
 
-  // Cambiar estado con validación de transiciones
   updateEstado: (id, estado) => {
     const validTransitions = {
       PROGRAMADA: ['EN_CURSO', 'CANCELADA'],

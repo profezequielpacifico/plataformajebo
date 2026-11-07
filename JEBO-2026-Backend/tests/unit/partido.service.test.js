@@ -5,25 +5,15 @@ const logger = require('../../src/config/logger');
 const { NotFoundError, BusinessError, ForbiddenError } = require('../../src/utils/errors');
 const { ESTADOS_PARTIDO, ESTADOS_RELOJ, ROLES, ROLES_ARBITRO } = require('../../src/constants');
 
-// partido.service es casi puro orquestacion: decide si una operacion es
-// valida, arma los datos que van a la tabla y delega el acceso. El SQL ya esta
-// cubierto por otros suites, asi que aca se aíslan los repositorios y se
-// comprueba la logica de negocio, incluidos los caminos de error.
 jest.mock('../../src/repositories', () => ({
   PartidoRepository: {
     findAll: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    // `cerrarResultado` y no `updateResult`: el marcador ya no lo escribe el
-    // cliente, se deriva del ledger. Un `updateResult(id, local, visitante)`
-    // volveria a ser la puerta de atras que este modulo elimina.
     cerrarResultado: jest.fn(),
     updateStatus: jest.fn(),
     delete: jest.fn(),
-    // "Hoy" en hora Argentina. Lo decide la base, no Node: con `new Date()` el
-    // partido de hoy se rechazaria entre las 21:00 y las 24:00, que es
-    // justamente cuando se juega.
     fechaDeHoy: jest.fn()
   },
   StaffPartidoRepository: {
@@ -44,18 +34,10 @@ jest.mock('../../src/services/bitacora.service', () => ({ log: jest.fn() }));
 jest.mock('../../src/services/disponibilidad.service', () => ({ createDisponibilidad: jest.fn() }));
 jest.mock('../../src/config/logger', () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }));
 
-// _assertEquiposInscriptos y la rama de _resolveDisponibilidad que no delega
-// consultan la DB directo con knex('tabla'). El test DB arranca vacio, asi que
-// se falsea el driver en vez de sembrar fixtures: devuelve builders que ya
-// resuelven, para que la logica se ejercite sin tocar Postgres.
 jest.mock('../../src/config/knex', () => {
   const TABLAS = {
     posicion: { pluck: [], first: null },
     equipo: { pluck: [], first: { nombre: 'Equipo genérico' } },
-    // Tipo de competencia del torneo. Por defecto MARCADOR, que es el
-    // comportamiento previo: los tests de escritura no son de Gimnasia. El
-    // guard de "este torneo no admite partidos" se ejercita aparte con
-    // `__setTipoCompetencia`.
     'torneo as t': { pluck: [], first: { torneo_nombre: 'Torneo genérico', tipo_competencia: 'MARCADOR', disciplina_nombre: 'Fútbol' }, limit: [] },
     fecha_cancha: { pluck: [], first: { id_fecha_cancha: 1, fecha: '2026-10-01' } },
     fecha_horario: { pluck: [], first: { id_fecha_horario: 1 } },
@@ -63,9 +45,6 @@ jest.mock('../../src/config/knex', () => {
     disponibilidad_cancha: { pluck: [], first: { id_disponibilidad: 99 } }
   };
 
-  // Por defecto los equipos usados en los tests de escritura estan inscriptos,
-  // para que no choquen contra el filtro. El caso "no inscripto" fuerza
-  // INSCRITOS = [] desde el test.
   let INSCRITOS = [100, 101];
 
   const knexMock = jest.fn((tabla) => {
@@ -75,8 +54,6 @@ jest.mock('../../src/config/knex', () => {
     }
     const resolver = (metodo) => {
       const v = spec[metodo];
-      // Cada valor puede ser un literal o una funcion que lo calcula (INSCRITOS
-      // cambia por test, asi que tiene que resolverse en el momento del await).
       if (typeof v === 'function') return Promise.resolve(v());
       return Promise.resolve(v);
     };
@@ -95,9 +72,7 @@ jest.mock('../../src/config/knex', () => {
       update: jest.fn(async () => 1),
       orderBy: jest.fn(async () => [])
     };
-    // Un thenable devuelve su resolved directo cuando se hace await del builder.
     qb.then = (onFulfilled) => Promise.resolve(onFulfilled(spec.first || {}));
-    // Los resolvers de la tabla pisan los genericos: cada tabla resuelve distinto.
     if (spec.pluck !== undefined) qb.pluck = jest.fn(() => resolver('pluck'));
     if (spec.first !== undefined) qb.first = jest.fn(() => resolver('first'));
     if (spec.limit !== undefined) qb.limit = jest.fn(() => resolver('limit'));
@@ -107,8 +82,6 @@ jest.mock('../../src/config/knex', () => {
   knexMock.raw = jest.fn(() => ({ then: (r) => Promise.resolve(r ? undefined : undefined) }));
   knexMock.TIPO = 'mock';
   knexMock.__setInscriptos = (v) => { INSCRITOS = v; };
-  // Cambia el tipo de competencia que ve `assertTorneoAceptaPartidos`.
-  // `EVALUACION` simula un torneo de Gimnasia, donde el partido no tiene sentido.
   knexMock.__setTipoCompetencia = (tipo, nombre = 'Gimnasia Artística') => {
     TABLAS['torneo as t'].first = {
       torneo_nombre: tipo === 'MARCADOR' ? 'Torneo genérico' : 'Torneo Gimnasia JEBO 2026',
@@ -134,9 +107,6 @@ const partidoBase = (over = {}) => ({
   id_equipo_visitante: 101,
   estado: ESTADOS_PARTIDO.PROGRAMADO,
   resultado_cargado: false,
-  // El reloj arranca PENDIENTE: es el estado por defecto de todo partido que
-  // todavia no se juega, y es lo que hace que `updateResult` exija haber iniciado
-  // el reloj antes de poder sellar el resultado.
   reloj_estado: ESTADOS_RELOJ.PENDIENTE,
   ...over
 });
@@ -147,9 +117,6 @@ describe('partido.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     knexMock.__setInscriptos([100, 101]);
-    // El mock de knex vive a nivel de modulo, asi que un `__setTipoCompetencia`
-    // de un test filtraria a todos los siguientes. Se vuelve a MARCADOR en
-    // cada test, que es el caso por defecto de los que no son de Gimnasia.
     knexMock.__setTipoCompetencia('MARCADOR', 'Fútbol');
   });
 
@@ -242,8 +209,6 @@ describe('partido.service', () => {
     });
 
     it('un fallo al recalcular no rompe la operacion', async () => {
-      // El resultado que el arbitro ya cargo sigue siendo valido: devolver 500
-      // obligaria a reingresar el marcador.
       PoR.recalcular.mockRejectedValue(new Error('vista posiciones caida'));
       await expect(partidoService._recalcularPosiciones(10)).resolves.toBeUndefined();
       expect(logger.error).toHaveBeenCalled();
@@ -267,8 +232,6 @@ describe('partido.service', () => {
       const knex = require('../../src/config/knex');
       knex.mockClear();
 
-      // Con un id no numerico el filtro se saltea en vez de rechazar: es el
-      // comportamiento actual y queda fijado aca a proposito.
       await expect(partidoService._assertEquiposInscriptos(10, 'abc', 'xyz'))
         .resolves.toBeUndefined();
       expect(knex).not.toHaveBeenCalledWith('posicion');
@@ -302,11 +265,6 @@ describe('partido.service', () => {
       PR.create.mockResolvedValue(partidoBase());
     });
 
-    // Un torneo de Gimnasia Artística no tiene partidos: se presenta un equipo
-    // solo y lo evalúa un jurado. `partido.id_equipo_local` e
-    // `id_equipo_visitante` son NOT NULL, así que el modelo de partido no puede
-    // representar eso ni por error. El guard corta antes de resolver la
-    // cancha y antes de tocar `posicion`.
     describe('torneos de tipo EVALUACION (Gimnasia)', () => {
       beforeEach(() => {
         knexMock.__setTipoCompetencia('EVALUACION');
@@ -380,9 +338,6 @@ describe('partido.service', () => {
     });
 
     it('inscribe cada arbitro en el staff, el primero como principal', async () => {
-      // La lista de arbitros viene sin roles. El primero es el principal por
-      // convencion: si quedara todo en ASISTENTE, un partido recien creado no
-      // tendria principal hasta que alguien lo corrigiera a mano.
       await partidoService.create(
         { id_torneo: 10, id_equipo_local: 100, id_equipo_visitante: 101, arbitros: [7, 8] },
         CTX_ADMIN
@@ -415,10 +370,6 @@ describe('partido.service', () => {
   });
 
   describe('update', () => {
-    // El formulario de edicion deja cambiar el torneo, asi que sin el guard un
-    // partido de Futbol se podia mover a un torneo de Gimnasia. El trigger de
-    // la base lo frenaba, pero con un error de Postgres crudo en vez del
-    // mensaje que dice que cargar en su lugar.
     it('no deja mover el partido a un torneo de Gimnasia', async () => {
       PR.findById.mockResolvedValue(partidoBase({ id_torneo: 10 }));
       knexMock.__setTipoCompetencia('EVALUACION');
@@ -480,8 +431,6 @@ describe('partido.service', () => {
     });
 
     it('devuelve null cuando el body solo trae campos descartados', async () => {
-      // fecha/hora/id_cancha/arbitros se filtran: sin nada mas que persistir no
-      // hay UPDATE que hacer, pero la bitacora igual se registra.
       PR.findById.mockResolvedValue(partidoBase());
       const r = await partidoService.update(1, { fecha: '2026-10-01' }, CTX_ADMIN);
 
@@ -500,7 +449,6 @@ describe('partido.service', () => {
   });
 
   describe('updateResult', () => {
-    // Un partido con el reloj ya arrancado: es el precondito para poder sellar.
     const conReloj = (over = {}) => partidoBase({
       estado: ESTADOS_PARTIDO.EN_JUEGO,
       reloj_estado: ESTADOS_RELOJ.PAUSADO,
@@ -514,8 +462,6 @@ describe('partido.service', () => {
 
       const r = await partidoService.updateResult(1, CTX_ARBITRO);
 
-      // La firma es `(id, context)`: no hay dos numeros que cargar, asi que no
-      // hay forma de que entren al marcador desde el body.
       expect(PR.cerrarResultado).toHaveBeenCalledWith(1);
       expect(r.goles_local).toBe(3);
       expect(r.goles_visitante).toBe(1);
@@ -528,11 +474,6 @@ describe('partido.service', () => {
 
       await partidoService.updateResult(1, CTX_ARBITRO);
 
-      // Sellar y finalizar son pasos separados. Recalcular aqui sumaria los
-      // puntos de un partido que todavia no esta Finalizado, y
-      // `actualizar_posiciones` solo cuenta los finalizados: el efecto seria
-      // invisible, pero la llamada de mas es la que terminaria descolocando el
-      // calculo cuando alguien cambie el filtro.
       expect(PoR.recalcular).not.toHaveBeenCalled();
     });
 
@@ -566,8 +507,6 @@ describe('partido.service', () => {
     });
 
     it('un 0-0 es un resultado valido si el reloj arranco', async () => {
-      // No exigir un evento es lo correcto: un partido 0-0 se juega y se cierra
-      // igual. Lo que se exige es que el reloj haya arrancado.
       PR.findById.mockResolvedValue(conReloj());
       SR.findByPartido.mockResolvedValue([ARBITRO]);
       PR.cerrarResultado.mockResolvedValue(conReloj({ goles_local: 0, goles_visitante: 0 }));
@@ -630,9 +569,6 @@ describe('partido.service', () => {
     });
 
     it('finalizar cierra tambien el reloj', async () => {
-      // Si el reloj quedara en EN_CURSO con el partido Finalizado, seguiria
-      // contando tiempo para siempre: no hay un consumidor que lo apague solo,
-      // y el `segundos` derivado de un partido cerrado no tiene sentido.
       PR.findById.mockResolvedValue(partidoBase({ resultado_cargado: true }));
       SR.findByPartido.mockResolvedValue([ARBITRO]);
       PR.updateStatus.mockResolvedValue(partidoBase({ estado: ESTADOS_PARTIDO.FINALIZADO }));
@@ -644,8 +580,6 @@ describe('partido.service', () => {
     });
 
     it('suspender pausa el reloj que estaba corriendo', async () => {
-      // Suspender sin pausar el reloj haria que la suspension contara como
-      // tiempo de juego, que es justo lo que el reloj con acumulado evita.
       PR.findById.mockResolvedValue(partidoBase({
         estado: ESTADOS_PARTIDO.EN_JUEGO,
         reloj_estado: ESTADOS_RELOJ.EN_CURSO
@@ -673,8 +607,6 @@ describe('partido.service', () => {
     });
 
     it('volver a En Juego sin venir de Suspendido no toca el reloj', async () => {
-      // Volver a "En Juego" un partido que ya estaba "En Juego" es un no-op del
-      // reloj: pausarlo habria descartado tiempo de juego sin motivo.
       PR.findById.mockResolvedValue(partidoBase({
         estado: ESTADOS_PARTIDO.EN_JUEGO,
         reloj_estado: ESTADOS_RELOJ.EN_CURSO
@@ -713,8 +645,6 @@ describe('partido.service', () => {
     });
   });
 
-  // Un partido solo arranca el dia de la fecha que tiene asignada. Sin esto un
-  // partido se podia empezar un jueves para un partido del lunes.
   describe('arranque limitado al dia de la fecha', () => {
     const HOY = '2026-09-30';
 
@@ -756,8 +686,6 @@ describe('partido.service', () => {
     });
 
     it('el mensaje dice si la fecha ya paso o si todavia no llega', async () => {
-      // Un mensaje generico obliga al arbitro a abrir el partido para entender
-      // el problema. El texto tiene que decir cual de las dos cosas falló.
       PR.findById.mockResolvedValue(partidoPara('2026-09-29'));
       await expect(partidoService.updateStatus(1, ESTADOS_PARTIDO.EN_JUEGO, CTX_ARBITRO))
         .rejects.toThrow(/ya pas/);
@@ -768,9 +696,6 @@ describe('partido.service', () => {
     });
 
     it('reanudar un suspendido NO se bloquea aunque la fecha sea de ayer', async () => {
-      // Decision explicita: suspender no es comenzar. Si esta transicion estuviera
-      // trabada, un partido suspendido un viernes no se podria volver a abrir
-      // jamas, porque a las 00:01 ya es otro dia.
       PR.findById.mockResolvedValue(partidoPara('2026-09-25', {
         estado: ESTADOS_PARTIDO.SUSPENDIDO,
         reloj_estado: ESTADOS_RELOJ.PAUSADO
@@ -785,9 +710,6 @@ describe('partido.service', () => {
     });
 
     it('un partido sin fecha se puede arrancar y queda asentado en bitacora', async () => {
-      // Sin slot de disponibilidad no hay fecha con la cual comparar. Bloquearlo
-      // dejaria esos partidos sin forma de jugar; se permiten y se registra que
-      // arrancaron sin fecha verificada.
       PR.findById.mockResolvedValue(partidoPara(''));
       PR.updateStatus.mockResolvedValue(partidoPara('', { estado: ESTADOS_PARTIDO.EN_JUEGO }));
 
@@ -817,10 +739,6 @@ describe('partido.service', () => {
     });
 
     it('"hoy" lo decide la base y no el reloj de Node', async () => {
-      // Este es el test que protege el bug de zona horaria. El contenedor de la
-      // API corre en UTC, asi que si la fecha se calculara con `new Date()`,
-      // entre las 21:00 y las 24:00 devolveria el dia siguiente y rechazaria el
-      // partido de HOY todas las noches.
       PR.findById.mockResolvedValue(partidoPara(HOY));
       PR.updateStatus.mockResolvedValue(partidoPara(HOY, { estado: ESTADOS_PARTIDO.EN_JUEGO }));
 
@@ -830,7 +748,6 @@ describe('partido.service', () => {
     });
 
     it('no consulta la fecha cuando la transicion no es un comienzo', async () => {
-      // Finalizar, suspender y reanudar no dependen de la fecha del slot.
       PR.findById.mockResolvedValue(partidoPara('2026-09-25', {
         estado: ESTADOS_PARTIDO.EN_JUEGO,
         reloj_estado: ESTADOS_RELOJ.EN_CURSO,

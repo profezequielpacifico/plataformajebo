@@ -2,8 +2,6 @@ const { HTTP_STATUS } = require('../constants');
 const partidoService = require('../services/partido.service');
 const { formatResponse, formatPaginatedResponse, soloCampos, bindAll } = require('../utils');
 
-// `id_disponibilidad` no entra por acá: la resuelve el servicio a partir de
-
 const CAMPOS_PARTIDO = [
   'id_torneo',
   'id_equipo_local',
@@ -36,7 +34,6 @@ class PartidoController {
       const { page, limit, id_torneo, id_equipo, fecha_desde, fecha_hasta, estado } = req.query;
       const result = await partidoService.findAll({
         page, limit, id_torneo, id_equipo, fecha_desde, fecha_hasta, estado,
-        // Aislamiento por institución (X-05): el partido es visible si alguno de
 
         alcance: req.alcance
       });

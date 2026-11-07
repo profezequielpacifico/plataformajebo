@@ -22,8 +22,6 @@ class DisciplinaService {
     await this.findById(id);
     if (data.nombre) {
       const existing = await DisciplinaRepository.findByName(data.nombre);
-      // Por `String`: `id` viene de `req.params` y el id del driver es entero,
-      // asi que `13 !== '13'` daba "la disciplina ya existe" contra la misma
 
       if (existing && String(existing.id_disciplina) !== String(id)) {
         throw new BusinessError('La disciplina ya existe');

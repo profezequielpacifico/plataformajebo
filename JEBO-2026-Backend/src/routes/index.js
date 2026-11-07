@@ -11,6 +11,7 @@ const institucionRoutes = require('./institucion.routes');
 const localidadRoutes = require('./localidad.routes');
 const etapaRoutes = require('./etapa.routes');
 const instanciaRoutes = require('./instancia.routes');
+const etapaInstanciaRoutes = require('./etapa_instancia.routes');
 const configuracionPuntajeRoutes = require('./configuracion_puntaje.routes');
 const torneoRoutes = require('./torneo.routes');
 const equipoRoutes = require('./equipo.routes');
@@ -41,11 +42,10 @@ router.use('/institutions', institucionRoutes);
 router.use('/localities', localidadRoutes);
 router.use('/stages', etapaRoutes);
 router.use('/instancias', instanciaRoutes);
+router.use('/stage-instances', etapaInstanciaRoutes);
 router.use('/scoring-formats', configuracionPuntajeRoutes);
 router.use('/tournaments', torneoRoutes);
 router.use('/teams', equipoRoutes);
-// El router de eventos va DESPUES de `partidoRoutes` y no fusionado con el:
-// sus rutas son `/:id/events`, `/:id/events/:idEvento/anular`, `/:id/clock` y
 
 router.use('/matches', partidoRoutes);
 router.use('/matches', eventoRoutes);
@@ -60,21 +60,16 @@ router.get('/roles', authenticate, async (_req, res) => {
 router.get('/statistics/dashboard', authenticate, estadisticaController.dashboard);
 router.get('/statistics/tournaments/:id', authenticate, estadisticaController.torneoStats);
 
-// La bitácora dice quién tocó qué. Es de SuperAdmin, no de Admin: un admin
-
 router.get('/audit/logs', authenticate, requireSuperAdmin, bitacoraController.findAll);
 
 router.get('/search/global', authenticate, busquedaController.global);
 
 router.get('/fixture/status/:id_torneo', authenticate, fixtureController.getStatus);
-// El fixture reparte los cruces de todo el torneo, asi que es de la misma mano
 
 router.post('/fixture/generate', authenticate, requireAdminOrAbove, fixtureController.generate);
 router.get('/fixture/audit', authenticate, requireAdminOrAbove, fixtureController.audit);
 
 router.post('/inscripcion/cerrar-vencidas', authenticate, requireAdminOrAbove, inscripcionController.cerrarVencidas);
-
-// Los bloqueos por intentos fallidos son seguridad de la plataforma, no de una
 
 router.get('/admin/login-lockouts', authenticate, requireSuperAdmin, loginLockoutController.listar);
 router.delete('/admin/login-lockouts/:ip', authenticate, requireSuperAdmin, loginLockoutController.desbloquear);

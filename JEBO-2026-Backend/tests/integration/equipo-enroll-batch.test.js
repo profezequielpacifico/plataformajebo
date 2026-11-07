@@ -6,26 +6,6 @@ const crypto = require('crypto');
 const { contrasenaDePrueba } = require('../helpers/credentials');
 const { accessTokenDe } = require('../helpers/cookies');
 
-/**
- * `POST /teams/enroll-batch`: el permiso de un lote.
- *
- * Este endpoint es el que obliga a separar "tener rol" de "tener el recurso".
- * No tiene `:id` en la ruta —el lote entero viaja en el body— asi que un guard
- * de nivel no alcanza: la pregunta es de QUIEN son los equipos que se anotan, y
- * eso no se resuelve mirando el verb HTTP ni la forma de la URL.
- *
- * La regla acordada es "todo o nada". Un 200 con los equipos propios y los ajenos
- * descartados en silencio sería indistinguible de un bug: el profesor cree que
- * inscribió cinco equipos y hay tres en la base. Con 403 sabe qué pasó y puede
- * corregir el lote. Ademas el corte va ANTES de validar el negocio, para que un
- * profesor no aprenda si el equipo ajeno está inscripto en el torneo.
- *
- * Es de extremo a extremo a propósito: la regla vive repartida entre el guard de
- * la ruta, el servicio de autorizacion y las consultas del controlador. Un test
- * de servicio que se armara el `req` a mano pasaria aunque el cable entre las
- * tres estuviera desconectado.
- */
-
 const sufijo = crypto.randomBytes(6).toString('hex');
 const TAG = `enrollb_${sufijo}`;
 
@@ -49,7 +29,6 @@ const admin = {};
 const superAdmin = {};
 const arbitro = {};
 
-/** Equipos: dos del profesor A (para probar el lote multiple) y uno del B. */
 const equipos = {};
 
 const IDS_EQUIPOS = [];
@@ -58,9 +37,6 @@ const torneos = [];
 const idRolDe = async (descripcion) => {
   const r = await dbQuery('SELECT id_rol FROM rol WHERE descripcion = $1', [descripcion]);
   if (!r.rows[0]) {
-    // Falla con nombre y no con `undefined.id_rol`: el padron de la base de test
-    // no tiene todos los roles de `jebo_2026` y un rol faltante se confunde
-    // facil con un error de fixture.
     throw new Error(`El rol "${descripcion}" no existe en la base de test`);
   }
   return r.rows[0].id_rol;
@@ -81,13 +57,12 @@ const crearUsuarioConToken = async (rol) => {
   return { id: ins.rows[0].id_usuario, token: accessTokenDe(login), email };
 };
 
-/** Un torneo limpio por caso: el estado de las inscripciones se acumula. */
 const crearTorneo = async (nombre) => {
   const r = await dbQuery(
-    `INSERT INTO torneo (nombre, categoria, fecha_inicio, fecha_fin, estado, id_disciplina, id_instancia)
-     VALUES ($1, 'Unica', current_date, current_date + 1, 'Programado', $2, $3)
+    `INSERT INTO torneo (nombre, categoria, fecha_inicio, fecha_fin, estado, id_disciplina)
+     VALUES ($1, 'Unica', current_date, current_date + 1, 'Programado', $2)
      RETURNING id_torneo`,
-    [`${TAG} ${nombre}`, idDisciplina, idInstanciaTorneos]
+    [`${TAG} ${nombre}`, idDisciplina]
   );
   torneos.push(r.rows[0].id_torneo);
   return r.rows[0].id_torneo;
@@ -150,25 +125,16 @@ beforeAll(async () => {
   Object.assign(admin, await crearUsuarioConToken(ROL.ADMIN));
   Object.assign(superAdmin, await crearUsuarioConToken(ROL.SUPERADMIN));
   Object.assign(arbitro, await crearUsuarioConToken(ROL.ARBITRO));
-  // No hay usuario `Juez`: el padron de la base de test no tiene esa fila en
-  // `rol`. El rechazo del Juez ante este endpoint lo cubre la suite unitaria de
-  // `autorizacion.service`, que no necesita base.
 
   equipos.a1 = await crearEquipo(`${TAG} equipo A1`, instA, profesorA.id);
   equipos.a2 = await crearEquipo(`${TAG} equipo A2`, instA, profesorA.id);
   equipos.b1 = await crearEquipo(`${TAG} equipo B1`, instB, profesorB.id);
-  // Misma institucion que los de A pero de otro dueño. El permiso del lote es
-  // por `equipo.id_usuario`, no por `usuario_institucion`:sharing la institucion
-  // no hace suyo el equipo.
   equipos.delAdmin = await crearEquipo(`${TAG} equipo del admin`, instA, admin.id);
 
   Object.values(equipos).forEach((id) => IDS_EQUIPOS.push(id));
 });
 
 afterAll(async () => {
-  // El orden lo impone la FK: `posicion` cuelga de `equipo` y `torneo`, y
-  // `bitacora` de `usuario`. Sin este orden el cleanup aborta y la suite deja
-  // fixtures colgadas en la base de test.
   await dbQuery('DELETE FROM posicion WHERE id_equipo = ANY($1::int[]) OR id_torneo = ANY($2::int[])', [
     IDS_EQUIPOS,
     torneos
@@ -242,8 +208,6 @@ describe('POST /teams/enroll-batch: el permiso del lote', () => {
       { id_equipo: equipos.a2, id_torneo: torneo }
     ]);
 
-    // El 403 es del lote entero, no solo del equipo ajeno: el propio tampoco se
-    // inscribe. Este es el caso que separa "rechazar" de "filtrar en silencio".
     expect(res.status).toBe(403);
     expect(await inscriptosEn(torneo)).toEqual([]);
     expect(await inscripto(equipos.a1, torneo)).toBe(false);
@@ -251,10 +215,6 @@ describe('POST /teams/enroll-batch: el permiso del lote', () => {
   });
 
   it('6) el 403 no dice si el equipo ajeno ya estaba inscripto', async () => {
-    // El equipo B quedo inscripto en el torneo del caso 1, con un Administrador.
-    // Un profesor que lo mande de nuevo tiene que recibir 403 y no el 409 de
-    // "ya esta inscrito": con el 409 confirmaria que el equipo existe y esta
-    // anotado en un torneo que no es suyo.
     const torneoDelAdmin = torneos[0];
     expect(await inscripto(equipos.b1, torneoDelAdmin)).toBe(true);
 
@@ -273,15 +233,12 @@ describe('POST /teams/enroll-batch: el permiso del lote', () => {
     ]);
 
     expect(res.status).toBe(404);
-    // Tampoco parcial: el equipo que sí existe tampoco se inscribe.
     expect(await inscriptosEn(torneo)).toEqual([]);
   });
 
   it('8) un lote vacio se rechaza en la validacion de la ruta', async () => {
     const res = await lote(profesorA.token, []);
 
-    // 400 y no 201 con una lista vacia: un exito sin filas deja al que lo pidio
-    // sin forma de distinguir "no habia nada" de "no se guardo".
     expect(res.status).toBe(400);
   });
 
@@ -289,8 +246,6 @@ describe('POST /teams/enroll-batch: el permiso del lote', () => {
     const torneo = await crearTorneo('sin permiso');
     const cuerpo = [{ id_equipo: equipos.a1, id_torneo: torneo }];
 
-    // El Arbitro opera partidos y es global, pero no administra equipos: el
-    // alcance global no es permiso. El 403 llega antes de tocar `posicion`.
     expect((await lote(arbitro.token, cuerpo)).status).toBe(403);
     expect(await inscriptosEn(torneo)).toEqual([]);
   });
@@ -322,10 +277,6 @@ describe('POST /teams/enroll-batch: reglas de negocio que siguen vivas', () => {
     const torneo = await crearTorneo('misma institucion');
     const res = await lote(profesorA.token, [{ id_equipo: equipos.delAdmin, id_torneo: torneo }]);
 
-    // El profesor A esta en la institucion de este equipo y aun asi no puede
-    // anotarlo: la pertenencia a la institucion alcanza para VER, no para
-    // administrar. Si esto pasara, cualquier profesor de una institucion con
-    // equipos ajenos podria inscribirlos en un torneo.
     expect(res.status).toBe(403);
     expect(await inscriptosEn(torneo)).toEqual([]);
   });
@@ -333,8 +284,6 @@ describe('POST /teams/enroll-batch: reglas de negocio que siguen vivas', () => {
   it('un torneo inexistente sigue siendo un error de negocio, no de permisos', async () => {
     const res = await lote(profesorA.token, [{ id_equipo: equipos.a1, id_torneo: 99999999 }]);
 
-    // 409 y no 403: el permiso ya se concedio (el equipo es suyo). El fallo es
-    // que no existe el torneo.
     expect(res.status).toBe(409);
   });
 
@@ -345,9 +294,6 @@ describe('POST /teams/enroll-batch: reglas de negocio que siguen vivas', () => {
       { id_equipo: equipos.a2, id_torneo: torneo }
     ]);
 
-    // Regla del dominio, no del permiso: los dos equipos son del profesor. Antes
-    // de F1.4 el lote rechazaba esto con cualquier torneo, porque la llave de
-    // deduplicacion era solo el `id_usuario` y no `id_usuario` + `id_torneo`.
     expect(res.status).toBe(409);
     expect(await inscriptosEn(torneo)).toEqual([]);
   });

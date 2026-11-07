@@ -7,8 +7,6 @@ const autorizacionService = require('../services/autorizacion.service');
 const { formatResponse, formatPaginatedResponse, soloCampos, bindAll } = require('../utils');
 const { BusinessError } = require('../utils/errors');
 
-// `id_usuario` entra en la lista a propósito: el frontend lo manda y el
-
 const CAMPOS_EQUIPO = [
   'nombre',
   'id_institucion',
@@ -45,7 +43,6 @@ class EquipoController {
       const result = await equipoService.findAll({
         page, limit, id_disciplina, id_institucion,
         search, filter, id_torneo, id_region, id_distrito, id_localidad,
-        // Aislamiento por institución (X-05). El servidor decide qué
 
         alcance: req.alcance
       });
@@ -88,6 +85,10 @@ class EquipoController {
       const torneo = await knex('torneo').where('id_torneo', id_torneo).first();
       if (!torneo) throw new BusinessError('Torneo no encontrado');
 
+      if (equipo.id_disciplina !== torneo.id_disciplina) {
+        throw new BusinessError(`El equipo "${equipo.nombre}" no es de la disciplina del torneo "${torneo.nombre}"`);
+      }
+
       const existing = await knex('posicion').where({ id_equipo: id, id_torneo: id_torneo }).first();
       if (existing) throw new BusinessError('El equipo ya está inscrito en este torneo');
 
@@ -124,6 +125,10 @@ class EquipoController {
     const torneo = await knex('torneo').where('id_torneo', reg.id_torneo).first();
     if (!torneo) throw new BusinessError(`El torneo con id ${reg.id_torneo} no existe`);
 
+    if (equipo.id_disciplina !== torneo.id_disciplina) {
+      throw new BusinessError(`El equipo "${equipo.nombre}" no es de la disciplina del torneo "${torneo.nombre}"`);
+    }
+
     const existing = await knex('posicion')
       .where({ id_equipo: reg.id_equipo, id_torneo: reg.id_torneo }).first();
     if (existing) {
@@ -131,8 +136,6 @@ class EquipoController {
     }
 
     if (equipo.id_usuario) {
-      // La llave lleva el torneo porque la regla es "un entrenador, un equipo por
-      // torneo", no "un entrenador, un equipo en la vida": es lo que ya mide
 
       const llaveCoach = `${equipo.id_usuario}-${reg.id_torneo}`;
       if (seenCoaches.has(llaveCoach)) {
@@ -150,8 +153,6 @@ class EquipoController {
   async enrollBatch(req, res, next) {
     try {
       const { registrations } = req.body;
-
-      // El permiso del lote. Va PRIMERO, antes de cualquier validación de
 
       await autorizacionService.assertGestionarEquiposPropiosBatch(
         { id: req.user?.id, rol: req.user?.rol },
@@ -221,8 +222,6 @@ class EquipoController {
         .leftJoin('institucion as i', 'e.id_institucion', 'i.id_institucion')
         .leftJoin('localidad as l', 'e.id_localidad', 'l.id_localidad')
         .leftJoin('region as r', 'l.id_region', 'r.id_region');
-
-      // Aislamiento por institución (X-05). Esta consulta vive en el controlador
 
       alcanceService.filtrarPorEquipos(baseQuery, req.alcance, ['pos.id_equipo']);
 

@@ -13,10 +13,12 @@ import { useResponsive } from '../../hooks/useResponsive.js';
 import disciplineService from '../../services/disciplineService.js';
 import tournamentService from '../../services/tournamentService.js';
 import { stageService } from '../../services/stageService.js';
+import { hoyArgentina, instanteAFechaHoraArgentina, fechaHoraArgentinaAInstante, formatearFecha } from '../../services/dateService.js';
+import { REGLAS_POR_DEFECTO, ETIQUETAS_AMBITO, ETIQUETAS_MODALIDAD, describirOrigen, crearEtapasJebo } from './etapaReglas.js';
 
 const { createElement: h } = React;
 
-const EMPTY_ETAPA = { nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', tipo: null, es_final: false };
+const EMPTY_ETAPA = { nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', tipo: null, es_final: false, ...REGLAS_POR_DEFECTO };
 
 const EXTRA_RANGE_COLORS = [
     { bg: '#d1fae5', fg: '#065f46' },
@@ -47,13 +49,13 @@ export function TournamentFormPage({ onNavigate, pageParams, readOnly }) {
         descripcion: '',
         edicion: '2026',
         id_disciplina: '',
-        fecha_inicio: new Date().toISOString().split('T')[0],
+        fecha_inicio: hoyArgentina(),
         fecha_fin: '',
         fecha_inscripcion_inicio: '',
         fecha_inscripcion_fin: ''
     });
 
-    const { isMd } = useResponsive();
+    const { isMd, lessThan } = useResponsive();
     const [disciplines, setDisciplines] = useState([]);
     const [etapas, setEtapas] = useState([{ ...EMPTY_ETAPA }]);
     const [loading, setLoading] = useState(isEdit || readOnly);
@@ -85,6 +87,11 @@ export function TournamentFormPage({ onNavigate, pageParams, readOnly }) {
 
     const validateCurrentStep = () => {
         return applyValidation(computeStepErrors(step, formData, etapas));
+    };
+
+    const usarEtapasJebo = () => {
+        const disciplina = disciplines.find((d) => String(d.id_disciplina || d.id) === String(formData.id_disciplina));
+        setEtapas(crearEtapasJebo(disciplina?.tipo_competencia));
     };
 
     const addEtapa = () => {
@@ -173,6 +180,7 @@ export function TournamentFormPage({ onNavigate, pageParams, readOnly }) {
         requestRemoveEtapa,
         undoRemoveEtapa,
         addEtapa,
+        usarEtapasJebo,
         openEtapaEditor,
         editingEtapaIndex,
         etapaToRemove,
@@ -189,13 +197,13 @@ export function TournamentFormPage({ onNavigate, pageParams, readOnly }) {
                 h('p', { style: styles.tournamentSubtitle }, pageSubtitle)
             ),
 
-            renderStepper(readOnly, step),
+            renderStepper(readOnly, step, isMd),
 
-            h('div', { style: { ...styles.tournamentLayout, gridTemplateColumns: isMd ? '1fr' : '1fr 360px' } },
+            h('div', { style: { ...styles.tournamentLayout, gridTemplateColumns: lessThan(1280) ? '1fr' : 'minmax(0, 1fr) 360px' } },
 
                 h('form', {
                     onSubmit: (e) => e.preventDefault(),
-                    style: styles.tournamentForm
+                    style: { ...styles.tournamentForm, ...(isMd ? { padding: 0, border: 'none', backgroundColor: 'transparent' } : {}) }
                 },
 
                     h(ErrorAlert, {
@@ -254,22 +262,16 @@ export function TournamentFormPage({ onNavigate, pageParams, readOnly }) {
 }
 
 function getEstado(formData) {
-    const now = new Date();
-    const inicio = formData.fecha_inicio ? new Date(formData.fecha_inicio) : null;
-    const fin = formData.fecha_fin ? new Date(formData.fecha_fin) : null;
-    if (!inicio || isNaN(inicio)) return 'Programado';
-    if (now < inicio) return 'Programado';
-    if (fin && !isNaN(fin) && now > fin) return 'Finalizado';
+    const hoy = hoyArgentina();
+    if (!formData.fecha_inicio || hoy < formData.fecha_inicio) return 'Programado';
+    if (formData.fecha_fin && hoy > formData.fecha_fin) return 'Finalizado';
     return 'En Progreso';
 }
 
 function getEtapaEstado(etapa) {
-    const now = new Date();
-    const inicio = etapa.fecha_inicio ? new Date(etapa.fecha_inicio) : null;
-    const fin = etapa.fecha_fin ? new Date(etapa.fecha_fin) : null;
-    if (!inicio || isNaN(inicio)) return 'Pendiente';
-    if (now < inicio) return 'Pendiente';
-    if (fin && !isNaN(fin) && now > fin) return 'Finalizada';
+    const hoy = hoyArgentina();
+    if (!etapa.fecha_inicio || hoy < etapa.fecha_inicio) return 'Pendiente';
+    if (etapa.fecha_fin && hoy > etapa.fecha_fin) return 'Finalizada';
     return 'En Progreso';
 }
 
@@ -279,8 +281,8 @@ function getStatusBadge(status) {
 
 function getInscripcionStatus(inicio, fin) {
     const now = new Date();
-    const inicioDate = new Date(inicio);
-    const finDate = new Date(fin);
+    const inicioDate = new Date(fechaHoraArgentinaAInstante(inicio) ?? NaN);
+    const finDate = new Date(fechaHoraArgentinaAInstante(fin) ?? NaN);
     if (now < inicioDate) {
         return { backgroundColor: '#fef3c7', color: '#92400e', label: 'Inscripciones pendientes' };
     }
@@ -295,18 +297,9 @@ function getDisciplineName(disciplines, formData) {
     return d ? d.nombre : '—';
 }
 
-function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    if (isNaN(d)) return dateStr;
-    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 function formatDatetime(dateStr) {
     if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    if (isNaN(d)) return dateStr;
-    return d.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `${formatearFecha(dateStr)}, ${dateStr.slice(11, 16)}`;
 }
 
 function toDay(v) {
@@ -372,10 +365,10 @@ function getEtapaDateError(e, formData) {
         errs.fin = `Etapa "${e.nombre}": la fecha de fin es anterior a la de inicio. Revisá el orden de las fechas.`;
     }
     if (formData.fecha_inicio && e.fecha_inicio && e.fecha_inicio < formData.fecha_inicio) {
-        errs.inicio = `Etapa "${e.nombre}": la fecha de inicio (${formatDate(e.fecha_inicio)}) es anterior al inicio del torneo (${formatDate(formData.fecha_inicio)}). Debe estar dentro del período del torneo.`;
+        errs.inicio = `Etapa "${e.nombre}": la fecha de inicio (${formatearFecha(e.fecha_inicio)}) es anterior al inicio del torneo (${formatearFecha(formData.fecha_inicio)}). Debe estar dentro del período del torneo.`;
     }
     if (formData.fecha_fin && e.fecha_fin && e.fecha_fin > formData.fecha_fin) {
-        errs.fin = `Etapa "${e.nombre}": la fecha de fin (${formatDate(e.fecha_fin)}) supera el fin del torneo (${formatDate(formData.fecha_fin)}). Debe estar dentro del período del torneo.`;
+        errs.fin = `Etapa "${e.nombre}": la fecha de fin (${formatearFecha(e.fecha_fin)}) supera el fin del torneo (${formatearFecha(formData.fecha_fin)}). Debe estar dentro del período del torneo.`;
     }
     return errs;
 }
@@ -400,7 +393,7 @@ function findEtapaOverlapError(validEtapas) {
             const a = validEtapas[i];
             const b = validEtapas[j];
             if (etapasOverlap(a, b)) {
-                overlapError = `Etapas "${a.nombre}" y "${b.nombre}" tienen períodos superpuestos (del ${formatDate(a.fecha_inicio)} al ${formatDate(a.fecha_fin)} y del ${formatDate(b.fecha_inicio)} al ${formatDate(b.fecha_fin)}). Revisá las fechas de ambas etapas.`;
+                overlapError = `Etapas "${a.nombre}" y "${b.nombre}" tienen períodos superpuestos (del ${formatearFecha(a.fecha_inicio)} al ${formatearFecha(a.fecha_fin)} y del ${formatearFecha(b.fecha_inicio)} al ${formatearFecha(b.fecha_fin)}). Revisá las fechas de ambas etapas.`;
             }
         }
     }
@@ -436,8 +429,8 @@ function mapTournamentToForm(data) {
         fecha_inicio: data.fecha_inicio ? data.fecha_inicio.split('T')[0] : '',
         fecha_fin: data.fecha_fin ? data.fecha_fin.split('T')[0] : '',
         descripcion: data.descripcion || '',
-        fecha_inscripcion_inicio: data.fecha_inscripcion_inicio ? data.fecha_inscripcion_inicio.slice(0, 16) : '',
-        fecha_inscripcion_fin: data.fecha_inscripcion_fin ? data.fecha_inscripcion_fin.slice(0, 16) : ''
+        fecha_inscripcion_inicio: instanteAFechaHoraArgentina(data.fecha_inscripcion_inicio),
+        fecha_inscripcion_fin: instanteAFechaHoraArgentina(data.fecha_inscripcion_fin)
     };
 }
 
@@ -449,7 +442,17 @@ function mapStageToEtapa(s) {
         fecha_inicio: s.fecha_inicio ? s.fecha_inicio.split('T')[0] : '',
         fecha_fin: s.fecha_fin ? s.fecha_fin.split('T')[0] : '',
         orden: s.orden,
-        estado: s.estado || ''
+        estado: s.estado || '',
+        tipo: s.tipo || null,
+        es_final: s.es_final || false,
+        ambito: s.ambito || REGLAS_POR_DEFECTO.ambito,
+        origen_tipo: s.origen_tipo || REGLAS_POR_DEFECTO.origen_tipo,
+        origen_ambito: s.origen_ambito || null,
+        id_etapa_origen: s.id_etapa_origen || null,
+        clasifican_por_instancia: s.clasifican_por_instancia ?? REGLAS_POR_DEFECTO.clasifican_por_instancia,
+        mejores_adicionales: s.mejores_adicionales ?? REGLAS_POR_DEFECTO.mejores_adicionales,
+        territorios_por_instancia: s.territorios_por_instancia ?? null,
+        avanza_si_unico: s.avanza_si_unico !== false
     };
 }
 
@@ -498,7 +501,15 @@ function buildPayload(formData, etapas) {
             fecha_fin: e.fecha_fin || null,
             estado: e.estado || getEtapaEstado(e),
             tipo: e.tipo || null,
-            es_final: e.es_final || false
+            es_final: e.es_final || false,
+            ambito: e.ambito || REGLAS_POR_DEFECTO.ambito,
+            origen_tipo: e.origen_tipo || REGLAS_POR_DEFECTO.origen_tipo,
+            origen_ambito: e.origen_ambito || null,
+            id_etapa_origen: e.id_etapa_origen || null,
+            clasifican_por_instancia: Number(e.clasifican_por_instancia) || 1,
+            mejores_adicionales: Number(e.mejores_adicionales) || 0,
+            territorios_por_instancia: Number(e.territorios_por_instancia) || null,
+            avanza_si_unico: e.avanza_si_unico !== false
         }));
     return {
         nombre: formData.nombre,
@@ -508,8 +519,8 @@ function buildPayload(formData, etapas) {
         fecha_inicio: formData.fecha_inicio,
         fecha_fin: formData.fecha_fin || null,
         id_disciplina: parseInt(formData.id_disciplina),
-        fecha_inscripcion_inicio: formData.fecha_inscripcion_inicio || null,
-        fecha_inscripcion_fin: formData.fecha_inscripcion_fin || null,
+        fecha_inscripcion_inicio: fechaHoraArgentinaAInstante(formData.fecha_inscripcion_inicio),
+        fecha_inscripcion_fin: fechaHoraArgentinaAInstante(formData.fecha_inscripcion_fin),
         etapas: validEtapas
     };
 }
@@ -562,7 +573,7 @@ function getPageSubtitle(readOnly, isEdit, step) {
     return `Paso ${step} de 3 — ${STEP_LABELS[step - 1]}`;
 }
 
-function renderStepperItem(label, idx, step) {
+function renderStepperItem(label, idx, step, compacto) {
     const num = idx + 1;
     const isCompleted = step > num;
     const isCurrent = step === num;
@@ -594,7 +605,7 @@ function renderStepperItem(label, idx, step) {
                     boxShadow: circleShadow
                 }
             }, isCompleted ? h(IconCheck, { size: 16 }) : String(num)),
-            h('span', {
+            (!compacto || isCurrent) && h('span', {
                 style: {
                     fontSize: '13px',
                     fontWeight: '600',
@@ -606,9 +617,9 @@ function renderStepperItem(label, idx, step) {
         ),
         idx < STEP_LABELS.length - 1 && h('div', {
             style: {
-                width: '60px',
+                width: compacto ? '24px' : '60px',
                 height: '2px',
-                margin: '0 8px',
+                margin: compacto ? '0 4px' : '0 8px',
                 transition: 'background-color 0.3s ease',
                 flexShrink: 0,
                 backgroundColor: lineBg
@@ -617,7 +628,7 @@ function renderStepperItem(label, idx, step) {
     );
 }
 
-function renderStepper(readOnly, step) {
+function renderStepper(readOnly, step, compacto) {
     if (readOnly) return null;
     return h('div', { 
         style: { 
@@ -628,7 +639,7 @@ function renderStepper(readOnly, step) {
             gap: 0 
         } 
     },
-        STEP_LABELS.map((label, idx) => renderStepperItem(label, idx, step))
+        STEP_LABELS.map((label, idx) => renderStepperItem(label, idx, step, compacto))
     );
 }
 
@@ -831,8 +842,8 @@ function renderStep2(ctx) {
 
 function getEtapaRango(etapa) {
     if (!etapa.fecha_inicio && !etapa.fecha_fin) return 'Fechas sin definir';
-    const desde = etapa.fecha_inicio ? formatDate(etapa.fecha_inicio) : '...';
-    const hasta = etapa.fecha_fin ? formatDate(etapa.fecha_fin) : '...';
+    const desde = etapa.fecha_inicio ? formatearFecha(etapa.fecha_inicio) : '...';
+    const hasta = etapa.fecha_fin ? formatearFecha(etapa.fecha_fin) : '...';
     return `${desde} — ${hasta}`;
 }
 
@@ -921,6 +932,10 @@ function renderEtapaCard(etapa, index, ctx) {
             )
         ),
 
+        h('div', { style: { fontSize: '12px', color: '#6b7280', marginBottom: '8px' } },
+            `${ETIQUETAS_AMBITO[etapa.ambito] || 'Personalizado'} · ${ETIQUETAS_MODALIDAD[etapa.tipo] || 'Según el deporte'} · Vienen de: ${describirOrigen(etapa)} · Clasifican: ${etapa.clasifican_por_instancia ?? 1}`
+        ),
+
         h('div', { style: { display: 'grid', gap: '8px', fontSize: '13px' } },
             h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' } },
                 h('span', { style: { color: etapa._removing ? '#b91c1c' : '#4b5563' } }, rango),
@@ -986,7 +1001,7 @@ function renderEtapaEditorModal(ctx) {
         confirmText: 'Guardar',
         cancelText: 'Cancelar',
         confirmStyle: 'primary',
-        message: h('div', { style: { display: 'grid', gridTemplateColumns: columns, gap: '12px' } },
+        message: h('div', { style: { display: 'grid', gridTemplateColumns: columns, gap: '12px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' } },
 
             h('div', { style: { gridColumn: fullRow } },
                 h('label', { style: labelStyle }, 'Nombre *'),
@@ -1011,17 +1026,97 @@ function renderEtapaEditorModal(ctx) {
             ),
 
             h('div', null,
-                h('label', { style: labelStyle }, 'Tipo'),
+                h('label', { style: labelStyle }, 'Modalidad'),
                 h('select', {
                     style: styles.formSelect,
                     value: etapaDraft.tipo || '',
                     onChange: e => updateEtapaDraft('tipo', e.target.value || null)
                 },
-                    h('option', { value: '' }, 'Sin tipo'),
-                    h('option', { value: 'ELIMINACION' }, 'Eliminación directa'),
-                    h('option', { value: 'GRUPOS' }, 'Fase de grupos'),
-                    h('option', { value: 'LIGA' }, 'Liga (todos contra todos)')
+                    h('option', { value: '' }, 'Según el deporte'),
+                    h('option', { value: 'LIGA' }, 'Liga (todos contra todos)'),
+                    h('option', { value: 'EVALUACION' }, 'Evaluación por jurado'),
+                    h('option', { value: 'ELIMINACION', disabled: true }, 'Eliminación directa (próximamente)'),
+                    h('option', { value: 'GRUPOS', disabled: true }, 'Fase de grupos (próximamente)')
                 )
+            ),
+
+            h('div', null,
+                h('label', { style: labelStyle }, 'Ámbito'),
+                h('select', {
+                    style: styles.formSelect,
+                    value: etapaDraft.ambito || REGLAS_POR_DEFECTO.ambito,
+                    onChange: e => updateEtapaDraft('ambito', e.target.value)
+                }, Object.entries(ETIQUETAS_AMBITO).map(([valor, etiqueta]) => h('option', { key: valor, value: valor }, etiqueta)))
+            ),
+
+            h('div', null,
+                h('label', { style: labelStyle }, 'De dónde vienen los equipos'),
+                h('select', {
+                    style: styles.formSelect,
+                    value: etapaDraft.origen_tipo || REGLAS_POR_DEFECTO.origen_tipo,
+                    onChange: e => updateEtapaDraft('origen_tipo', e.target.value)
+                },
+                    h('option', { value: 'INSCRIPCION' }, 'Inscripción al torneo'),
+                    h('option', { value: 'ETAPA' }, 'Clasificados de otra etapa'),
+                    h('option', { value: 'MANUAL' }, 'Carga manual')
+                )
+            ),
+
+            etapaDraft.origen_tipo === 'ETAPA' && h('div', null,
+                h('label', { style: labelStyle }, 'Etapa de origen'),
+                h('select', {
+                    style: styles.formSelect,
+                    value: etapaDraft.origen_ambito || '',
+                    onChange: e => updateEtapaDraft('origen_ambito', e.target.value || null)
+                },
+                    h('option', { value: '' }, 'La etapa anterior'),
+                    Object.entries(ETIQUETAS_AMBITO).map(([valor, etiqueta]) => h('option', { key: valor, value: valor }, etiqueta))
+                )
+            ),
+
+            h('div', null,
+                h('label', { style: labelStyle }, 'Clasifican por instancia'),
+                h('input', {
+                    type: 'number',
+                    min: 1,
+                    style: styles.formInput,
+                    value: etapaDraft.clasifican_por_instancia ?? 1,
+                    onChange: e => updateEtapaDraft('clasifican_por_instancia', e.target.value)
+                })
+            ),
+
+            h('div', null,
+                h('label', { style: labelStyle }, 'Mejores adicionales de la etapa'),
+                h('input', {
+                    type: 'number',
+                    min: 0,
+                    style: styles.formInput,
+                    value: etapaDraft.mejores_adicionales ?? 0,
+                    onChange: e => updateEtapaDraft('mejores_adicionales', e.target.value)
+                })
+            ),
+
+            etapaDraft.ambito === 'INTERREGIONAL' && h('div', null,
+                h('label', { style: labelStyle }, 'Regiones por zona'),
+                h('input', {
+                    type: 'number',
+                    min: 1,
+                    style: styles.formInput,
+                    placeholder: 'Vacío: una sola zona',
+                    value: etapaDraft.territorios_por_instancia ?? '',
+                    onChange: e => updateEtapaDraft('territorios_por_instancia', e.target.value)
+                })
+            ),
+
+            h('div', null,
+                h('label', { style: labelStyle }, 'Si queda un solo equipo, avanza directo'),
+                h('input', {
+                    type: 'checkbox',
+                    'aria-label': 'Si queda un solo equipo, avanza directo',
+                    checked: etapaDraft.avanza_si_unico !== false,
+                    onChange: e => updateEtapaDraft('avanza_si_unico', e.target.checked),
+                    style: { marginTop: '8px' }
+                })
             ),
 
             h('div', null,
@@ -1099,6 +1194,12 @@ function renderStep3(ctx) {
         errors.etapas && h('div', { style: { color: '#ef4444', padding: '8px 12px', marginBottom: '12px', backgroundColor: '#fee2e2', borderRadius: '6px', fontSize: '13px' } }, errors.etapas),
 
         etapas.map((etapa, index) => renderEtapaCard(etapa, index, ctx)),
+
+        !readOnly && !etapas.some(e => e.id_etapa || e.nombre.trim()) && h('button', {
+            type: 'button',
+            style: { ...styles.buttonPrimary, marginTop: '8px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
+            onClick: ctx.usarEtapasJebo
+        }, h(IconPlus), ' Usar etapas JEBO'),
 
         !readOnly && h('button', {
             type: 'button',
@@ -1251,11 +1352,11 @@ function renderConfirmModal({ isEdit, showConfirmModal, setShowConfirmModal, han
                 ),
                 h('div', { style: styles.confirmRow },
                     h('span', { style: styles.confirmLabel }, 'Fecha Inicio'),
-                    h('span', { style: styles.confirmValue }, formatDate(formData.fecha_inicio))
+                    h('span', { style: styles.confirmValue }, formatearFecha(formData.fecha_inicio))
                 ),
                 h('div', { style: styles.confirmRow },
                     h('span', { style: styles.confirmLabel }, 'Fecha Fin'),
-                    h('span', { style: styles.confirmValue }, formatDate(formData.fecha_fin))
+                    h('span', { style: styles.confirmValue }, formatearFecha(formData.fecha_fin))
                 ),
                 h('div', { style: styles.confirmRow },
                     h('span', { style: styles.confirmLabel }, 'Inscripción'),

@@ -10,7 +10,6 @@ module.exports = {
   update: (id, data) => knex('competencia_etapa').where({ id_competencia_etapa: id }).update(data).returning('*'),
   delete: (id) => knex('competencia_etapa').where({ id_competencia_etapa: id }).del().returning('*'),
 
-  // Métodos con transacción
   createConTrx: (data, trx = knex) => trx('competencia_etapa').insert(data).returning('*'),
   updateConTrx: (id, data, trx = knex) => trx('competencia_etapa').where({ id_competencia_etapa: id }).update(data).returning('*'),
   findByIdConTrx: (id, trx = knex) => trx('competencia_etapa').where({ id_competencia_etapa: id }).first(),

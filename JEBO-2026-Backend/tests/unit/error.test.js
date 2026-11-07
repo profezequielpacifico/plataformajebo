@@ -6,10 +6,6 @@ const { HTTP_STATUS } = require('../../src/constants');
 
 jest.mock('../../src/config/logger', () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }));
 
-// errorHandler es el ultimo eslabon de la cadena: decide que status y que cuerpo
-// ve el cliente. Lo que importa aca es que un error de datos de Postgres no
-// termine expuesto como 500 con detalle interno, y que los inesperados nunca
-// filtren el mensaje original.
 describe('errorHandler', () => {
   const resFalso = () => {
     const res = { status: jest.fn(), json: jest.fn() };
@@ -58,8 +54,6 @@ describe('errorHandler', () => {
     });
 
     it('un 23xx desconocido cae en la clase de integridad', () => {
-      // 23 no esta en la tabla pero si es clase de integridad: mejor un 409
-      // generico que un 500.
       const e = traducirErrorDePostgres({ code: '23P01' });
       expect(e).toBeInstanceOf(BusinessError);
       expect(e.message).toMatch(/restricción de integridad/);
@@ -87,8 +81,6 @@ describe('errorHandler', () => {
     });
 
     it('en un alta un 23503 pide corregir la referencia, no borrar el referenciado', () => {
-      // El mensaje por tabla esta redactado para DELETE. Reusarlo en un POST
-      // mandaba al admin a eliminar el usuario al que la presentacion apuntaba.
       const e = traducirErrorDePostgres(
         { code: '23503', table: 'usuario', constraint: 'staff_presentacion_id_usuario_fkey' },
         { method: 'POST' }
@@ -99,12 +91,6 @@ describe('errorHandler', () => {
     });
 
     it('en un borrado sigue hablando de dependencias, no de referencias', () => {
-      // Limitacion conocida: para un DELETE, Postgres manda en `detail` la tabla
-      // que *referencia* al borrado ("... is still referenced from table
-      // \"partido\""), y extractTableName se queda con esa. El mensaje por tabla
-      // puede entonces nombrar el recurso equivocado, asi que lo que se fija aca
-      // es el contrato: un borrado habla de dependencias, nunca de "la
-      // referencia no existe".
       const e = traducirErrorDePostgres(
         { code: '23503', table: 'partido', constraint: 'partido_id_torneo_fkey' },
         { method: 'DELETE' }
@@ -161,8 +147,6 @@ describe('errorHandler', () => {
     });
 
     it('nunca filtra el mensaje interno de un error inesperado', () => {
-      // Si el mensaje crudo llegara al cliente, una excepcion de pg puede
-      // exponer host, usuario y hasta fragmentos de la consulta.
       const res = resFalso();
       const secreto = 'password authentication failed for user "jebo" at 10.0.0.5';
       errorHandler(new Error(secreto), {}, res, jest.fn());
@@ -174,11 +158,6 @@ describe('errorHandler', () => {
     });
 
     it('isOperational manda por sobre el status y deja pasar el mensaje', () => {
-      // Contrato actual: la primera rama cortocircuita con isOperational, sin
-      // mirar el status. Es intencional para los errores de negocio, que ya
-      // llevan un mensaje pensado para el cliente, pero implica que un error
-      // marcado operational con status 5xx si expone su texto. La combinacion
-      // es contradictoria; aca queda fijada para que un cambio sea deliberado.
       const res = resFalso();
       const err = new Error('detalle interno');
       err.isOperational = true;

@@ -56,8 +56,6 @@ describe('documentoValidator', () => {
   });
 
   describe('looksLikeEmail', () => {
-    // Devuelve booleano y no lanza: se usa como guarda antes de tocar la base,
-    // asi que un valor raro tiene que ser un "no" y no una excepcion.
     it('acepta formas normales', () => {
       for (const v of ['a@b.co', 'usuario@example.com', 'nombres.apellido@sub.dominio.ar',
         'user+tag@example.com', 'u@d.io']) {
@@ -99,10 +97,6 @@ describe('documentoValidator', () => {
     });
 
     it('no se degrasa con muchos arrobas', () => {
-      // La razon de ser de esta implementacion: una regex con cuantificador sin
-      // limite hace que el motor pruebe muchos split points y el tiempo crezca
-      // de forma cuadratica (S5852). Con split + conteo es lineal. Muchos @ es
-      // justo la entrada que mas split points genera.
       const adversario = 'a'.repeat(10000) + Array(10000).fill('@b').join('');
       const inicio = process.hrtime.bigint();
       const r = looksLikeEmail(adversario);

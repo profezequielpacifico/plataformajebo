@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { styles } from '../../styles/theme/index.js';
 import { IconLoader, IconCheck } from '../../components/icons/index.js';
 import authService from '../../services/authService.js';
+import { useUiScale } from '../../hooks/useResponsive.js';
 
 const { createElement: h } = React;
 
 export function RecoverPasswordPage({ onNavigate }) {
+    const uiScale = useUiScale();
     const [email, setEmail] = useState('');
     const [step, setStep] = useState('form');
 
@@ -41,32 +43,36 @@ export function RecoverPasswordPage({ onNavigate }) {
     }
 
     return h('div', { style: styles.loginContainer },
-        h('div', { style: styles.loginBox },
-            h('div', { style: styles.loginLogo },
-                h('div', { style: styles.loginLogoText }, 'Recuperar Contraseña')
-            ),
+        h('div', { style: styles.loginArea },
+            h('div', { style: { ...styles.loginColumn, zoom: uiScale } },
+                h('div', { style: styles.loginBox },
+                    h('div', { style: styles.loginLogo },
+                        h('div', { style: styles.loginLogoText }, 'Recuperar Contraseña')
+                    ),
 
-            h('form', { onSubmit: handleSubmit },
-                h('div', { style: styles.formGroup },
-                    h('label', { style: styles.formLabel }, 'Correo Electrónico'),
-                    h('input', {
-                        type: 'email',
-                        value: email,
-                        onChange: (e) => setEmail(e.target.value),
-                        style: styles.formInput,
-                        placeholder: 'tu@correo.com',
-                        required: true
-                    })
-                ),
+                    h('form', { onSubmit: handleSubmit },
+                        h('div', { style: styles.formGroup },
+                            h('label', { style: styles.formLabel }, 'Correo Electrónico'),
+                            h('input', {
+                                type: 'email',
+                                value: email,
+                                onChange: (e) => setEmail(e.target.value),
+                                style: styles.formInput,
+                                placeholder: 'tu@correo.com',
+                                required: true
+                            })
+                        ),
 
-                h('button', { type: 'submit', style: styles.loginButton }, 'Enviar solicitud'),
+                        h('button', { type: 'submit', style: styles.loginButton }, 'Enviar solicitud'),
 
-                h('div', { style: { marginTop: '16px', textAlign: 'center' } },
-                    h('a', {
-                        href: '#',
-                        style: styles.loginLink,
-                        onClick: (e) => { e.preventDefault(); onNavigate('login'); }
-                    }, '← Volver al inicio de sesión')
+                        h('div', { style: { marginTop: '16px', textAlign: 'center' } },
+                            h('a', {
+                                href: '#',
+                                style: styles.loginLink,
+                                onClick: (e) => { e.preventDefault(); onNavigate('login'); }
+                            }, '← Volver al inicio de sesión')
+                        )
+                    )
                 )
             )
         )

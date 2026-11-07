@@ -7,8 +7,6 @@ import disciplineService from '../../../src/services/disciplineService.js';
 import tournamentService from '../../../src/services/tournamentService.js';
 import teamService from '../../../src/services/teamService.js';
 
-// Los servicios exportan tanto el nombre como default; los mocks replican
-// ambas formas para no romper segun como los importe cada modulo.
 vi.mock('../../../src/services/disciplineService.js', () => {
   const s = { getAll: vi.fn() };
   return { default: s, disciplineService: s };
@@ -30,8 +28,8 @@ const DISCIPLINAS = [
 const TORNEOS = [
   {
     id_torneo: 1, id_disciplina: 1, nombre: 'Torneo Otoño', categoria: 'Senior',
-    fecha_inicio: '2026-03-01', fecha_fin: '2026-06-30',
-    fecha_inscripcion_inicio: '2026-02-01', fecha_inscripcion_fin: '2026-02-20',
+    fecha_inicio: '2026-03-01T00:00:00.000Z', fecha_fin: '2026-06-30T00:00:00.000Z',
+    fecha_inscripcion_inicio: '2026-02-01T03:00:00.000Z', fecha_inscripcion_fin: '2026-02-21T02:30:00.000Z',
     estado: 'En Progreso'
   },
   {
@@ -57,13 +55,8 @@ describe('TournamentPage', () => {
   const renderPage = (props = {}) =>
     render(<TournamentPage onNavigate={vi.fn()} {...props} />);
 
-  // Cada tarjeta de contador es un label seguido del valor, asi que el numero
-  // se busca dentro de la tarjeta del label correspondiente.
-  // Cada tarjeta es label + valor. Hay que acotar a la tarjeta: 'Torneos'
-  // tambien es el encabezado de la columna, asi que se busca el primero.
   const valorDe = (label) => {
     const etiqueta = screen.getAllByText(label)[0];
-    // El padre de la etiqueta es el bloque que contiene etiqueta y valor.
     return etiqueta.parentElement.lastElementChild.textContent;
   };
 
@@ -75,8 +68,6 @@ describe('TournamentPage', () => {
   });
 
   it('muestra los contadores en las tarjetas', async () => {
-    // Los numeros salen de pagination.total cuando viene, y del largo del array
-    // si no: con limit=100 un conteo por array mentiria al haber paginacion.
     renderPage();
     await waitFor(() => expect(screen.getByText('Disciplinas')).toBeInTheDocument());
     expect(valorDe('Disciplinas')).toBe('2');
@@ -102,15 +93,18 @@ describe('TournamentPage', () => {
 
   it('muestra el rango de inscripcion', async () => {
     renderPage();
-    const rango = `${new Date('2026-02-01').toLocaleDateString('es-ES')} - ${new Date('2026-02-20').toLocaleDateString('es-ES')}`;
-    expect(await screen.findByText(rango)).toBeInTheDocument();
+    expect(await screen.findByText('01/02/2026 - 20/02/2026')).toBeInTheDocument();
+  });
+
+  it('muestra el dia de las columnas DATE sin correrlo', async () => {
+    renderPage();
+    const fila = (await screen.findByText('Torneo Otoño')).closest('tr');
+    const celdas = [...fila.querySelectorAll('td')].map((td) => td.textContent);
+    expect(celdas.slice(2, 4)).toEqual(['01/03/2026', '30/06/2026']);
   });
 
   it('pone guion en las fechas ausentes', async () => {
     renderPage();
-    // Copa Primavera no trae categoria ni ninguna fecha. La celda del rango de
-    // inscripcion concatena dos guiones con un separador, asi que acaba siendo
-    // un solo texto con tres guiones en vez de dos celdas sueltas.
     const fila = (await screen.findByText('Copa Primavera')).closest('tr');
     const celdas = [...fila.querySelectorAll('td')].map((td) => td.textContent);
     expect(celdas.slice(1, 4)).toEqual(['-', '-', '-']);
@@ -124,8 +118,6 @@ describe('TournamentPage', () => {
   });
 
   it('dice "sin resultados" cuando el filtro no deja ninguno', async () => {
-    // Otoño es disciplina 1 y esta En Progreso, Primavera es disciplina 2 y esta
-    // Programado: pedir disciplina 1 + Programado no deja ninguno.
     const user = userEvent.setup();
     renderPage();
     await screen.findByText('Torneo Otoño');
@@ -149,8 +141,6 @@ describe('TournamentPage', () => {
   });
 
   it('filtra por estado usando el valor con guion del select', async () => {
-    // El select usa 'en-progreso' pero el estado guardado es 'En Progreso': el
-    // mapeo interno tiene que existir para que el filtro funcione.
     const user = userEvent.setup();
     renderPage();
     await screen.findByText('Torneo Otoño');
@@ -223,8 +213,6 @@ describe('TournamentPage', () => {
   });
 
   it('sugiere limpiar lo asociado cuando el borrado choca con partidos', async () => {
-    // El backend rechaza el borrado si quedan partidos; el mensaje de sugerencia
-    // le dice al admin que hacer en vez de dejarle un error seco.
     const user = userEvent.setup();
     tournamentService.delete.mockRejectedValue(
       new Error('No se puede eliminar: tiene partidos asociados')
@@ -262,8 +250,6 @@ describe('TournamentPage', () => {
   });
 
   it('un fallo al cargar no tapa la pagina', async () => {
-    // A diferencia del borrado, los errores de carga solo van a la consola:
-    // las tarjetas quedan en 0 y la tabla vacia.
     tournamentService.getAll.mockRejectedValue(new Error('API caída'));
     renderPage();
     await waitFor(() => expect(console.error).toHaveBeenCalled());

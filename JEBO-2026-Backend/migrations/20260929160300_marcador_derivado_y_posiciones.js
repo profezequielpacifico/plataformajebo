@@ -1,25 +1,4 @@
-/**
- * `v_marcador_partido`: el marcador derivado del ledger, y
- * `actualizar_posiciones` deja de leer `partido.goles_*`.
- *
- * El marcador era un par de contadores en `partido` que el arbitro escribia a
- * mano. A partir de aca es un COUNT sobre los eventos CONFIRMADOS, y eso
- * significa que un evento anulado se descuenta solo, sin ningun paso extra.
- *
- * La regla de negocio queda escrita UNA vez, en la base. Si la regra viviera en
- * el servicio, cada consulta nueva del marcador (el listado, la pantalla en
- * vivo, las posiciones, un reporte futuro) seria el lugar donde alguien la
- * reimplementa mal.
- *
- * `actualizar_posiciones` sigue contando solo partidos `Finalizado`: el
- * `FILTER` sobre `pares.estado` no se toca, asi que un partido en curso sigue
- * sin puntuar hasta que se cierra.
- */
 exports.up = async function up(knex) {
-  // Dos self-LEFT JOIN, uno por lado, porque `m` viene agregado por
-  // (partido, equipo) y cada lado del partido necesita SU conteo. Un solo JOIN
-  // con `puntos_local = puntos_visitante` seria el error clasico: daria el
-  // mismo numero a los dos equipos.
   await knex.raw(`
     CREATE OR REPLACE VIEW v_marcador_partido AS
     SELECT
@@ -43,7 +22,6 @@ exports.up = async function up(knex) {
     ) mv ON mv.id_partido = p.id_partido AND mv.id_equipo = p.id_equipo_visitante
   `);
 
-  // Upsert de las posiciones leyendo el marcador derivado.
   await knex.raw(`
     CREATE OR REPLACE FUNCTION actualizar_posiciones(p_id_torneo INT, p_id_etapa INT)
     RETURNS VOID AS $$
@@ -130,9 +108,6 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  // Vuelve a leer `partido.goles_*`. Las columnas no se dropean: siguen siendo
-  // la foto congelada del resultado y las leen reportes viejos. Lo que se
-  // revierte es de donde sale el marcador para el calculo de posiciones.
   await knex.raw(`
     CREATE OR REPLACE FUNCTION actualizar_posiciones(p_id_torneo INT, p_id_etapa INT)
     RETURNS VOID AS $$

@@ -7,6 +7,7 @@ import { Modal } from '../../components/ui/Modal.js';
 import { Loading } from '../../components/ui/Loading.js';
 import { IconPlus, IconEdit, IconTrash, IconEye, IconArrowLeft } from '../../components/icons/index.js';
 import { tournamentService } from '../../services/tournamentService.js';
+import { formatearFecha } from '../../services/dateService.js';
 
 const { createElement: h } = React;
 
@@ -97,12 +98,16 @@ function renderEmptyRow(searchTerm) {
     );
 }
 
+function formatDate(value) {
+    return value ? formatearFecha(value) : '-';
+}
+
 function renderTournamentRow(tournament, onNavigate, handleEdit, handleDelete) {
     return h(TableRow, { key: tournament.id || tournament.id_torneo },
         h(TableCell, { style: { fontWeight: 500 } }, tournament.nombre || tournament.name),
         h(TableCell, null, tournament.categoria || tournament.category || '-'),
-        h(TableCell, null, tournament.fecha_inicio || tournament.start || '-'),
-        h(TableCell, null, tournament.fecha_fin || tournament.end || '-'),
+        h(TableCell, null, formatDate(tournament.fecha_inicio || tournament.start)),
+        h(TableCell, null, formatDate(tournament.fecha_fin || tournament.end)),
         h(TableCell, null, tournament.cantidad_equipos || tournament.teams || '-'),
         h(TableCell, null, h(Badge, { variant: getBadgeVariant(tournament.estado || tournament.status) }, tournament.estado || tournament.status)),
         h(TableCell, null,
@@ -118,7 +123,11 @@ function renderTournamentRow(tournament, onNavigate, handleEdit, handleDelete) {
                 h('button', {
                     style: { ...styles.buttonDanger, padding: '6px 12px' },
                     onClick: () => handleDelete(tournament)
-                }, h(IconTrash))
+                }, h(IconTrash)),
+                h('button', {
+                    style: { ...styles.buttonPrimary, padding: '6px 12px' },
+                    onClick: () => onNavigate('tournaments-stages/' + (tournament.id || tournament.id_torneo))
+                }, 'Etapas')
             )
         )
     );

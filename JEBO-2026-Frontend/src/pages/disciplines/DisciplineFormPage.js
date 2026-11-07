@@ -14,6 +14,9 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
         descripcion: '',
         jugadores_por_equipo: '',
         tipo_competencia: 'MARCADOR',
+        puntos_victoria: 2,
+        puntos_empate: 1,
+        puntos_derrota: 1,
         reglamento: ''
     });
     const [loading, setLoading] = useState(isEdit);
@@ -38,6 +41,9 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
                     descripcion: d.descripcion || '',
                     jugadores_por_equipo: d.jugadores_por_equipo || '',
                     tipo_competencia: d.tipo_competencia || 'MARCADOR',
+                    puntos_victoria: d.puntos_victoria ?? 2,
+                    puntos_empate: d.puntos_empate ?? 1,
+                    puntos_derrota: d.puntos_derrota ?? 1,
                     reglamento: d.reglamento || ''
                 });
             } catch {
@@ -73,6 +79,11 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
             setError('El nombre es requerido');
             return;
         }
+        const puntos = [formData.puntos_victoria, formData.puntos_empate, formData.puntos_derrota];
+        if (puntos.some((p) => p === '' || !Number.isInteger(Number(p)) || Number(p) < 0 || Number(p) > 100)) {
+            setError('Los puntos deben ser números enteros entre 0 y 100');
+            return;
+        }
         setIsSaving(true);
         setError('');
         try {
@@ -80,7 +91,10 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
                 nombre: formData.nombre.trim(),
                 descripcion: formData.descripcion.trim(),
                 jugadores_por_equipo: formData.jugadores_por_equipo ? parseInt(formData.jugadores_por_equipo, 10) : undefined,
-                tipo_competencia: formData.tipo_competencia
+                tipo_competencia: formData.tipo_competencia,
+                puntos_victoria: Number(formData.puntos_victoria),
+                puntos_empate: Number(formData.puntos_empate),
+                puntos_derrota: Number(formData.puntos_derrota)
             };
             if (isEdit) {
                 await disciplineService.update(disciplineId, payload);
@@ -149,6 +163,30 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
                     (!readOnly && formData.tipo_competencia === 'EVALUACION')
                         && h('div', { style: { fontSize: '12px', color: '#6b7280', marginTop: '6px' } },
                             'Las competencias de este deporte no tienen partidos: los encuentros se cargan en Presentaciones, donde cada trío se presenta solo y lo evalúa un jurado.')
+                ),
+                formData.tipo_competencia === 'MARCADOR' && h('div', { style: styles.formGroup },
+                    h('div', { style: styles.formLabel }, 'Puntos por resultado'),
+                    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' } },
+                        [
+                            ['puntos_victoria', 'Si gana'],
+                            ['puntos_empate', 'Si empata'],
+                            ['puntos_derrota', 'Si pierde']
+                        ].map(([campo, etiqueta]) => h('div', { key: campo },
+                            h('label', { htmlFor: campo, style: { fontSize: '13px', color: '#4b5563', display: 'block', marginBottom: '4px' } }, etiqueta),
+                            h('input', {
+                                id: campo,
+                                type: 'number',
+                                min: 0,
+                                max: 100,
+                                value: formData[campo],
+                                onChange: (e) => setFormData({ ...formData, [campo]: e.target.value }),
+                                style: styles.formInput,
+                                disabled: readOnly
+                            })
+                        ))
+                    ),
+                    !readOnly && h('div', { style: { fontSize: '12px', color: '#6b7280', marginTop: '6px' } },
+                        'Al cambiarlos se recalculan las tablas por etapa. La clasificación general del torneo se actualiza con el próximo partido que termine.')
                 ),
                 h('div', { style: styles.formGroup },
                     h('label', { style: styles.formLabel }, 'Descripción'),

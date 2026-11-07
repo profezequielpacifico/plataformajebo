@@ -34,7 +34,6 @@ module.exports = {
 
   delete: (id_config) => knex(TABLE).where('id_config', id_config).del(),
 
-  // Configuración por defecto para gimnasia
   defaultGimnasia: () => ({
     peso_dificultad: 1.00,
     peso_ejecucion: 1.00,

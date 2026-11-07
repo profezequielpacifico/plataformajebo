@@ -9,6 +9,7 @@ import { IconTrophy, IconUsers, IconHome, IconPlus, IconEye, IconEdit, IconTrash
 import disciplineService from '../../services/disciplineService.js';
 import tournamentService from '../../services/tournamentService.js';
 import teamService from '../../services/teamService.js';
+import { formatearFecha, instanteAFechaHoraArgentina } from '../../services/dateService.js';
 
 const { createElement: h } = React;
 
@@ -122,9 +123,9 @@ function renderFilters(disciplines, disciplineFilter, statusFilter, setDisciplin
 }
 
 function renderToolbar(onNavigate) {
-    return h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' } },
+    return h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' } },
         h('h3', { style: { margin: 0 } }, 'Torneos'),
-        h('div', { style: { display: 'flex', gap: '8px' } },
+        h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
             onNavigate && h('button', {
                 style: { ...styles.buttonOutline, padding: '8px 12px', fontSize: '14px' },
                 onClick: () => onNavigate('tournaments-history')
@@ -162,7 +163,11 @@ function renderNoResultsRow() {
 }
 
 function formatDate(value) {
-    return value ? new Date(value).toLocaleDateString('es-ES') : '-';
+    return value ? formatearFecha(value) : '-';
+}
+
+function formatInstantDate(value) {
+    return value ? formatearFecha(instanteAFechaHoraArgentina(value)) : '-';
 }
 
 function renderTournamentRow(t, onNavigate, handleDelete) {
@@ -171,7 +176,7 @@ function renderTournamentRow(t, onNavigate, handleDelete) {
         h(TableCell, {}, t.categoria || '-'),
         h(TableCell, {}, formatDate(t.fecha_inicio)),
         h(TableCell, {}, formatDate(t.fecha_fin)),
-        h(TableCell, {}, formatDate(t.fecha_inscripcion_inicio) + ' - ' + formatDate(t.fecha_inscripcion_fin)),
+        h(TableCell, {}, formatInstantDate(t.fecha_inscripcion_inicio) + ' - ' + formatInstantDate(t.fecha_inscripcion_fin)),
         h(TableCell, {}, h(Badge, { variant: getBadgeVariant(t.estado) }, t.estado)),
         h(TableCell, null,
             h(TableActions, null,
@@ -186,7 +191,11 @@ function renderTournamentRow(t, onNavigate, handleDelete) {
                 h('button', {
                     style: { ...styles.buttonDanger, padding: '6px 10px' },
                     onClick: () => handleDelete(t)
-                }, h(IconTrash))
+                }, h(IconTrash)),
+                h('button', {
+                    style: { ...styles.buttonPrimary, padding: '6px 10px' },
+                    onClick: () => onNavigate && onNavigate('tournaments-stages/' + (t.id_torneo || t.id))
+                }, 'Etapas')
             )
         )
     );

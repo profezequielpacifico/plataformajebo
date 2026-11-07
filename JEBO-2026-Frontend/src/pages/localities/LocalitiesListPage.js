@@ -9,12 +9,15 @@ import { localityService } from '../../services/localityService.js';
 
 const { createElement: h } = React;
 
+const normalizar = (texto) => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 export function LocalitiesListPage({ onNavigate }) {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [search, setSearch] = useState('');
 
     const load = async () => {
         try {
@@ -35,16 +38,31 @@ export function LocalitiesListPage({ onNavigate }) {
         setShowModal(false);
     };
 
+    const termino = normalizar(search);
+    const filtered = termino
+        ? items.filter(i => [i.nombre, i.distrito_nombre, i.region_nombre, i.codigo].some(v => normalizar(v).includes(termino)))
+        : items;
+
     if (loading) return h(Loading);
 
     return h('div', null,
         error && h('div', { style: { color: '#ef4444', padding: '12px', marginBottom: '16px', backgroundColor: '#fee2e2', borderRadius: '6px' } }, error),
         h(Card, null,
             h(CardHeader, { title: 'Localidades' },
-                h('button', {
-                    style: styles.buttonPrimary,
-                    onClick: () => onNavigate('localities-new')
-                }, h(IconPlus), 'Nueva Localidad')
+                h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+                    h('input', {
+                        type: 'text',
+                        placeholder: 'Buscar por nombre, distrito, región o código...',
+                        'aria-label': 'Buscar localidad',
+                        value: search,
+                        onChange: (e) => setSearch(e.target.value),
+                        style: { ...styles.formInput, width: '340px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
+                    }),
+                    h('button', {
+                        style: styles.buttonPrimary,
+                        onClick: () => onNavigate('localities-new')
+                    }, h(IconPlus), 'Nueva Localidad')
+                )
             ),
             h(Table, null,
                 h(TableHeader, null,
@@ -55,7 +73,8 @@ export function LocalitiesListPage({ onNavigate }) {
                     h(TableHeaderCell, null, 'Acciones')
                 ),
                 h('tbody', null,
-                    items.map(item => {
+                    filtered.length === 0 && h(TableRow, null, h(TableCell, { colSpan: 5, style: { textAlign: 'center', color: '#9ca3af' } }, termino ? 'Sin resultados para la búsqueda' : 'No hay localidades registradas')),
+                    filtered.map(item => {
                         return h(TableRow, { key: item.id_localidad },
                             h(TableCell, { style: { fontWeight: 500 } }, item.nombre),
                             h(TableCell, null, item.distrito_nombre || '-'),

@@ -26,18 +26,6 @@ module.exports = {
   deleteByEquipo: (id_equipo) =>
     knex(TABLE).where('id_equipo', id_equipo).del(),
 
-  /**
-   * Validar composición de trío.
-   *
-   * Solo se verifica la cantidad de integrantes. La regla del reglamento pide
-   * además 1 de un género y 2 del otro, pero el modelo de datos no guarda el
-   * género: no hay columna `genero` en `usuario` ni en ninguna otra tabla, y las
-   * consultas que la usaban reventaban con "column u.genero does not exist",
-   * dejando toda alta de presentación con trío en error.
-   *
-   * Para cubrir la regla hace falta agregar la columna (migración + campo en el
-   * alta de usuario) y recién ahí recuperar el conteo por género.
-   */
   validarTrio: async (id_equipo) => {
     const [{ cantidad }] = await knex(TABLE)
       .where('id_equipo', id_equipo)

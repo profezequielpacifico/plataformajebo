@@ -25,8 +25,6 @@ jest.mock('../../src/repositories/disponibilidad.repository', () => ({
 }));
 jest.mock('../../src/services/bitacora.service', () => ({ log: jest.fn() }));
 
-// disponibilidad.service consulta la base directo para reutilizar fecha_cancha,
-// fecha_horario y disponibilidad_cancha en vez de duplicarlas.
 jest.mock('../../src/config/knex', () => {
   const knexMock = jest.fn();
   knexMock.transaction = jest.fn();
@@ -119,8 +117,6 @@ describe('cancha.service', () => {
   });
 
   it('updateSchedule sin items vacia la grilla en vez de fallar', async () => {
-    // replaceSchedule recibe [] para que "sin horarios" sea un estado valido y
-    // no un error de validacion del cliente.
     CanchaRepository.findById.mockResolvedValue(cancha);
     CanchaHorarioRepository.replaceSchedule.mockResolvedValue(0);
 
@@ -136,9 +132,6 @@ describe('cancha.service', () => {
 });
 
 describe('disponibilidad.service', () => {
-  // Este servicio arma la clave fecha_horario que despues consume el fixture y
-  // partido.service, asi que lo que importa es que reutilice las filas
-  // existentes en vez de duplicarlas y que compare horarios por HH:MM.
   const TABLAS = {
     fecha_cancha: { first: { id_fecha_cancha: 1 } },
     horarios_cancha: { all: [{ id_horario_cancha: 1, hora_inicio: '09:00:00' }, { id_horario_cancha: 2, hora_inicio: '18:30:00' }] },
@@ -183,8 +176,6 @@ describe('disponibilidad.service', () => {
   });
 
   it('rechaza un horario que no existe y los lista en el mensaje', async () => {
-    // Sin esto el cliente recibiria un error de FK opaco; el mensaje dice que
-    // horarios hay realmente.
     await expect(disponibilidadService.createDisponibilidad(3, '2026-10-01', '23:00'))
       .rejects.toBeInstanceOf(ValidationError);
     await expect(disponibilidadService.createDisponibilidad(3, '2026-10-01', '23:00'))
@@ -221,9 +212,6 @@ describe('disponibilidad.service', () => {
   it('no duplica la disponibilidad si ya estaba', async () => {
     TABLAS.disponibilidad_cancha = { first: null };
     await disponibilidadService.createDisponibilidad(3, '2026-10-01', '09:00');
-    // La segunda llamada tiene que reutilizar lo que acaba de insertar, no
-    // volver a insertar: el fixture genera many partidos y cada uno reusa la
-    // misma fecha_horario.
     TABLAS.disponibilidad_cancha = { first: { id_disponibilidad: 99 } };
     await disponibilidadService.createDisponibilidad(3, '2026-10-01', '09:00');
 

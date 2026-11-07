@@ -164,6 +164,21 @@ export function IconFileText({ size = 16, ...props }) {
     );
 }
 
+export function IconMenu({ size = 16, ...props }) {
+    return h(Icon, { size, ...props },
+        h('line', { x1: '4', y1: '6', x2: '20', y2: '6' }),
+        h('line', { x1: '4', y1: '12', x2: '15', y2: '12' }),
+        h('line', { x1: '4', y1: '18', x2: '20', y2: '18' })
+    );
+}
+
+export function IconClose({ size = 16, ...props }) {
+    return h(Icon, { size, ...props },
+        h('line', { x1: '6', y1: '6', x2: '18', y2: '18' }),
+        h('line', { x1: '18', y1: '6', x2: '6', y2: '18' })
+    );
+}
+
 export function IconLogOut({ size = 16, ...props }) {
     return h(Icon, { size, ...props },
         h('path', { d: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' }),

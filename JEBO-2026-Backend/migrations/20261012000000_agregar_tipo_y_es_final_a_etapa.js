@@ -1,9 +1,3 @@
-/**
- * Agrega los campos `tipo` y `es_final` a la tabla `etapa` para soportar
- * la misma mecánica que el módulo de Competencias.
- * Idempotente: no falla si las columnas ya existen.
- */
-
 exports.up = function (knex) {
   return knex.raw(`
     DO $$

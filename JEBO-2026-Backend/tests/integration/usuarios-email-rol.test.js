@@ -6,36 +6,6 @@ const { query: dbQuery } = require('../../src/config/database.js');
 const { contrasenaDePrueba } = require('../helpers/credentials');
 const { accessTokenDe } = require('../helpers/cookies');
 
-/**
- * Un email identifica a una persona, no a una cadena de caracteres.
- *
- * Lo que se prueba acá es la regla "no pueden existir dos usuarios con el mismo
- * email" en las cuatro capas por las que un email entra o sale del sistema: el
- * alta, la edición, el login y la escritura directa en la base (seeds, scripts
- * de demo, consola). Y con las mismas pruebas, que tocar un usuario no termine
- * convirtiéndolo en dos.
- *
- * Antes de esto el índice era `UNIQUE (email)`, que en Postgres distingue
- * mayúsculas, y el chequeo de la aplicación comparaba el email exacto. Medido
- * contra la base de desarrollo: `POST /users` con `ADMIN@jebo2026.com` devolvió
- * 201 y creó un segundo usuario, y `admin@jebo2026.com` y `ADMIN@jebo2026.com`
- * entraban los dos.
- *
- * La segunda mitad del archivo es el rol. `POST /users` y `PUT /users/:id`
- * validaban el rol contra una lista escrita en la ruta
- * (`['Administrador', 'Editor', 'Profesor', 'Arbitro']`) que quedó desactualizada
- * en las dos direcciones: `Juez` faltaba, con lo que a un juez no se lo podía
- * editar —empezando por un cambio de contraseña— y `Editor` sobraba, con lo que
- * el `isIn` lo aceptaba y la creación terminaba en 500.
- */
-
-// Todos los correos de esta suite terminan en `_TAG@jebo.test`, así que el
-// cleanup es un `LIKE` sobre ese sufijo y no una lista de documentos. Los
-// documentos, en cambio, son fijos y altos: el alta de una cuenta gemela tiene
-// que chocar con el índice de email, no con el de documento.
-//
-// El `_` del patrón es el comodín de un carácter de SQL, no un literal: no
-// importa para el cleanup (cualquier carácter antes del sufijo sirve igual).
 const TAG = crypto.randomBytes(4).toString('hex');
 const SUFIJO = `%_${TAG}@%`;
 const PASA = (email) => `${email}_${TAG}@jebo.test`;
@@ -45,8 +15,6 @@ const EMAIL_OBJETIVO = PASA('objetivo');
 const EMAIL_INGRESO = PASA('ingreso');
 const PASSWORD_INGRESO = contrasenaDePrueba();
 
-// Rol que existe en la tabla `rol` pero no estaba en la lista de la ruta: el
-// caso real es `Juez`, que la base de desarrollo tiene y la de test no.
 const ROL_EXTRA = `Delegado_${TAG}`;
 
 let tokenAdmin;
@@ -91,9 +59,6 @@ beforeAll(async () => {
     password: contrasenaDePrueba()
   });
 
-  // Cuenta propia para el login: si compartiera fixture con el objetivo, el
-  // test del cambio de contraseña le rompería la contraseña y esta prueba
-  // dependería del orden de ejecución.
   await crearUsuario({
     nombre: 'Usuario Ingreso',
     email: EMAIL_INGRESO,
@@ -117,8 +82,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // El orden importa: `bitacora` y `refresh_token_revocado` tienen clave foránea
-  // a `usuario`, así que primero se borran las filas que los apuntan.
   await dbQuery('DELETE FROM bitacora WHERE id_usuario IN (SELECT id_usuario FROM usuario WHERE email LIKE $1)', [
     SUFIJO
   ]);
@@ -146,8 +109,6 @@ describe('Usuarios: el email identifica a una sola persona', () => {
 
     expect(response.status).toBe(409);
     expect(response.body.error).toMatch(/email ya existe/i);
-    // Lo importante es que la cuenta no quede creada: el síntoma era ver dos
-    // personas en la pantalla de Usuarios con "el mismo email".
     expect((await usuariosPorEmail(EMAIL_OBJETIVO)).rows).toHaveLength(1);
   });
 
@@ -161,7 +122,6 @@ describe('Usuarios: el email identifica a una sola persona', () => {
     const filas = await usuariosPorEmail(EMAIL_OBJETIVO);
     expect(filas.rows).toHaveLength(1);
     expect(filas.rows[0].id_usuario).toBe(idObjetivo);
-    // Guardado en la forma canónica: si no, el login dejaría de encontrarlo.
     expect(filas.rows[0].email).toBe(EMAIL_OBJETIVO);
   });
 
@@ -206,8 +166,6 @@ describe('Usuarios: el email identifica a una sola persona', () => {
   });
 
   it('la base sola impide la cuenta gemela, aunque se escriba por SQL', async () => {
-    // El índice `usuario_email_lower_uk` es lo que cierra esto para los seeds,
-    // los scripts de demo y la consola: la validación de la API no pasa por ahí.
     let error = null;
     try {
       await crearUsuario({
@@ -257,9 +215,6 @@ describe('Usuarios: el rol se valida contra la tabla rol', () => {
   });
 
   it('rechaza un rol que la lista de la ruta admitía pero no existe en la tabla', async () => {
-    // 'Editor' estaba en la lista escrita en la ruta: el `isIn` lo aceptaba y
-    // después `findByDescripcion('Editor')` devolvía undefined, así que el alta
-    // terminaba en 500 "Ha ocurrido un error inesperado".
     const response = await request(app)
       .post('/users')
       .set('Authorization', `Bearer ${tokenAdmin}`)

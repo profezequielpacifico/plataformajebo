@@ -1,10 +1,3 @@
-/**
- * Mueve la relación Región de distrito a localidad.
- * - Elimina distrito.id_region
- * - Agrega localidad.id_region (FK -> region)
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function (knex) {
   const localidadHasRegion = await knex.schema.hasColumn('localidad', 'id_region');
   if (!localidadHasRegion) {
@@ -39,10 +32,6 @@ exports.up = async function (knex) {
   });
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function (knex) {
   const distritoHasRegion = await knex.schema.hasColumn('distrito', 'id_region');
   if (!distritoHasRegion) {

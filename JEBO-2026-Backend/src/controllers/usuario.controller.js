@@ -4,8 +4,6 @@ const { formatResponse, soloCampos, bindAll } = require('../utils');
 const { ForbiddenError } = require('../utils/errors');
 const { puedeAdministrarUsuarios } = require('../services/alcance.service');
 
-// Allowlist del body. `id_rol` no entra por acá a propósito: el servicio lo
-
 const CAMPOS_USUARIO = ['nombre', 'email', 'documento', 'password', 'rol', 'estado'];
 
 class UsuarioController {
@@ -20,7 +18,6 @@ class UsuarioController {
   async findAll(req, res, next) {
     try {
       const { rol, search } = req.query;
-      // Traduccion de la invariante del repositorio a un 403 (F1.1).
 
       if (!puedeAdministrarUsuarios(req.alcance) && !rol) {
         return next(
@@ -41,29 +38,6 @@ class UsuarioController {
     }
   }
 
-  /**
-   * `GET /users/opciones` — nombres para armar un jurado.
-   *
-   * Este endpoint reemplaza al `GET /users?rol=X` con el que los selectores
-   * (`TeamFormPage` -> Profesor, `MatchFormPage` -> Arbitro,
-   * `GymPresentationsPage` -> Juez) elegian a quien designar. La separacion
-   * importa por dos motivos:
-   *
-   * 1. La autorizacion queda atada a la ruta y no a como el cliente arma la
-   *    query. Con una sola ruta, que el servidor sirviera el padron dependia de
-   *    si venia `?rol=`: dos contratos de seguridad en la misma URL.
-   * 2. La proyeccion es fija y no depende del alcance: siempre
-   *    `{ id, nombre, rol }`. Un selector necesita identificar a una persona, no
-   *    saber su email, su documento ni cuando entro por ultima vez.
-   *
-   * El recorte a tres campos se hace en dos capas a proposito: la proyeccion
-   * del repositorio es la primera, y este mapeo la segunda. No es redundancia
-   * gratuita: `findOpciones` es un metodo publico del repositorio y cualquier
-   * consumidor futuro que lo use hereda la proyeccion, pero este mapeo fija la
-   * forma de la respuesta HTTP aunque la proyeccion cambie. Si alguien abre una
-   * proyeccion nueva "porque un selector necesita mas datos", el test de forma
-   * sigue exigiendo `{ id, nombre, rol }` y hay que cambiarlo a proposito.
-   */
   async opciones(req, res, next) {
     try {
       const { rol } = req.query;

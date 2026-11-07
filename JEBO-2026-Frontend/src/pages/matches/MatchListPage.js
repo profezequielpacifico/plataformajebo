@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge.js';
 import { Table, TableHeader, TableHeaderCell, TableRow, TableCell, TableActions } from '../../components/ui/Table.js';
 import { IconPlus, IconEdit, IconTrash, IconEye } from '../../components/icons/index.js';
 import matchService from '../../services/matchService.js';
+import { formatearFecha } from '../../services/dateService.js';
 import tournamentService from '../../services/tournamentService.js';
 import { soloTorneosConPartidos } from '../../services/tiposCompetencia.js';
 import '../../styles/components.css';
@@ -24,7 +25,6 @@ function getBadgeVariant(status) {
 function loadTournaments(setTournaments) {
     tournamentService.getAll(1, 100).then(res => {
         const data = res.data || res || [];
-        // Los torneos de Gimnasia no admiten partidos: se compiten con
 
         setTournaments(soloTorneosConPartidos(Array.isArray(data) ? data : []));
     }).catch(err => console.error(err));
@@ -60,7 +60,7 @@ function renderFilters({ selectedTorneo, setSelectedTorneo, tournaments, estadoF
         h('select', {
             value: selectedTorneo,
             onChange: (e) => setSelectedTorneo(e.target.value),
-            style: { ...styles.formSelect, width: '220px', marginBottom: 0 }
+            style: { ...styles.formSelect, width: '220px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
         },
             h('option', { value: '' }, 'Todos los torneos'),
             tournaments.map(t => h('option', { key: t.id_torneo || t.id, value: String(t.id_torneo || t.id) }, `${t.nombre || t.name} (${t.disciplina_nombre || ''})`))
@@ -68,7 +68,7 @@ function renderFilters({ selectedTorneo, setSelectedTorneo, tournaments, estadoF
         h('select', {
             value: estadoFilter,
             onChange: (e) => setEstadoFilter(e.target.value),
-            style: { ...styles.formSelect, width: '160px', marginBottom: 0 }
+            style: { ...styles.formSelect, width: '160px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
         },
             h('option', { value: '' }, 'Todos los estados'),
             h('option', { value: 'Pendiente' }, 'Pendiente'),
@@ -99,7 +99,7 @@ function renderArbitrosCell(match) {
 
 function renderMatchRow(match, onNavigate, setMatches) {
     return h(TableRow, { key: match.id_partido || match.id },
-        h(TableCell, null, match.fecha ? new Date(match.fecha).toLocaleDateString('es-ES') : '—'),
+        h(TableCell, null, formatearFecha(match.fecha)),
         h(TableCell, null, match.hora || '—'),
         h(TableCell, null, match.cancha_nombre || '—'),
         h(TableCell, null, match.torneo || '—'),

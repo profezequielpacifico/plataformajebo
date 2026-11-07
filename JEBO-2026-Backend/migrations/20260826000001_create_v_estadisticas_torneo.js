@@ -1,9 +1,3 @@
-/**
- * Crea la vista v_estadisticas_torneo con estadísticas agregadas por torneo.
- * Usada en estadistica.repository.js → GET /statistics/tournaments/:id
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function up(knex) {
   await knex.raw(`
     CREATE OR REPLACE VIEW v_estadisticas_torneo AS
@@ -28,10 +22,6 @@ exports.up = async function up(knex) {
   `);
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function down(knex) {
   await knex.raw('DROP VIEW IF EXISTS v_estadisticas_torneo');
 };

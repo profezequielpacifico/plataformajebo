@@ -2,7 +2,11 @@ const { HTTP_STATUS } = require('../constants');
 const etapaService = require('../services/etapa.service');
 const { formatResponse, bindAll, soloCampos } = require('../utils');
 
-const CAMPOS_ETAPA = ['id_torneo', 'nombre', 'orden', 'descripcion', 'estado', 'fecha_inicio', 'fecha_fin'];
+const CAMPOS_ETAPA = [
+  'id_torneo', 'nombre', 'orden', 'descripcion', 'estado', 'fecha_inicio', 'fecha_fin', 'tipo', 'es_final',
+  'ambito', 'origen_tipo', 'origen_ambito', 'id_etapa_origen', 'clasifican_por_instancia',
+  'mejores_adicionales', 'territorios_por_instancia', 'avanza_si_unico'
+];
 
 class EtapaController {
   constructor() {

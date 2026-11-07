@@ -8,7 +8,6 @@ export const Z_INDEX = {
     tooltip: 1070
 };
 
-// Add modal alias for compatibility
 export const modal = 1050;
 
 export default Z_INDEX;

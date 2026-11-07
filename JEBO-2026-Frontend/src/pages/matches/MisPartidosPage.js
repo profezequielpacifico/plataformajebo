@@ -74,7 +74,7 @@ function renderFilters({ filters, setFilters, disciplines, tournaments, onRefres
         h('select', {
             value: filters.id_disciplina,
             onChange: (e) => setFilters({ id_disciplina: e.target.value, id_torneo: '', estado: filters.estado }),
-            style: { ...styles.formSelect, width: '200px', marginBottom: 0 }
+            style: { ...styles.formSelect, width: '200px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
         },
             h('option', { value: '' }, 'Todos los deportes'),
             disciplines.map(d => h('option', { key: d.id_disciplina, value: String(d.id_disciplina) }, d.nombre))
@@ -82,7 +82,7 @@ function renderFilters({ filters, setFilters, disciplines, tournaments, onRefres
         h('select', {
             value: filters.id_torneo,
             onChange: (e) => setFilters({ ...filters, id_torneo: e.target.value }),
-            style: { ...styles.formSelect, width: '220px', marginBottom: 0 }
+            style: { ...styles.formSelect, width: '220px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
         },
             h('option', { value: '' }, 'Todos los torneos'),
             filteredTournaments.map(t => h('option', { key: t.id_torneo || t.id, value: String(t.id_torneo || t.id) }, `${t.nombre || t.name} (${t.disciplina_nombre || ''})`))
@@ -90,7 +90,7 @@ function renderFilters({ filters, setFilters, disciplines, tournaments, onRefres
         h('select', {
             value: filters.estado,
             onChange: (e) => setFilters({ ...filters, estado: e.target.value }),
-            style: { ...styles.formSelect, width: '160px', marginBottom: 0 }
+            style: { ...styles.formSelect, width: '160px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
         },
             renderEstadoOptions()
         ),
@@ -104,7 +104,6 @@ function renderMatchActions(match, onStart, onLive, onFinalize) {
 
     const buttons = [];
     if (estado === 'Pendiente' || estado === 'Programado') {
-        // El arbitro no puede arrancar el partido fuera del dia programado. El
 
         const fecha = estadoFechaPartido(match.fecha);
         const bloqueado = !fecha.permitido;
@@ -131,7 +130,6 @@ function renderMatchActions(match, onStart, onLive, onFinalize) {
         }
     }
     if (estado === 'En Juego' || estado === 'En Progreso' || estado === 'En progreso') {
-        // Antes este boton abria un modal con dos inputs numericos. Ya no hay
 
         buttons.push(h('button', {
             key: 'live',
@@ -198,7 +196,7 @@ function getMatchNombre(equipo, fallback, conGoles) {
 function renderMatchRow(match, onStart, onLive, onFinalize) {
     const resultado = getMatchResultado(match);
     return h(TableRow, { key: match.id_partido || match.id },
-        h(TableCell, null, match.fecha ? new Date(match.fecha).toLocaleDateString('es-ES') : '—'),
+        h(TableCell, null, formatearFecha(match.fecha)),
         h(TableCell, null, match.hora || '—'),
         h(TableCell, null, match.cancha_nombre || '—'),
         h(TableCell, null, match.torneo || '—'),
@@ -274,8 +272,6 @@ function useMatchActions(refresh, onNavigate) {
             setNotif({ message: 'Partido iniciado', type: 'success' });
             refresh();
         } catch (err) {
-            // El mensaje del backend llega ya escrito ("Esta programado para el
-            // 30/09 y hoy es 29/09"), asi que se muestra tal cual. El boton
 
             setShowStart(false);
             setStartMatch(null);
@@ -283,8 +279,6 @@ function useMatchActions(refresh, onNavigate) {
             refresh();
         }
     };
-
-    // La fila ya no lleva a ningun modal de resultado: lleva a la pantalla en
 
     const abrirEnVivo = (match) => onNavigate(`${ROUTES.MATCH_LIVE}/${match.id_partido || match.id}`);
 

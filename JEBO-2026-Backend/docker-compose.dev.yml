@@ -1,28 +1,13 @@
-# Development override for JEBO 2026.
-# Usage:
-#   docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml up --build -d
-#
-# This adds:
-#   - API exposed on host port 15252 (for direct testing / frontend Vite proxy)
-#   - pgAdmin exposed on host port 5051
-
 services:
   db:
-    # Solo en desarrollo: en producción el 5432 queda en la red interna de
-    # Docker (docs/docker-up.md: "no expuesto"). Atado a loopback para que los
-    # tests de integración y un psql de la máquina lleguen sin abrirlo a la red.
     ports:
       - "127.0.0.1:15432:5432"
 
   api:
-    # Expose the API directly on localhost for local development tooling.
-    # In production the API must remain internal and reachable only through nginx.
     ports:
       - "127.0.0.1:15252:3000"
 
   pgadmin:
-    # Imagen fijada, no `latest`: `latest` cambia sin aviso y una subida de
-    # versión puede romper el entrypoint en el medio de un deploy.
     image: dpage/pgadmin4:8.14
     container_name: jebo-pgadmin
     restart: unless-stopped
@@ -30,18 +15,12 @@ services:
       db:
         condition: service_healthy
     environment:
-      # Sin default en ninguno de los dos: si faltan, el compose falla en vez
-      # de arrancar con credenciales conocidas (mismo criterio que db y api).
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?defina PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?defina PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "127.0.0.1:5051:80"
     volumes:
       - jebo_pgadmin:/var/lib/pgadmin
-    # Endurecimiento medido de a una en QA: `cap_drop: ALL` menos las
-    # capacidades que el entrypoint necesita (postfix hace bind del 25 y
-    # `sudo` baja a `pgadmin`), y SIN `no-new-privileges` a propósito: con la
-    # bandera el entrypoint entra en bucle de reinicio con exit 126.
     cap_drop:
       - ALL
     cap_add:

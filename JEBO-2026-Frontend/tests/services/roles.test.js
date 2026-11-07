@@ -13,8 +13,6 @@ describe('roles', () => {
             expect(getRoleId({ id_rol: ROLE_IDS.JUEZ, rol: 'Arbitro' })).toBe(ROLE_IDS.JUEZ);
         });
 
-        // `/auth/login` no devuelve `id_rol`, asi que el nombre del rol es el
-        // unico dato disponible en el perfil cacheado.
         it('cae al nombre del rol cuando no hay id_rol', () => {
             expect(getRoleId({ rol: 'SuperAdmin' })).toBe(ROLE_IDS.SUPERADMIN);
             expect(getRoleId({ rol: 'Administrador' })).toBe(ROLE_IDS.ADMINISTRADOR);
@@ -36,8 +34,6 @@ describe('roles', () => {
             expect(esAdministrador({ id_rol: ROLE_IDS.ADMINISTRADOR })).toBe(true);
         });
 
-        // El id 1 es Profesor, no Administrador: el check viejo
-        // `user.id_rol === 1` le daba acciones de admin al docente.
         it('Profesor no es admin', () => {
             expect(esAdministrador({ rol: 'Profesor' })).toBe(false);
             expect(esAdministrador({ id_rol: ROLE_IDS.PROFESOR })).toBe(false);

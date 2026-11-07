@@ -3,6 +3,25 @@ const { NotFoundError, BusinessError } = require('../utils/errors');
 const bitacoraService = require('./bitacora.service');
 const knex = require('../config/knex');
 
+const AMBITOS = ['DISTRITO', 'REGION', 'INTERREGIONAL', 'NACIONAL', 'PERSONALIZADO'];
+const ORIGENES = ['INSCRIPCION', 'ETAPA', 'MANUAL'];
+const MODALIDADES = ['LIGA', 'ELIMINACION', 'GRUPOS', 'EVALUACION'];
+const CRITERIOS = ['PUNTOS', 'DIFERENCIA', 'A_FAVOR'];
+
+const enteroOpcional = (valor) => (valor === undefined || valor === null || valor === '' ? null : Number(valor));
+
+const reglasDeEtapa = (e) => ({
+  ambito: e.ambito || 'PERSONALIZADO',
+  origen_tipo: e.origen_tipo || 'INSCRIPCION',
+  origen_ambito: e.origen_ambito || null,
+  id_etapa_origen: enteroOpcional(e.id_etapa_origen),
+  clasifican_por_instancia: enteroOpcional(e.clasifican_por_instancia) ?? 1,
+  mejores_adicionales: enteroOpcional(e.mejores_adicionales) ?? 0,
+  territorios_por_instancia: enteroOpcional(e.territorios_por_instancia),
+  avanza_si_unico: e.avanza_si_unico !== false,
+  criterios_desempate: JSON.stringify(e.criterios_desempate || CRITERIOS)
+});
+
 class EtapaService {
   async findAll(id_torneo) {
     return EtapaRepository.findAll(id_torneo);
@@ -35,6 +54,36 @@ class EtapaService {
     if (torneoFechas.fecha_fin && etapa.fecha_fin && etapa.fecha_fin > torneoFechas.fecha_fin) {
       throw new BusinessError(`Etapa "${etapa.nombre}": la fecha de fin no puede ser posterior a la del torneo`);
     }
+    this._validateReglas(etapa);
+  }
+
+  _validateReglas(etapa) {
+    const nombre = etapa.nombre;
+    if (etapa.ambito && !AMBITOS.includes(etapa.ambito)) {
+      throw new BusinessError(`Etapa "${nombre}": ámbito inválido`);
+    }
+    if (etapa.origen_ambito && !AMBITOS.includes(etapa.origen_ambito)) {
+      throw new BusinessError(`Etapa "${nombre}": ámbito de origen inválido`);
+    }
+    if (etapa.origen_tipo && !ORIGENES.includes(etapa.origen_tipo)) {
+      throw new BusinessError(`Etapa "${nombre}": origen de equipos inválido`);
+    }
+    if (etapa.tipo && !MODALIDADES.includes(etapa.tipo)) {
+      throw new BusinessError(`Etapa "${nombre}": modalidad inválida`);
+    }
+    for (const campo of ['clasifican_por_instancia', 'mejores_adicionales', 'territorios_por_instancia']) {
+      const valor = enteroOpcional(etapa[campo]);
+      const minimo = campo === 'mejores_adicionales' ? 0 : 1;
+      if (valor !== null && (!Number.isInteger(valor) || valor < minimo)) {
+        throw new BusinessError(`Etapa "${nombre}": el valor de ${campo} es inválido`);
+      }
+    }
+    const criterios = etapa.criterios_desempate;
+    if (criterios !== undefined && criterios !== null) {
+      if (!Array.isArray(criterios) || criterios.length === 0 || criterios.some((c) => !CRITERIOS.includes(c))) {
+        throw new BusinessError(`Etapa "${nombre}": criterios de desempate inválidos`);
+      }
+    }
   }
 
   _assertNoOverlaps(etapas) {
@@ -64,7 +113,8 @@ class EtapaService {
       fecha_fin: e.fecha_fin || null,
       estado: e.estado || 'Pendiente',
       tipo: e.tipo || null,
-      es_final: e.es_final || false
+      es_final: e.es_final || false,
+      ...reglasDeEtapa(e)
     }));
     const result = await EtapaRepository.createMany(items);
     await bitacoraService.log({
@@ -79,11 +129,9 @@ class EtapaService {
     this._validateEtapas(etapas, torneoFechas);
 
     return await knex.transaction(async (trx) => {
-      // Bloquear las etapas del torneo para prevenir modificaciones concurrentes
       const etapasActuales = await EtapaRepository.findPorTorneoConBloqueo(id_torneo, trx);
       const etapasActualesMap = new Map(etapasActuales.map(e => [e.id_etapa, e]));
 
-      // Validar IDs y pertenencia al torneo
       for (const etapa of etapas) {
         if (etapa.id_etapa !== undefined && etapa.id_etapa !== null) {
           const existente = etapasActualesMap.get(etapa.id_etapa);
@@ -93,15 +141,12 @@ class EtapaService {
         }
       }
 
-      // Identificar etapas omitidas (estan en la BD pero no en la lista recibida)
       const idsRecibidos = new Set(
         etapas.filter(e => e.id_etapa !== undefined && e.id_etapa !== null).map(e => e.id_etapa)
       );
       const etapasOmitidas = etapasActuales.filter(e => !idsRecibidos.has(e.id_etapa));
 
-      // Verificar dependencias de etapas omitidas
       for (const etapa of etapasOmitidas) {
-        // Proteger etapas en curso o finalizadas de eliminacion automatica
         if (etapa.estado === 'En Progreso' || etapa.estado === 'Finalizada') {
           throw new BusinessError(
             `No se puede eliminar la etapa "${etapa.nombre}" porque está ${etapa.estado}. ` +
@@ -130,7 +175,6 @@ class EtapaService {
 
       const resultados = [];
 
-      // Actualizar etapas existentes y insertar nuevas
       for (let idx = 0; idx < etapas.length; idx++) {
         const etapa = etapas[idx];
         const datosEtapa = {
@@ -141,15 +185,14 @@ class EtapaService {
           fecha_fin: etapa.fecha_fin || null,
           estado: etapa.estado || 'Pendiente',
           tipo: etapa.tipo || null,
-          es_final: etapa.es_final || false
+          es_final: etapa.es_final || false,
+          ...reglasDeEtapa(etapa)
         };
 
         if (etapa.id_etapa !== undefined && etapa.id_etapa !== null) {
-          // Actualizar etapa existente conservando su identidad
           const actualizada = await EtapaRepository.updateConTrx(etapa.id_etapa, datosEtapa, trx);
           resultados.push(actualizada[0]);
         } else {
-          // Insertar nueva etapa
           const nueva = await EtapaRepository.createManyConTrx([{
             ...datosEtapa,
             id_torneo
@@ -158,12 +201,10 @@ class EtapaService {
         }
       }
 
-      // Eliminar etapas omitidas sin dependencias
       for (const etapa of etapasOmitidas) {
         await EtapaRepository.deleteConTrx(etapa.id_etapa, trx);
       }
 
-      // Auditar la operación
       await bitacoraService.log({
         userId: context.userId, action: 'ACTUALIZAR_ETAPA', entity: 'Etapa',
         entityId: id_torneo, ip: context.ip, userAgent: context.userAgent,

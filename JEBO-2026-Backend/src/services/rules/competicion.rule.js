@@ -1,10 +1,3 @@
-/**
- * Regla de Competición
- * 
- * Define cómo compiten los participantes (grupos, eliminación, etc).
- * Esta regla responde: "¿Cómo compiten?"
- */
-
 module.exports = function competicionRule(context) {
   const { participants, config } = context;
   const warnings = [];
@@ -14,7 +7,6 @@ module.exports = function competicionRule(context) {
 
   switch (formato) {
     case 'ELIMINACION':
-      // Verificar potencia de 2 o tener_BYE
       if (participants.length < 2) {
         errores.push('Eliminación requiere al menos 2 participantes');
       }
@@ -28,7 +20,6 @@ module.exports = function competicionRule(context) {
       if (participants.length < tamaño) {
         errores.push(`Se necesitan al menos ${tamaño} participantes para formar un grupo`);
       }
-      // Calcular grupos
       const cantidadGrupos = Math.ceil(participants.length / tamaño);
       warnings.push(`Se formarán ${cantidadGrupos} grupos de ~${tamaño} participantes`);
       break;

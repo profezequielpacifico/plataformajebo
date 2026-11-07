@@ -1,9 +1,3 @@
-/**
- * Agrega id_distrito e id_localidad a la tabla equipo.
- * Backfilled desde la institución a la que pertenece cada equipo.
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function (knex) {
   const distritoExists = await knex.schema.hasColumn('equipo', 'id_distrito');
   if (!distritoExists) {
@@ -26,10 +20,6 @@ exports.up = async function (knex) {
     });
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function (knex) {
   await knex.schema.alterTable('equipo', (table) => {
     table.dropColumn('id_distrito');

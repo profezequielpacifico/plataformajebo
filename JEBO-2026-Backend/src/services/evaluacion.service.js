@@ -11,10 +11,6 @@ const bitacoraService = require('./bitacora.service');
 const autorizacionService = require('./autorizacion.service');
 
 class EvaluacionService {
-  /**
-   * Guarda/actualiza la hoja de un juez para un participante
-   * Valida rangos 1-5 y unicidad juez-participante
-   */
   async guardarHoja(data, context = {}) {
     const {
       id_presentacion,
@@ -33,8 +29,6 @@ class EvaluacionService {
       throw new BusinessError('Solo se puede evaluar una presentación EN_CURSO');
     }
 
-    // Verificar que el usuario es juez de esta presentación.
-
     const esJuezDelJurado = await autorizacionService.esJuezDelJurado(id_presentacion, context.userId);
     const esAdmin = autorizacionService.esAdministrador(context.rol);
     if (!esJuezDelJurado && !esAdmin) {
@@ -44,7 +38,6 @@ class EvaluacionService {
     const participante = await PresentacionParticipanteRepository.findById(id_presentacion, id_participante_equipo);
     if (!participante) throw new NotFoundError('Participante no encontrado en esta presentación');
 
-    // Validar rangos (1-5)
     const valores = [coord_1, desem_1, coord_2, desem_2, coord_3, desem_3, coord_4, desem_4];
     for (const v of valores) {
       if (v < 1 || v > 5 || !Number.isInteger(v)) {
@@ -74,7 +67,6 @@ class EvaluacionService {
         id_participante_equipo,
         total_coord: coord_1 + coord_2 + coord_3 + coord_4,
         total_desem: desem_1 + desem_2 + desem_3 + desem_4,
-        // Deja asentado si la hoja la cargo el jurado o el admin: sin esto, una
 
         como_admin: esAdmin && !esJuezDelJurado
       },
@@ -85,28 +77,10 @@ class EvaluacionService {
     return evaluacion;
   }
 
-  /**
-   * Obtiene todas las evaluaciones de un juez en una presentación.
-   *
-   * El `id_juez` lo decide el token, nunca el que pregunta: el unico caller es
-   * `presentacion.controller.getEvaluacionesJuez`, que lo saca de `req.user`. Ese
-   * metodo recibia antes un `?id_juez=` que ganaba sobre el token, y con el
-   * guard ya en su lugar un juez del jurado todavia podia pedir la hoja de otro.
-   *
-   * `getHoja` se borró en F1.5.3. No tenía ni un caller —ni en `src`, ni en
-   * `tests`, ni en `scripts`— y su firma era exactamente la del agujero: un
-   * `id_juez` quezejez recibe de parte de quien llama. Código muerto con esa forma
-   * es una puerta giratoria: el día que alguien lo cablee a un controlador, el
-   * `id_juez` entra desde el body y el problema vuelve sin que nada haya parecido
-   * cambiar. Si alguna vez hace falta, tiene que salir de `context.userId`.
-   */
   async getEvaluacionesPorJuez(id_presentacion, id_juez) {
     return EvaluacionRepository.findByJuez(id_juez, id_presentacion);
   }
 
-  /**
-   * Calcula el resultado final aplicando la fórmula del reglamento
-   */
   async calcularResultado(id_presentacion, context = {}) {
     const presentacion = await PresentacionRepository.findById(id_presentacion);
     if (!presentacion) throw new NotFoundError('Presentación no encontrada');
@@ -140,16 +114,10 @@ class EvaluacionService {
     return resultado;
   }
 
-  /**
-   * Obtiene totales por juez (para verificación)
-   */
   async getTotalesPorJuez(id_presentacion) {
     return EvaluacionRepository.totalesPorJuez(id_presentacion);
   }
 
-  /**
-   * Valida que se puedan cerrar resultados
-   */
   async validarCierre(id_presentacion) {
     const presentacion = await PresentacionRepository.findById(id_presentacion);
     const participantes = await PresentacionParticipanteRepository.findByPresentacion(id_presentacion);

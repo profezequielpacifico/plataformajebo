@@ -10,46 +10,10 @@ import { esAdministrador } from '../../services/roles.js';
 
 const { createElement: h } = React;
 
-/**
- * Pantalla de partido en vivo.
- *
- * La regla del modulo es que nadie escribe un numero de resultado: el marcador
- * es un conteo de los eventos confirmados, asi que lo unico que hace el arbitro
- * es apretar "Gol" y el sistema suma. Si apareciera un input de goles al lado
- * del marcador habria dos fuentes de verdad, que es justo lo que el ledger viene
- * a eliminar. Por eso esta pantalla no tiene —ni deberia tener nunca— un campo
- * numerico de goles.
- *
- * No es la administracion del partido: la programacion, la cancha y los
- * arbitros se editan en la pantalla de partidos. Aqui solo corre el reloj y se
- * escribe el ledger.
- */
-
 const TICK_MS = 1000;
 const RECARGA_MS = 15000;
 
-/**
- * Reloj de partido, contado en local desde la ultima respuesta.
- *
- * Cuando el reloj esta EN_CURSO suma al valor de la respuesta el tiempo
- * transcurrido desde que llego. Cuando esta PAUSADO se queda con el valor tal
- * cual: ese es el sentido de la pausa, y la base hace exactamente lo mismo con
- * `reloj_acumulado_seg` + `now() - reloj_iniciado_en`.
- *
- * No consulta al servidor por segundo. Un GET por minuto multiplica por 60 las
- * consultas para obtener un numero que ya se sabe derivar, y el valor que
- * llega igual viene desfasado: entre una respuesta y la siguiente el numero real
- * ya cambio.
- *
- * `Date.now()` se lee DENTRO del callback del intervalo, nunca durante el
- * render. Con render concurrente, un `Date.now()` leido en render puede
- * pertenecia a una foto que React descarto, y el reloj retrocederia un segundo
- * de forma intermitente — el sintoma clasico de un reloj que a veces salta
- * hacia atras. Leyendolo en el callback, el valor que se pinta es siempre el
- * ultimo que se calculo.
- */
 function useRelojLocal(reloj, base) {
-    // Solo se guarda lo TRANSCURRIDO, que es lo unico que no se deriva de las
 
     const [transcurrido, setTranscurrido] = useState(0);
 
@@ -59,7 +23,6 @@ function useRelojLocal(reloj, base) {
         const tic = () => setTranscurrido(
             Math.max(0, Math.floor((Date.now() - base.recibidoEn) / 1000))
         );
-        // Un tic inmediato: sin el, tras una recarga pasaria hasta un segundo
 
         tic();
         const t = setInterval(tic, TICK_MS);
@@ -71,16 +34,6 @@ function useRelojLocal(reloj, base) {
     return base.segundos + transcurrido;
 }
 
-/**
- * Hora real de un evento, corregida por el desfase contra el servidor.
- *
- * Solo aplica a marcas de tiempo ABSOLUTAS como `hora_real`. Para el reloj de
- * partido no hace falta, y conviene decirlo: `segundos` es una DURACION, y la
- * diferencia entre dos marcas de tiempo no depende de que reloj se use. Donde si
- * importa es en mostrar "20:10" — con un navegador dos minutos desviado, el gol
- * de las 20:10 se veria a las 20:12, que es un horario que no existe y que el
- * arbitro no podria defender en una revision.
- */
 function horaLocal(iso, offset) {
     if (!iso) return '—';
     const d = new Date(new Date(iso).getTime() + offset);
@@ -93,26 +46,13 @@ function formatearReloj(segundos) {
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/**
- * Como se llama una anotacion segun la disciplina.
- *
- * La base guarda `ANOTACION` porque es el termino comun a los deportes;
- * "Gol" y "Punto" son palabras de la disciplina, no del dato. Por eso la
- * resolucion vive aca y no en el servidor: cambiar el nombre de un deporte no
- * deberia requerir una migracion.
- *
- * El nombre de la disciplina es texto libre que escribe un administrador —en la
- * base conviven "Voleibol" y nombres de prueba—, asi que se compara sin
- * acentos y sin distinguir mayusculas. Si no, "Vóley" caeria en la rama de
- * "Gol" y el boton de un deporte de cancha se llamaria igual que el de
- * fútbol: el arbitro leeria "Gol" donde la jugadora hizo un punto.
- */
 function nombreAnotacion(disciplinaNombre) {
     const d = (disciplinaNombre || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
-    if (d.includes('baloncesto') || d.includes('voleibol') || d.includes('voley')) return 'Punto';
+    if (d.includes('softbol')) return 'Carrera';
+    if (['baloncesto', 'basquet', 'basket', 'voleibol', 'voley', 'ringo'].some(n => d.includes(n))) return 'Punto';
     return 'Gol';
 }
 
@@ -132,14 +72,6 @@ const ETIQUETA_RELOJ = {
     FINALIZADO: 'Terminado'
 };
 
-/**
- * Clave de idempotencia de un click.
- *
- * Un doble toque sobre "Gol" tiene que registrar UN gol. La proteccion no es un
- * debounce en el boton —que no evita un reintento de red, solo un segundo
- * toque— sino una clave que viaja al servidor: la base tiene un indice unico
- * parcial sobre ella y el segundo intento devuelve el evento ya creado.
- */
 function nuevaClave() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -149,11 +81,8 @@ function usePartidoLive(matchId) {
     const [live, setLive] = useState(null);
     const [eventos, setEventos] = useState([]);
     const [error, setError] = useState(null);
-    // Para QUE partido se cargo lo de arriba. Es lo que distingue "todavia no
-    // llego nada" de "llego bien": con un `cargando` booleano, cambiar de
 
     const [cargadoPara, setCargadoPara] = useState(null);
-    // Base del reloj y desfase contra el servidor. Se toman ACA, en el momento
 
     const [relojBase, setRelojBase] = useState(null);
     const [offset, setOffset] = useState(0);
@@ -161,7 +90,6 @@ function usePartidoLive(matchId) {
     const cargar = useCallback(async () => {
         if (!matchId) return;
         try {
-            // Las dos peticiones van juntas: el marcador con el evento nuevo y el
 
             const [l, ev] = await Promise.all([
                 matchService.getLive(matchId),
@@ -186,8 +114,6 @@ function usePartidoLive(matchId) {
     useEffect(() => {
         cargar();
     }, [cargar]);
-
-    // Respaldo en segundo plano, no reloj. Trae el marcador y el historial que
 
     useEffect(() => {
         const t = setInterval(cargar, RECARGA_MS);
@@ -228,13 +154,11 @@ function RelojPanel({ reloj, segundos, partido, busy, onAccion }) {
     return h('div', { style: { textAlign: 'center', padding: '10px 0 4px' } },
         h('div', {
             role: 'timer',
-            // "07:01" a secas no dice nada. Con el rotulo, un lector de pantalla
 
             'aria-label': `Tiempo de partido: ${formatearReloj(segundos)}, ${(ETIQUETA_RELOJ[estado] || estado).toLowerCase()}`,
             style: {
                 fontSize: '38px',
                 fontWeight: '800',
-                // `tabular-nums` evita que los digitos cambien de ancho al
 
                 fontVariantNumeric: 'tabular-nums',
                 color: estado === 'EN_CURSO' ? '#16a34a' : '#6b7280'
@@ -265,16 +189,6 @@ function BotonAnotacion({ equipo, disabled, onClick }) {
     }, `${equipo}`);
 }
 
-/**
- * Quien carga un evento, que no es lo mismo que quien lo arbitra.
- *
- * Un arbitro asignado queda como arbitro del evento y el nombre se muestra
- * directo. Cuando lo cargo un Administrador no hay arbitro —no esta en el
- * staff de ese partido—, pero SI sabemos quien escribio, asi que se muestra su
- * nombre anotando que lo hizo como administrador. Poner "sin arbitro" ahi seria
- * verdad a medias: ocultaria justo el dato que sirve para reconstruir una
- * carga dudosa.
- */
 function columnaQuien(ev) {
     if (ev.arbitro_nombre) return ev.arbitro_nombre;
     if (ev.registrado_por_nombre) {
@@ -302,7 +216,6 @@ function TablaEventos({ eventos, anotacion, offset, busy, onAnular }) {
             h(TableHeaderCell, null, 'Estado'),
             h(TableHeaderCell, null, '')
         ),
-        // Llegan del mas nuevo al mas viejo: el arbitro quiere ver arriba lo
 
         eventos.map(ev => h(TableRow, { key: ev.id_evento },
             h(TableCell, { style: { color: '#9ca3af' } }, `#${ev.numero_evento}`),
@@ -424,8 +337,6 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
     const cerrado = partido.estado === 'Finalizado' || partido.estado === 'Cancelado';
     const jugable = partido.estado === 'En Juego' && !cerrado;
 
-    // El aviso de "no hay arbitros" solo le aplica a quien NO puede registrar.
-
     const esAdmin = esAdministrador(user);
     const sinArbitros = (live.arbitros || []).length === 0;
     const avisoSinArbitros = sinArbitros && !esAdmin;
@@ -466,7 +377,6 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
 
         h(Card, { style: { marginBottom: '16px' } },
             h('div', {
-                // El rotulo no es decorativo: sin el, un lector de pantalla
 
                 role: 'status',
                 'aria-live': 'polite',
@@ -488,7 +398,7 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
 
             h('div', {
                 style: { textAlign: 'center', fontSize: '11px', color: '#9ca3af', paddingBottom: '6px' }
-            }, `El marcador se cuenta solo: cada ${anotacion.toLowerCase()} registrado suma uno. No se escribe a mano.`),
+            }, 'El marcador se cuenta solo: cada anotación registrada suma uno. No se escribe a mano.'),
 
             h(RelojPanel, {
                 reloj, segundos, partido, busy, onAccion: accionReloj
@@ -534,7 +444,7 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
             h(CardHeader, { title: 'Cerrar el resultado' }),
             h('div', { style: { fontSize: '13px', color: '#4b5563', marginBottom: '12px' } },
                 'Cerrar el resultado congela el marcador derivado y deja registrado quien lo cerro. ',
-                h('strong', null, 'No escribe los goles'),
+                h('strong', null, 'No escribe el resultado'),
                 ': los toma del ledger. Despues solo falta finalizar el partido desde la pantalla de partidos.'),
             h('button', {
                 style: styles.buttonSuccess,
@@ -562,7 +472,7 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
                     value: motivo,
                     maxLength: 500,
                     autoFocus: true,
-                    placeholder: 'Por ejemplo: gol en propia',
+                    placeholder: 'Por ejemplo: cargado por error',
                     onChange: (e) => setMotivo(e.target.value),
                     style: styles.formInput
                 }),

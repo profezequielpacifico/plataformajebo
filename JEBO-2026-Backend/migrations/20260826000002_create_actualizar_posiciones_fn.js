@@ -1,10 +1,3 @@
-/**
- * Crea la función almacenada actualizar_posiciones(id_torneo, id_etapa).
- * Recalcula la tabla posicion a partir de los partidos finalizados.
- * Usada en posicion.repository.js → recalcular()
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function up(knex) {
   await knex.raw(`
     CREATE OR REPLACE FUNCTION actualizar_posiciones(p_id_torneo INT, p_id_etapa INT)
@@ -52,10 +45,6 @@ exports.up = async function up(knex) {
   `);
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function down(knex) {
   await knex.raw('DROP FUNCTION IF EXISTS actualizar_posiciones(INT, INT)');
 };

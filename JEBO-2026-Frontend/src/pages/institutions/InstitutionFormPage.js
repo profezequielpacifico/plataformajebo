@@ -58,7 +58,7 @@ export function InstitutionFormPage({ onNavigate, pageParams }) {
         const payload = {
             nombre: formData.nombre,
             id_distrito: formData.id_distrito,
-            id_localidad: formData.id_localidad,
+            id_localidad: formData.id_localidad || null,
             tipo: formData.tipo,
             direccion: formData.direccion,
             telefono: formData.telefono

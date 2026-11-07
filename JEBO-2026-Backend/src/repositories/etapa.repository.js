@@ -18,7 +18,6 @@ module.exports = {
   ...crud('etapa', 'id_etapa'),
   deleteByTorneo: (id_torneo) => knex('etapa').where('id_torneo', id_torneo).del(),
 
-  // Métodos que soportan transacciones para syncForTorneo
   findByIdConTorneo: (id_etapa, id_torneo, trx = knex) =>
     trx('etapa').where({ id_etapa, id_torneo }).first(),
 

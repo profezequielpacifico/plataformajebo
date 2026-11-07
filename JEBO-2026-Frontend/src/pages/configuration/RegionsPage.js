@@ -67,13 +67,13 @@ export function RegionsPage({ onNavigate }) {
 
         h(Card, null,
             h(CardHeader, { title: 'Regiones' },
-                h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+                h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
                     h('input', {
                         type: 'text',
                         placeholder: 'Buscar región...',
                         value: search,
                         onChange: (e) => setSearch(e.target.value),
-                        style: { ...styles.formInput, width: '200px', marginBottom: 0 }
+                        style: { ...styles.formInput, width: '200px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
                     }),
                     h('button', {
                         style: styles.buttonPrimary,

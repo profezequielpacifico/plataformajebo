@@ -18,8 +18,6 @@ describe('Competencia Repositories - Integración', () => {
   const SUFIJO = Date.now();
 
   beforeAll(async () => {
-    // Crear cadena de dependencias completa usando SQL directo
-    // Nota: en JEBO, distrito NO tiene id_region (la relación territorial es vía localidad)
     const [distrito] = await knex.raw(
       `INSERT INTO distrito (nombre) VALUES (?) RETURNING id_distrito`,
       [`Test Distrito ${SUFIJO}`]
@@ -38,7 +36,6 @@ describe('Competencia Repositories - Integración', () => {
     ).then(r => r.rows);
     institucionId = institucion.id_institucion;
 
-    // usuario requiere: documento (NOT NULL), token_version (NOT NULL DEFAULT 1)
     const [usuario] = await knex.raw(
       `INSERT INTO usuario (nombre, email, password_hash, id_rol, documento, token_version)
        VALUES (?, ?, 'hash', 1, ?, 1) RETURNING id_usuario`,
@@ -46,7 +43,6 @@ describe('Competencia Repositories - Integración', () => {
     ).then(r => r.rows);
     usuarioId = usuario.id_usuario;
 
-    // equipo requiere: id_institucion, id_disciplina, id_usuario (todas NOT NULL FK)
     const [equipo] = await knex.raw(
       `INSERT INTO equipo (nombre, colores, id_institucion, id_disciplina, id_usuario)
        VALUES (?, '#000000', ?, ?, ?) RETURNING id_equipo`,
@@ -56,7 +52,6 @@ describe('Competencia Repositories - Integración', () => {
   });
 
   afterAll(async () => {
-    // Limpiar en orden inverso (respetando FKs)
     await knex('etapa_participante').del();
     await knex('etapa_restriccion').del();
     await knex('etapa_regla').del();
@@ -195,7 +190,6 @@ describe('Competencia Repositories - Integración', () => {
           throw new Error('Error forzado');
         });
       } catch (e) {
-        // Esperado
       }
 
       const finalCount = await knex('competencia').count('* as count').first();

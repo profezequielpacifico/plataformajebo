@@ -1,13 +1,8 @@
 const { validationResult } = require('express-validator');
 const router = require('../../src/routes/partido.routes');
 
-// La cadena exacta que corre en `PUT /matches/:id`, no una copia. Probar el
-// valor de `""` por HTTP necesitaria fixtures de torneo, equipos inscriptos y
-// disponibilidad en la base de test; la validacion en si no toca la base, asi
-// que se prueba sola.
 const { VALIDACION_UPDATE } = router;
 
-/** Corre la cadena contra un body y devuelve los mensajes de error. */
 async function errores(body) {
   const req = { body };
   for (const chain of VALIDACION_UPDATE) {
@@ -17,17 +12,6 @@ async function errores(body) {
 }
 
 describe('PUT /matches/:id — validacion del body', () => {
-  // El bug: un `<select>` sin opcion elegida viaja como `""`, no como `null`.
-  // `optional()` acepta `undefined` y `optional({ nullable: true })` acepta
-  // `null`, pero ninguno de los dos acepta `""`, asi que `isInt()` lo rechazaba
-  // con un 400 cuyo mensaje era literalmente "Invalid value": no decia que
-  // campo fallo, ni por que, ni que deberia mandarse vacio.
-  //
-  // Y no era teorico. El formulario de edicion mandaba SIEMPRE `id_cancha: ""`,
-  // porque `GET /matches/:id` no devolvia ese campo (la cancha vive en
-  // `disponibilidad_cancha`, no en `partido`). O sea que editar un partido no
-  // funcionaba, con cancha o sin cancha, y el mensaje que aparecia no daba
-  // ninguna pista.
   describe('el vacio de un formulario', () => {
     it('acepta id_cancha vacio', async () => {
       expect(await errores({ id_cancha: '' })).toEqual([]);
@@ -38,8 +22,6 @@ describe('PUT /matches/:id — validacion del body', () => {
     });
 
     it('acepta los demas ids vacios, que el formulario tambien manda como texto', async () => {
-      // `mapMatchToFormData` convierte todo a String, asi que un select sin
-      // opcion elegida produce "" en cada uno de estos campos.
       expect(await errores({
         id_torneo: '',
         id_equipo_local: '',
@@ -54,8 +36,6 @@ describe('PUT /matches/:id — validacion del body', () => {
   });
 
   describe('lo que si tiene que rechazar', () => {
-    // Que `checkFalsy` sea tolerante con `""` no puede volverse tolerancia con
-    // cualquier basura. Este es el limite de la concession.
     it('rechaza un id_cancha que no es un numero', async () => {
       expect(await errores({ id_cancha: 'no-es-un-id' })).not.toEqual([]);
     });
@@ -88,8 +68,6 @@ describe('PUT /matches/:id — validacion del body', () => {
     });
 
     it('acepta arbitros como arreglo, includedo el vacio', async () => {
-      // `[]` es truthy, asi que `checkFalsy` no lo descarta: vaciar la lista de
-      // arbitros tiene que seguir llegando al servicio para que la borre.
       expect(await errores({ arbitros: [] })).toEqual([]);
       expect(await errores({ arbitros: [22] })).toEqual([]);
     });

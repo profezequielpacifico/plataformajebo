@@ -8,19 +8,12 @@ const knex = require('../../src/config/knex');
 const { ForbiddenError, NotFoundError, BusinessError } = require('../../src/utils/errors');
 const { ROLES, ESTADOS_PRESENTACION } = require('../../src/constants');
 
-// La autorizacion de recurso es la unica regla que combina rol + fila +
-// asignacion. Se aislan los repositorios y knex para ejercitar cada rama sin
-// Postgres: lo que se prueba es la decision, no el SQL.
 jest.mock('../../src/repositories', () => ({
   PresentacionRepository: { findById: jest.fn() },
   StaffPartidoRepository: { findByPartido: jest.fn() },
   StaffPresentacionRepository: { findById: jest.fn() }
 }));
 
-// `autorizacion.service` toca el driver de dos formas: `knex('equipo').where(...).first()`
-// (un equipo puntual) y `knex('equipo').whereIn(...).select(...)` (un lote). El
-// mock es una cadena que devuelve siempre el mismo builder, y el builder es
-// awaitable, asi que las dos formas funcionan sin branching en el mock.
 jest.mock('../../src/config/knex', () => {
   const consulta = jest.fn();
   const builder = {};
@@ -33,7 +26,6 @@ jest.mock('../../src/config/knex', () => {
   const fn = jest.fn(() => builder);
   fn.__consulta = consulta;
   fn.__builder = builder;
-  // Nombre viejo, que usan los tests de equipo puntual.
   fn.__first = consulta;
   return fn;
 });
@@ -212,16 +204,7 @@ describe('autorizacion.service', () => {
     });
   });
 
-  /**
-   * El lote de inscripciones es el caso donde el permiso NO depende de que haya
-   * un id en la ruta: `POST /teams/enroll-batch` no tiene `:id` y sin embargo la
-   * propiedad de los equipos sigue mandando. La regla que se prueba es
-   * "todo o nada": si uno solo es ajeno, no se inscribe ninguno.
-   */
   describe('assertGestionarEquiposPropiosBatch', () => {
-    // El servicio recibe SOLO los ids de equipo: lo demas del lote (el torneo,
-    // el estado) es validacion de negocio, y mezclarla con el permiso haria que
-    // un error de dato se reportara como un error de permisos.
     it('el Administrador pasa sin consultar los propietarios', async () => {
       await expect(autorizacionService.assertGestionarEquiposPropiosBatch(ADMIN, [1, 2, 3])).resolves.toBe(true);
       expect(knex.__consulta).not.toHaveBeenCalled();
@@ -243,8 +226,6 @@ describe('autorizacion.service', () => {
     });
 
     it('compara los propietarios como string: el id del body es texto', async () => {
-      // `req.body` llega como texto y `id_usuario` vuelve del driver como
-      // entero. Con `!==` el `9 !== '9'` rechazaba al dueño legítimo.
       knex.__consulta.mockResolvedValue([
         { id_equipo: '1', id_usuario: '9' },
         { id_equipo: '2', id_usuario: 9 }
@@ -276,16 +257,12 @@ describe('autorizacion.service', () => {
     });
 
     it('la inexistencia se detecta antes que la propiedad', async () => {
-      // Un id que no existe no puede ser "ajeno" ni "propio". Si el orden fuera
-      // al reves, el mensaje seria de propiedad y confirmaria que el id existe.
       knex.__consulta.mockResolvedValue([]);
       await expect(autorizacionService.assertGestionarEquiposPropiosBatch(PROFESOR, [404]))
         .rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('un lote vacio es un error de negocio, no un exito silencioso', async () => {
-      // Un 200 con `0 equipos inscritos` no le dice nada al que lo pidio: parece
-      // que funciono. El mensaje obliga a mirar el body.
       await expect(autorizacionService.assertGestionarEquiposPropiosBatch(PROFESOR, []))
         .rejects.toBeInstanceOf(BusinessError);
       await expect(autorizacionService.assertGestionarEquiposPropiosBatch(PROFESOR, undefined))
@@ -294,9 +271,6 @@ describe('autorizacion.service', () => {
     });
 
     it('para el Administrador el lote vacio no es un problema', async () => {
-      // El admin no tiene la restriccion de propiedad, asi que un lote vacio es
-      // un no-op legitimo. La validacion de negocio del equipo (torneo inexistente,
-      //etc.) la hace `_assertRegistration` para todos los roles.
       await expect(autorizacionService.assertGestionarEquiposPropiosBatch(ADMIN, [])).resolves.toBe(true);
     });
 

@@ -193,7 +193,6 @@ export function CalendarField({ value, onChange, rangeStart, rangeEnd, disabled,
         if (!Array.isArray(extraRanges)) return null;
         const d = new Date(year, month, dayNum);
         for (const r of extraRanges) {
-            // Un rango puede venir definido por cualquiera de sus dos extremos.
             if (!r || (!r.start && !r.end)) continue;
             const rs = parseD(r.start);
             const re = parseD(r.end);
@@ -266,7 +265,6 @@ export function CalendarField({ value, onChange, rangeStart, rangeEnd, disabled,
             disabled,
             style: inputStyle,
             onClick: () => { if (!disabled) setOpen(true); },
-            // El foco tambien abre: en el input readOnly es el unico disparador
 
             onFocus: () => { if (!disabled) setOpen(true); }
         }),

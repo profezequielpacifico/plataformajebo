@@ -14,8 +14,8 @@ class InstitucionService {
   }
 
   async create(data, context = {}) {
-    const existing = await InstitucionRepository.findByName(data.nombre);
-    if (existing) throw new BusinessError('La institución ya existe');
+    const existing = await InstitucionRepository.findByName(data.nombre, data.id_distrito);
+    if (existing) throw new BusinessError('La institución ya existe en ese distrito');
     const result = await InstitucionRepository.create(data);
     await bitacoraService.log({
       userId: context.userId, action: 'CREAR_INSTITUCION', entity: 'Institucion',
@@ -25,14 +25,14 @@ class InstitucionService {
   }
 
   async update(id, data, context = {}) {
-    await this.findById(id, context);
-    if (data.nombre) {
-      const existing = await InstitucionRepository.findByName(data.nombre);
-      // La comparacion va por `String`: `id` viene de `req.params` y es texto,
-      // mientras que `existing.id_institucion` vuelve del driver como entero.
-
+    const actual = await this.findById(id, context);
+    if (data.nombre || data.id_distrito) {
+      const existing = await InstitucionRepository.findByName(
+        data.nombre || actual.nombre,
+        data.id_distrito || actual.id_distrito
+      );
       if (existing && String(existing.id_institucion) !== String(id)) {
-        throw new BusinessError('La institución ya existe');
+        throw new BusinessError('La institución ya existe en ese distrito');
       }
     }
     const result = await InstitucionRepository.update(id, data);

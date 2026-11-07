@@ -8,7 +8,6 @@ module.exports = {
   update: (id, data) => knex('competencia').where({ id_competencia: id }).update(data).returning('*'),
   delete: (id) => knex('competencia').where({ id_competencia: id }).del().returning('*'),
 
-  // Métodos con transacción
   createConTrx: (data, trx = knex) => trx('competencia').insert(data).returning('*'),
   updateConTrx: (id, data, trx = knex) => trx('competencia').where({ id_competencia: id }).update(data).returning('*'),
   findByIdConTrx: (id, trx = knex) => trx('competencia').where({ id_competencia: id }).first()

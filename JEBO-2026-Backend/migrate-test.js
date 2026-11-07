@@ -2,7 +2,6 @@ const knexLib = require('knex');
 const path = require('path');
 const fs = require('fs');
 
-// Leer .env manualmente
 const envPath = path.join(__dirname, 'src/config/.env');
 const envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
 const vars = {};

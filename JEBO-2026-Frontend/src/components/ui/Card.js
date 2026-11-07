@@ -10,7 +10,7 @@ export function Card({ children, style = {} }) {
 export function CardHeader({ title, children }) {
     return h('div', { style: styles.cardHeader },
         h('h2', { style: styles.cardTitle }, title),
-        children
+        children && h('div', { style: styles.cardHeaderActions }, children)
     );
 }
 

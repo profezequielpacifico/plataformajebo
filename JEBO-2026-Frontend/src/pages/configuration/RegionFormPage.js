@@ -76,7 +76,7 @@ export function RegionFormPage({ onNavigate }) {
                 ),
 
             ),
-            h('div', { style: { marginTop: '24px', display: 'flex', gap: '12px' } },
+            h('div', { style: { marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' } },
                 h('button', { type: 'submit', style: styles.buttonPrimary }, h(IconSave), 'Guardar'),
                 h('button', { type: 'button', style: styles.buttonOutline, onClick: handleClear }, 'Limpiar'),
                 h('button', { type: 'button', style: styles.buttonOutline, onClick: () => onNavigate('regions') }, 'Cancelar')

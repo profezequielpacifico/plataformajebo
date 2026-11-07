@@ -10,9 +10,6 @@ jest.mock('../../src/middleware/login-lockout', () => ({
 }));
 jest.mock('../../src/services/bitacora.service', () => ({ log: jest.fn() }));
 
-// Estos endpoints son la unica via para levantar un lockout: si el controlador
-// no distingue cuenta de IP, el admin tendria que saber de que IP vino el
-// intento, que es justamente lo que el lockout por cuenta vino a evitar.
 describe('login-lockout.controller', () => {
   const reqFalso = (params = {}, extra = {}) => ({
     params,
@@ -78,8 +75,6 @@ describe('login-lockout.controller', () => {
     });
 
     it('limpiar por cuenta borra los bloqueos de todas las IP del usuario', async () => {
-      // La diferencia clave con un limite por IP: el admin levanta la cuenta
-      // entera, no hace falta saber desde que IP se Miguelo.
       loginLockout.limpiarPorIdentificador.mockResolvedValue(4);
       const res = resFalso();
 

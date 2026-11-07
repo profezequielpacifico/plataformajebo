@@ -6,30 +6,6 @@ const crypto = require('crypto');
 const { contrasenaDePrueba } = require('../helpers/credentials');
 const { accessTokenDe } = require('../helpers/cookies');
 
-/**
- * `POST /teams`: el alta propia del Profesor y sus reglas.
- *
- * Hasta ahora el alta era `requireAdminOrAbove` mientras el formulario de
- * "Alta de Equipo" ya se mostraba al Profesor en el dashboard: el boton
- * existia y la API lo rechazaba con 403. El guard paso a
- * `gestionarEquipoPropio` (en el alta sin `:id` alcanza con el nivel: la fila
- * todavia no existe) y las reglas viven en `equipo.service.create`:
- *
- *  1. El equipo queda a nombre del Profesor que lo crea, aunque el body mande
- *     otro `id_usuario`: si el dueno lo eligiera el que teclea, las reglas de
- *     mas abajo se saltarian con un id ajeno.
- *  2. Solo en una institucion que ya es suya (`usuario_institucion`). El
- *     formulario ya llega recortado por alcance (X-05), pero el backend no se
- *     apoya en el cliente para el tenant.
- *  3. Maximo 3 equipos y nombre unico entre los suyos. Aplica por DUENIO, no
- *     por quien teclea: un Administrador tampoco pasa el limite a nombre de un
- *     Profesor.
- *
- * Es extremo a extremo a proposito: guard de la ruta, servicio y repositorio
- * son una sola regla, y un test de servicio que se armara el `req` a mano
- * pasaria con el cable entre las tres piezas desconectado.
- */
-
 const sufijo = crypto.randomBytes(6).toString('hex');
 const TAG = `altaprof_${sufijo}`;
 
@@ -122,8 +98,6 @@ beforeAll(async () => {
   Object.assign(admin, await crearUsuarioConToken(ROL.ADMIN));
   Object.assign(arbitro, await crearUsuarioConToken(ROL.ARBITRO));
 
-  // Solo `profesor` pertenece a `instPropia`; los otros dos Profesores quedan
-  // deliberadamente sin institucion para cubrir las dos caras de la regla.
   await dbQuery(
     'INSERT INTO usuario_institucion (id_usuario, id_institucion) VALUES ($1, $2)',
     [profesor.id, instPropia]
@@ -131,9 +105,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // El orden lo impone la FK: `usuario_institucion` cuelga de `usuario` e
-  // `institucion`, y `bitacora` de `usuario`. Sin este orden el cleanup aborta
-  // y la suite deja fixtures colgadas en la base de test.
   await dbQuery('DELETE FROM equipo WHERE nombre LIKE $1', [`${TAG}%`]);
   await dbQuery(
     'DELETE FROM usuario_institucion WHERE id_usuario IN (SELECT id_usuario FROM usuario WHERE email LIKE $1)',

@@ -1,33 +1,18 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { TournamentFormPage } from '../../../src/pages/tournaments/TournamentFormPage.js';
 import disciplineService from '../../../src/services/disciplineService.js';
 import tournamentService from '../../../src/services/tournamentService.js';
 import { stageService } from '../../../src/services/stageService.js';
 
-// La pagina es un wizard de 3 pasos. Los tests la manejan como la maneja el
-// usuario: escribir en los campos y avanzar de paso. CalendarField se mockea
-// porque es un calendario propio y su cobertura va en su propio archivo.
-// La pagina monta los CalendarField en orden: inicio y fin del torneo en el
-// paso 1, e inicio y fin de inscripcion en el paso 2. El mock lleva un contador
-// para poder referirse a cada uno por posicion.
-// La pagina pasa withTime a los campos de inscripcion: es la unica distincion
-// fiable, porque el orden de montaje cambia con el paso del wizard.
-// La pagina pasa withTime a los campos de inscripcion: es la unica distincion
-// estable, porque el orden de montaje cambia con el paso del wizard. Los testid
-// quedan "torneo-0/1" para las fechas del torneo e "inscripcion-0/1" para las
-// de inscripcion.
 vi.mock('../../../src/components/ui/CalendarField.js', () => {
   const { createElement: h, useRef } = globalThis.React;
   const vistos = { con: 0, sin: 0 };
   return {
     __reiniciar: () => { vistos.con = 0; vistos.sin = 0; },
     CalendarField: ({ value, onChange, disabled, withTime }) => {
-      // El nombre se fija en el primer render de cada instancia. Si se calculara
-      // en cada render, el contador avanzaria con cada tecla y el campo dejaria
-      // de encontrarse por testid.
       const ref = useRef(null);
       if (ref.current === null) {
         ref.current = withTime ? `inscripcion-${vistos.con++}` : `torneo-${vistos.sin++}`;
@@ -72,10 +57,8 @@ const ETAPAS = [
   { id_etapa: 1, nombre: 'Local', descripcion: 'Primera etapa', fecha_inicio: '2026-03-01', fecha_fin: '2026-04-01', orden: 1, estado: 'Pendiente' }
 ];
 
-/** Fecha local ISO sin zona, que es el formato que espera el campo de texto. */
 const local = (yyyy_mm_dd, hhmm = '10:00') => `${yyyy_mm_dd}T${hhmm}`;
 
-/** Momento desplazado X dias desde ahora, en formato de campo de texto. */
 const relativo = (dias, hhmm = '10:00') => {
   const d = new Date();
   d.setDate(d.getDate() + dias);
@@ -88,38 +71,23 @@ const hace = (dias) => relativo(-dias, '10:00');
 const NOMBRE_ETAPA = 'Ej: Local, Distrital, Regional...';
 const DESCRIPCION_ETAPA = 'Descripción opcional de la etapa';
 
-/**
- * Abre el editor de la etapa que esta en la posicion `indice` y devuelve su
- * input de nombre, que es el primero que aparece en el modal.
- */
 const abrirEditorEtapa = async (user, indice) => {
   await user.click(screen.getAllByRole('button', { name: /editar/i })[indice]);
   return screen.findByPlaceholderText(NOMBRE_ETAPA);
 };
 
-/**
- * Los botones del modal se distinguen de los de la pagina por su posicion: la
- * pagina dibuja primero sus propios botones y despues los modales, asi que el
- * ultimo que aparece con ese nombre es el del modal abierto.
- */
 const botonDelModal = (nombre) => {
   const botones = screen.getAllByRole('button', { name: nombre });
   return botones[botones.length - 1];
 };
 
-/** Confirma el editor de etapa: el modal lo llama solo "Guardar". */
 const guardarEtapa = (user) => user.click(botonDelModal('Guardar'));
 
-/**
- * En el paso 3 los unicos CalendarField sin hora visibles son los del editor de
- * etapa, asi que se toman del final de la lista.
- */
 const fechasDeEtapa = () => {
   const campos = screen.getAllByTestId(/^torneo-/);
   return { inicio: campos[campos.length - 2], fin: campos[campos.length - 1] };
 };
 
-/** Carga nombre, fechas y descripcion en la etapa `indice` y la guarda. */
 const completarEtapa = async (user, indice, nombre, inicio, fin, descripcion) => {
   const campo = await abrirEditorEtapa(user, indice);
   await user.clear(campo);
@@ -138,17 +106,11 @@ const completarEtapa = async (user, indice, nombre, inicio, fin, descripcion) =>
   await guardarEtapa(user);
 };
 
-/** Deja el paso 1 completo y listo para avanzar al paso 2. */
 const completarPaso1 = async (user) => {
   await user.type(screen.getByPlaceholderText('Ej: Juegos Bonaerenses 2026'), 'Torneo Nuevo');
   await user.selectOptions(screen.getByDisplayValue('Seleccionar disciplina...'), '1');
 };
 
-/**
- * Escribe el periodo de inscripcion del paso 2 y avanza al paso 3.
- * Los CalendarField se identifican por posicion: 0 y 1 son las fechas del
- * torneo (paso 1), 2 y 3 las de inscripcion (paso 2).
- */
 const completarPaso2 = async (user, inicio = '2026-02-01T10:00', fin = '2026-02-20T18:00') => {
   await user.type(screen.getByTestId('inscripcion-0'), inicio);
   await user.type(screen.getByTestId('inscripcion-1'), fin);
@@ -178,7 +140,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('no pide el torneo al crear', async () => {
-      // En alta no hay id todavia: pedirlo seria un 404 garantizado.
       renderPage();
       await screen.findByRole('option', { name: 'Fútbol 5' });
       expect(tournamentService.getById).not.toHaveBeenCalled();
@@ -191,8 +152,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('no muestra spinner en el alta, que no tiene nada que cargar', async () => {
-      // En alta loading arranca en false: el formulario se pinta de entrada y
-      // los selects se van llenando solos.
       renderPage();
       await screen.findByRole('option', { name: 'Fútbol 5' });
       expect(screen.queryByText('Cargando...')).not.toBeInTheDocument();
@@ -208,7 +167,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('mapea edicion a categoria', async () => {
-      // El formulario llama "edicion" a lo que la API llama "categoria".
       renderPage({ pageParams: { id: 5 } });
       expect(await screen.findByDisplayValue('Senior')).toBeInTheDocument();
     });
@@ -260,9 +218,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('muestra el spinner al editar hasta que carga', async () => {
-      // Nada resuelve: la pagina queda esperando el torneo, que es lo que
-      // dispara el spinner. Las otras peticiones tampoco resuelven para que no
-      // haya actualizaciones de estado despues de terminado el test.
       const pendiente = () => new Promise(() => {});
       tournamentService.getById.mockReturnValue(pendiente());
       disciplineService.getAll.mockReturnValue(pendiente());
@@ -286,8 +241,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('la edicion tiene un valor por defecto', async () => {
-      // El año viene precargado como 2026: el usuario no deberia tener que
-      // escribirlo cada año.
       renderPage();
       expect(await screen.findByDisplayValue('2026')).toBeInTheDocument();
     });
@@ -344,8 +297,6 @@ describe('TournamentFormPage', () => {
   });
 
   describe('estado derivado del torneo', () => {
-    // El estado se calcula de las fechas, no se elige a mano: asi el admin no
-    // puede dejar un torneo terminado marcado como en curso.
     const estadoVisible = () => screen.getByText(/^(Programado|Pendiente|En Progreso|Finalizado)$/);
 
     it('un torneo con fecha de inicio futura esta programado', async () => {
@@ -406,8 +357,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('exige que las inscripciones cierren antes del torneo', async () => {
-      // Si las inscripciones cerraran despues de que arranque el torneo, los
-      // equipos se anotarian con el torneo ya empezado.
       const user = userEvent.setup();
       renderPage();
       await screen.findByRole('option', { name: 'Fútbol 5' });
@@ -451,7 +400,6 @@ describe('TournamentFormPage', () => {
       await user.click(screen.getByRole('button', { name: /siguiente/i }));
       await screen.findByRole('heading', { name: 'Fechas Inscripción de Equipos' });
 
-      // Sin las dos fechas no se muestra ningun estado.
       expect(screen.queryByText(/^Inscripciones (abiertas|pendientes|cerradas)$/)).not.toBeInTheDocument();
 
       const escribirPeriodo = async (desde, hasta) => {
@@ -461,15 +409,12 @@ describe('TournamentFormPage', () => {
         await user.type(screen.getByTestId('inscripcion-1'), hasta);
       };
 
-      // Ambas fechas en el futuro todavia no abrio el periodo.
       await escribirPeriodo(relativo(20), relativo(30));
       expect(screen.getByText('Inscripciones pendientes')).toBeInTheDocument();
 
-      // Periodo en curso.
       await escribirPeriodo(ayer(), manana());
       expect(screen.getByText('Inscripciones abiertas')).toBeInTheDocument();
 
-      // Periodo ya vencido.
       await escribirPeriodo(hace(40), hace(30));
       expect(screen.getByText('Inscripciones cerradas')).toBeInTheDocument();
     });
@@ -554,7 +499,6 @@ describe('TournamentFormPage', () => {
     it('rechaza dos etapas con periodos superpuestos', async () => {
       const user = userEvent.setup();
       await irAPaso3(user);
-      // Dos etapas que se pisan hacen imposible generar el fixture.
       await completarEtapa(user, 0, 'Local', relativo(10), relativo(20));
       await user.click(screen.getByRole('button', { name: /agregar etapa/i }));
       await completarEtapa(user, 1, 'Regional', relativo(15), relativo(25));
@@ -583,7 +527,6 @@ describe('TournamentFormPage', () => {
       await user.clear(await screen.findByPlaceholderText(NOMBRE_ETAPA));
       await guardarEtapa(user);
 
-      // El editor sigue abierto: un nombre vacio no puede guardarse.
       expect(screen.getByPlaceholderText(NOMBRE_ETAPA)).toBeInTheDocument();
     });
 
@@ -600,8 +543,6 @@ describe('TournamentFormPage', () => {
     it('marca la etapa para borrar y permite deshacerlo', async () => {
       const user = userEvent.setup();
       await irAPaso3(user);
-      // Con una sola etapa no hay boton eliminar: el torneo tiene que conservar
-      // al menos una.
       await completarEtapa(user, 0, 'Local', relativo(10), relativo(20));
       await user.click(screen.getByRole('button', { name: /agregar etapa/i }));
       await completarEtapa(user, 1, 'Regional', relativo(21), relativo(30));
@@ -636,8 +577,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('una etapa marcada para borrar no se manda al backend', async () => {
-      // Se marca en vez de borrarse para poder deshacer: el payload lleva solo
-      // las etapas que quedan.
       const user = userEvent.setup();
       const onNavigate = vi.fn();
       renderPage({ onNavigate });
@@ -684,7 +623,6 @@ describe('TournamentFormPage', () => {
 
       await waitFor(() => expect(tournamentService.create).toHaveBeenCalled());
       const payload = tournamentService.create.mock.calls[0][0];
-      // Los ids llegan como string del <select> y se mandan como int.
       expect(payload).toMatchObject({
         nombre: 'Torneo Nuevo',
         categoria: '2026',
@@ -716,8 +654,6 @@ describe('TournamentFormPage', () => {
     });
 
     it('el payload conserva el id de las etapas que ya existen', async () => {
-      // Si se perdiera el id_etapa, el backend crearia etapas duplicadas en
-      // vez de actualizar las existentes.
       const user = userEvent.setup();
       renderPage({ pageParams: { id: 5 } });
       await screen.findByDisplayValue('Torneo Otoño');
@@ -803,8 +739,6 @@ describe('TournamentFormPage', () => {
       await screen.findByText('Confirmar cambios del torneo');
       await user.click(botonDelModal('Guardar cambios'));
 
-      // Sin mensaje del backend, el alert se arma con el titulo y el mensaje
-      // por defecto, asi que el texto aparece dos veces.
       expect((await screen.findAllByText('Error al guardar')).length).toBe(2);
     });
   });
@@ -831,6 +765,171 @@ describe('TournamentFormPage', () => {
 
       expect(onNavigate).toHaveBeenCalledWith('tournaments');
       expect(tournamentService.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('zona horaria de Argentina con el navegador en otra zona', () => {
+    beforeEach(() => {
+      vi.stubEnv('TZ', 'Asia/Tokyo');
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+    });
+
+    const fijarAhora = (iso) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(iso));
+    };
+
+    const llegarAPaso2 = async (user) => {
+      await screen.findByRole('option', { name: 'Fútbol 5' });
+      await completarPaso1(user);
+      await user.click(screen.getByRole('button', { name: /siguiente/i }));
+      await screen.findByRole('heading', { name: 'Fechas Inscripción de Equipos' });
+    };
+
+    it('envia la inscripcion cargada como hora de Argentina', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await llegarAPaso2(user);
+      await completarPaso2(user, '2026-11-04T00:00', '2026-11-05T20:00');
+      await completarEtapa(user, 0, 'Local', relativo(10), relativo(20));
+      await user.click(screen.getByRole('button', { name: /finalizar/i }));
+      await screen.findByText('Confirmar creación del torneo');
+      await user.click(botonDelModal('Crear Torneo'));
+
+      await waitFor(() => expect(tournamentService.create).toHaveBeenCalled());
+      expect(tournamentService.create.mock.calls[0][0]).toMatchObject({
+        fecha_inscripcion_inicio: '2026-11-04T03:00:00.000Z',
+        fecha_inscripcion_fin: '2026-11-05T23:00:00.000Z'
+      });
+    });
+
+    it('muestra en el formulario la hora de Argentina del dato guardado', async () => {
+      const user = userEvent.setup();
+      tournamentService.getById.mockResolvedValue({
+        ...TORNEO,
+        fecha_inscripcion_inicio: '2026-02-04T03:00:00.000Z',
+        fecha_inscripcion_fin: '2026-02-20T23:00:00.000Z'
+      });
+      renderPage({ pageParams: { id: 5 } });
+      await screen.findByDisplayValue('Torneo Otoño');
+      await user.click(screen.getByRole('button', { name: /siguiente/i }));
+      await screen.findByRole('heading', { name: 'Fechas Inscripción de Equipos' });
+
+      expect(screen.getByTestId('inscripcion-0')).toHaveValue('2026-02-04T00:00');
+      expect(screen.getByTestId('inscripcion-1')).toHaveValue('2026-02-20T20:00');
+    });
+
+    it('guardar sin cambios conserva el mismo instante', async () => {
+      const user = userEvent.setup();
+      renderPage({ pageParams: { id: 5 } });
+      await screen.findByDisplayValue('Torneo Otoño');
+      await user.click(screen.getByRole('button', { name: /siguiente/i }));
+      await screen.findByRole('heading', { name: 'Fechas Inscripción de Equipos' });
+      await user.click(screen.getByRole('button', { name: /siguiente/i }));
+      await screen.findByRole('heading', { name: /Etapas del Torneo/i });
+      await user.click(screen.getByRole('button', { name: /finalizar/i }));
+      await screen.findByText('Confirmar cambios del torneo');
+      await user.click(botonDelModal('Guardar cambios'));
+
+      await waitFor(() => expect(tournamentService.update).toHaveBeenCalled());
+      expect(tournamentService.update.mock.calls[0][1]).toMatchObject({
+        fecha_inscripcion_inicio: TORNEO.fecha_inscripcion_inicio,
+        fecha_inscripcion_fin: TORNEO.fecha_inscripcion_fin
+      });
+    });
+
+    it('la inscripcion sigue pendiente hasta la hora de apertura en Argentina', async () => {
+      fijarAhora('2026-11-04T02:30:00.000Z');
+      const user = userEvent.setup();
+      renderPage();
+      await llegarAPaso2(user);
+      await user.type(screen.getByTestId('inscripcion-0'), '2026-11-04T00:00');
+      await user.type(screen.getByTestId('inscripcion-1'), '2026-11-10T00:00');
+
+      expect(screen.getByText('Inscripciones pendientes')).toBeInTheDocument();
+    });
+
+    it('la inscripcion se abre al llegar la hora de apertura en Argentina', async () => {
+      fijarAhora('2026-11-04T03:30:00.000Z');
+      const user = userEvent.setup();
+      renderPage();
+      await llegarAPaso2(user);
+      await user.type(screen.getByTestId('inscripcion-0'), '2026-11-04T00:00');
+      await user.type(screen.getByTestId('inscripcion-1'), '2026-11-10T00:00');
+
+      expect(screen.getByText('Inscripciones abiertas')).toBeInTheDocument();
+    });
+
+    it('la inscripcion cierra pasada la hora de cierre en Argentina', async () => {
+      fijarAhora('2026-11-05T23:30:00.000Z');
+      const user = userEvent.setup();
+      renderPage();
+      await llegarAPaso2(user);
+      await user.type(screen.getByTestId('inscripcion-0'), '2026-11-04T00:00');
+      await user.type(screen.getByTestId('inscripcion-1'), '2026-11-05T20:00');
+
+      expect(screen.getByText('Inscripciones cerradas')).toBeInTheDocument();
+    });
+
+    it('la fecha de inicio por defecto es el dia de hoy en Argentina', async () => {
+      fijarAhora('2026-11-07T02:00:00.000Z');
+      renderPage();
+      await screen.findByRole('option', { name: 'Fútbol 5' });
+
+      expect(screen.getByTestId('torneo-0')).toHaveValue('2026-11-06');
+    });
+
+    it('un torneo que empieza manana en Argentina sigue programado', async () => {
+      fijarAhora('2026-11-06T01:00:00.000Z');
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('option', { name: 'Fútbol 5' });
+      await completarPaso1(user);
+      const fechas = screen.getAllByTestId(/^torneo-/);
+      await user.clear(fechas[0]);
+      await user.type(fechas[0], '2026-11-06');
+
+      expect(screen.getByText('Programado')).toBeInTheDocument();
+    });
+
+    it('un torneo sigue en progreso durante su ultimo dia', async () => {
+      fijarAhora('2026-11-06T20:00:00.000Z');
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('option', { name: 'Fútbol 5' });
+      await completarPaso1(user);
+      const fechas = screen.getAllByTestId(/^torneo-/);
+      await user.clear(fechas[0]);
+      await user.type(fechas[0], '2026-11-01');
+      await user.type(fechas[1], '2026-11-06');
+
+      expect(screen.getByText('En Progreso')).toBeInTheDocument();
+    });
+
+    it('la confirmacion muestra el mismo dia cargado para el torneo', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('option', { name: 'Fútbol 5' });
+      await completarPaso1(user);
+      const fechas = screen.getAllByTestId(/^torneo-/);
+      await user.clear(fechas[0]);
+      await user.type(fechas[0], '2099-11-06');
+      await user.click(screen.getByRole('button', { name: /siguiente/i }));
+      await screen.findByRole('heading', { name: 'Fechas Inscripción de Equipos' });
+      await completarPaso2(user, '2099-11-04T00:00', '2099-11-05T20:00');
+      await completarEtapa(user, 0, 'Local', '2099-11-06', '2099-11-08');
+
+      expect(screen.getByText('06/11/2099 — 08/11/2099')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /finalizar/i }));
+      await screen.findByText('Confirmar creación del torneo');
+
+      expect(screen.getByText('06/11/2099')).toBeInTheDocument();
+      expect(screen.getByText('04/11/2099, 00:00 — 05/11/2099, 20:00')).toBeInTheDocument();
     });
   });
 });

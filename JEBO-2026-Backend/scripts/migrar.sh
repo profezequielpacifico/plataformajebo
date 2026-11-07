@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-# Aplica TODAS las migraciones pendientes del sistema (knex migrate:latest).
-# Uso: doble click sobre este archivo, o desde terminal: ./scripts/migrar.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Si se abrió con doble click sin terminal, relanza en una terminal visible.
 if ! [ -t 1 ] && [ "${JEBO_MIGRAR_TERM:-0}" != "1" ]; then
   export JEBO_MIGRAR_TERM=1
   for term in gnome-terminal konsole xfce4-terminal x-terminal-emulator xterm; do
@@ -18,7 +15,6 @@ if ! [ -t 1 ] && [ "${JEBO_MIGRAR_TERM:-0}" != "1" ]; then
       esac
     fi
   done
-  # Sin terminal disponible: igual corre, la salida va al stdout del sistema.
 fi
 
 cd "$BACKEND_DIR"
@@ -39,7 +35,6 @@ fi
 echo "[2/2] Aplicando migraciones pendientes..."
 echo
 
-# CLI de knex directo (el shim de .bin/knex puede estar roto en instalaciones viejas)
 KNEX_CLI="node_modules/knex/bin/cli.js"
 if [ ! -f "$KNEX_CLI" ]; then
   echo "ERROR: knex no está instalado (falta $KNEX_CLI)."

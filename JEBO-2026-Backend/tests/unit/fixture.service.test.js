@@ -126,10 +126,6 @@ describe('fixture.service', () => {
       await expect(fixtureService.generate(999, 1)).rejects.toBeInstanceOf(NotFoundError);
     });
 
-    // Un fixture ES una lista de partidos local/visitante. Generarlo en un torneo
-    // de Gimnasia no produce un fixture raro: produce el modelo equivocado
-    // entero. Con dos trios inscriptos armaba un round-robin de 2 partidos que
-    // en la disciplina no existen.
     describe('torneos de tipo EVALUACION (Gimnasia)', () => {
       beforeEach(() => {
         knexMock.__limpiar();
@@ -144,8 +140,6 @@ describe('fixture.service', () => {
       });
 
       it('rechaza generar el fixture y dice que no tiene partidos', async () => {
-        // Con equipos de sobra inscriptos: si el guard no cortara, el fixture
-        // se armaria y el rechazo vendria del round-robin, no del tipo.
         knexMock.__set('posicion', { pluck: [39, 40, 41] });
 
         await expect(fixtureService.generate(32, 1))
@@ -155,8 +149,6 @@ describe('fixture.service', () => {
       });
 
       it('el guard corre antes de leer posicion, para que el mensaje sea el del tipo', async () => {
-        // Sin equipos inscriptos, el mensaje de "al menos 2 equipos" seria el
-        // que veria el usuario. El guard tiene que ganarle.
         knexMock.__set('posicion', { pluck: [] });
 
         await expect(fixtureService.generate(32, 1))
@@ -171,8 +163,6 @@ describe('fixture.service', () => {
 
         await expect(fixtureService.generate(32, 1)).rejects.toThrow();
 
-        // El guard va antes de la transaccion: si se abriera, ya se estaria
-        // escribiendo un fixture para un torneo que no admite partidos.
         expect(knexMock.transaction).not.toHaveBeenCalled();
       });
     });
@@ -195,7 +185,6 @@ describe('fixture.service', () => {
       knexMock.transaction = jest.fn(async (cb) => cb(trx));
 
       const r = await fixtureService.generate(1, 1);
-      // 2 equipos reales -> 1 ronda de 1 partido, no 3 con un null.
       expect(r.equipos).toBe(2);
       expect(inserts.partido).toHaveLength(1);
     });

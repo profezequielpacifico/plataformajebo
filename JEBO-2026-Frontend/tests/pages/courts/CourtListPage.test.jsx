@@ -58,8 +58,6 @@ describe('CourtListPage', () => {
   });
 
   it('muestra un texto por defecto si el error no trae mensaje', async () => {
-    // courtService puede rechazar con un error sin message si algo fallo antes
-    // de construirlo; la pagina tiene que mostrar algo legible igual.
     courtService.getAll.mockRejectedValue(new Error(''));
     renderPage();
     expect(await screen.findByText('Error al cargar')).toBeInTheDocument();
@@ -72,8 +70,6 @@ describe('CourtListPage', () => {
   });
 
   it('acepta las tres formas de respuesta del servicio', async () => {
-    // La pagina normaliza array plano, { data } y { rows } para no romperse si
-    // el backend cambia la envoltura.
     for (const envoltura of [CANCHAS, { data: CANCHAS }, { rows: CANCHAS }]) {
       courtService.getAll.mockResolvedValue(envoltura);
       const { unmount } = renderPage();
@@ -155,7 +151,6 @@ describe('CourtListPage', () => {
   });
 
   it('usa el campo id si la cancha viene con esa forma', async () => {
-    // Las respuestas del backend alternan entre id e id_cancha segun el endpoint.
     courtService.getAll.mockResolvedValue([{ id: 7, nombre: 'Cancha vieja', name: 'Cancha vieja' }]);
     renderPage();
     await screen.findByText('Cancha vieja');

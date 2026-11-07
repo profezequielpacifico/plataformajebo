@@ -88,26 +88,19 @@ describe('MatchFormPage', () => {
     return utils;
   };
 
-  /** Los cinco select del formulario, en el orden en que los dibuja la pagina. */
   const selects = () => screen.getAllByRole('combobox');
 
   const elegirTorneo = async (user, value = '1') => {
     await user.selectOptions(selects()[0], value);
   };
 
-  /** Espera a que termine de cargar el torneo con sus equipos. */
   const esperarTorneo = () => waitFor(() => expect(teamService.getEnrolled).toHaveBeenCalled());
 
-  /** Espera a que el selector de torneo haya recibido la lista de torneos. */
   const esperarTorneos = () =>
     waitFor(() =>
       expect(within(selects()[0]).getAllByRole('option').length).toBeGreaterThan(1)
     );
 
-  /**
-   * Completa los campos obligatorios. El navegador bloquea el submit si falta
-   * alguno, asi que los tests de guardado tienen que llenarlos.
-   */
   const completarFormulario = async (user) => {
     await elegirTorneo(user);
     await esperarTorneo();
@@ -192,8 +185,6 @@ describe('MatchFormPage', () => {
     renderPage({ matchId: 55 });
     await waitFor(() => expect(selects()[1]).toHaveDisplayValue('Cancha 1 (Fútbol 5)'));
 
-    // El partido editado era del torneo 1, ahora se pasa al 2 (Vóley): la
-    // cancha de fútbol deja de ser válida.
     await elegirTorneo(user, '2');
 
     await waitFor(() => expect(selects()[1]).toHaveValue(''));
@@ -317,14 +308,12 @@ describe('MatchFormPage', () => {
     renderPage();
     await waitFor(() => expect(screen.getByRole('option', { name: /Torneo Otoño/ })).toBeInTheDocument());
 
-    // Sin torneo elegido no hay disciplina que mostrar.
     expect(screen.getByPlaceholderText('Se completa con el torneo elegido')).toHaveValue('');
 
     await elegirTorneo(user);
 
     expect(screen.getByPlaceholderText('Se completa con el torneo elegido')).toHaveValue('Fútbol 5');
 
-    // Cambiar de torneo cambia la disciplina mostrada.
     await elegirTorneo(user, '2');
     expect(screen.getByPlaceholderText('Se completa con el torneo elegido')).toHaveValue('Vóley');
   });
@@ -334,8 +323,6 @@ describe('MatchFormPage', () => {
     renderPage();
     await waitFor(() => expect(screen.getByRole('option', { name: /Torneo Otoño/ })).toBeInTheDocument());
 
-    // La Copa Libre no trae id_disciplina: sin ese dato no hay con que filtrar
-    // en el backend, asi que se piden todos los equipos inscriptos.
     await elegirTorneo(user, '2');
     await esperarTorneo();
 
@@ -348,8 +335,6 @@ describe('MatchFormPage', () => {
     expect(await screen.findByText('Editar Partido')).toBeInTheDocument();
     expect(matchService.getById).toHaveBeenCalledWith(55);
     expect(selects()[0]).toHaveValue('1');
-    // Las canchas y los equipos se van llenando a medida que resuelven las
-    // consultas, asi que se espera a que cada valor este disponible.
     await waitFor(() => expect(selects()[1]).toHaveValue('10'));
     await waitFor(() => expect(selects()[3]).toHaveValue('100'));
     await waitFor(() => expect(selects()[4]).toHaveValue('200'));
@@ -484,10 +469,6 @@ describe('MatchFormPage', () => {
     }
   });
 
-  // Gimnasia Artística no tiene partidos: el equipo se presenta solo y lo
-  // evalúa un jurado. Este formulario exige local y visitante como
-  // obligatorios, así que ofrecer el torneo garantizaba un 409 después de que
-  // el usuario llenara el formulario entero.
   describe('torneos de tipo EVALUACION (Gimnasia)', () => {
     const CON_GIMNASIA = {
       data: [

@@ -79,7 +79,6 @@ export function CompetenciasListPage({ onNavigate }) {
                         onClick: () => onNavigate('competencias-new')
                     }, h(IconPlus), ' Nueva Competencia')
                 ),
-                // Búsqueda
                 h('div', { style: { marginBottom: '16px' } },
                     h('input', {
                         type: 'text',
@@ -89,7 +88,6 @@ export function CompetenciasListPage({ onNavigate }) {
                         style: { ...styles.formInput, maxWidth: '300px' }
                     })
                 ),
-                // Tabla
                 h(Table, null,
                     h(TableHeader, null,
                         h(TableHeaderCell, null, 'Nombre'),
@@ -131,7 +129,6 @@ export function CompetenciasListPage({ onNavigate }) {
                     )
                 )
             ),
-            // Modal de confirmación
             showModal && h(Modal, {
                 isOpen: showModal,
                 onClose: () => setShowModal(false),
@@ -142,7 +139,6 @@ export function CompetenciasListPage({ onNavigate }) {
                 cancelText: 'Cancelar',
                 confirmStyle: 'danger'
             }),
-            // Error
             error && h('div', {
                 style: {
                     marginTop: '16px',

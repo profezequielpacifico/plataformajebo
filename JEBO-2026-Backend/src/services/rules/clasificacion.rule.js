@@ -1,10 +1,3 @@
-/**
- * Regla de Clasificación
- * 
- * Define quién clasifica y por qué método.
- * Esta regla responde: "¿Quién pasa?"
- */
-
 module.exports = function clasificacionRule(context) {
   const { participants, config } = context;
   const warnings = [];
@@ -14,13 +7,11 @@ module.exports = function clasificacionRule(context) {
   const cantidad = config?.cantidad || 1;
   const unidad = config?.unidad || 'COMPETENCIA';
 
-  // Validar método
   const metodosValidos = ['POSICION', 'GANADOR'];
   if (!metodosValidos.includes(metodo)) {
     errores.push(`Método de clasificación inválido: ${metodo}. Válidos: ${metodosValidos.join(', ')}`);
   }
 
-  // Validar cantidad
   if (cantidad < 1) {
     errores.push(`Cantidad de clasificados inválida: ${cantidad}`);
   }
@@ -29,12 +20,10 @@ module.exports = function clasificacionRule(context) {
     errores.push(`No se pueden clasificar ${cantidad} si solo hay ${participants.length} participantes`);
   }
 
-  // Calcular clasificados según método
   let clasificados = [];
 
   switch (metodo) {
     case 'POSICION':
-      // Clasifican los primeros N por posición
       clasificados = participants
         .slice()
         .sort((a, b) => (a.posicion || 0) - (b.posicion || 0))
@@ -42,7 +31,6 @@ module.exports = function clasificacionRule(context) {
       break;
 
     case 'GANADOR':
-      // Clasifican los N mejores por puntos (y diferencia de goles)
       clasificados = participants
         .slice()
         .sort((a, b) => {

@@ -21,8 +21,8 @@ function getBadgeVariant(status) {
 
 function DetailRow({ label, value }) {
     return h('div', { style: { display: 'flex', padding: '10px 0', borderBottom: '1px solid #f0f0f0' } },
-        h('div', { style: { width: '180px', fontWeight: 600, color: '#374151', fontSize: '14px' } }, label),
-        h('div', { style: { flex: 1, color: '#111827', fontSize: '14px' } }, value || '—')
+        h('div', { style: { width: '40%', maxWidth: '180px', flexShrink: 0, fontWeight: 600, color: '#374151', fontSize: '14px' } }, label),
+        h('div', { style: { flex: 1, minWidth: 0, color: '#111827', fontSize: '14px' } }, value || '—')
     );
 }
 
@@ -120,7 +120,7 @@ export function MatchDetailPage({ onNavigate, matchId, user }) {
                     DetailRow({ label: 'Árbitro(s)', value: arbitros }),
                     DetailRow({ label: 'Resultado', value: match.goles_local != null ? `${match.goles_local} - ${match.goles_visitante}` : '—' }),
                     mapsUrl ? h('div', { style: { display: 'flex', padding: '10px 0', borderBottom: '1px solid #f0f0f0' } },
-                        h('div', { style: { width: '180px', fontWeight: 600, color: '#374151', fontSize: '14px' } }, 'Ubicación'),
+                        h('div', { style: { width: '40%', maxWidth: '180px', flexShrink: 0, fontWeight: 600, color: '#374151', fontSize: '14px' } }, 'Ubicación'),
                         h('div', { style: { flex: 1 } },
                             h('a', {
                                 href: mapsUrl,

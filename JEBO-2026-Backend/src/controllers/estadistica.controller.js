@@ -5,7 +5,6 @@ const { formatResponse } = require('../utils');
 class EstadisticaController {
   async dashboard(req, res, next) {
     try {
-      // `req.alcance` lo deja `authenticate`; sin él el repositorio lanza (X-05).
       const data = await estadisticaService.dashboard(req.alcance);
       res.status(HTTP_STATUS.OK).json(formatResponse(data));
     } catch (err) {

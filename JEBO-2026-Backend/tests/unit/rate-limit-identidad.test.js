@@ -1,26 +1,4 @@
-/**
- * X-07: los limites ya no se indexan solo por IP.
- *
- * El defecto original: `keyGenerator: (req) => req.ip` hacia que el presupuesto
- * fuera compartido por todos los usuarios detras de la misma IP. En una escuela
- * —20 usuarios, una IP publica— 15 peticiones de cada uno agotaban el global y
- * el siguiente recibia 429 sin haber hecho nada malo. En autenticacion el efecto
- * era al reves de lo que se busca: 5 intentos fallidos de una cuenta bloquearon
- * el login legitimo del resto.
- *
- * OJO al escribir tests de esto: el store de `express-rate-limit` es un
- * singleton por modulo, asi que el estado de un test se filtra al siguiente de
- * la misma suite. Cada `describe` usa IPs y correos propios para no arrastrar
- * presupuesto, y los limites se miden exhausting desde cero.
- *
- * `next` se invoca SIEMPRE, con error o sin error. El 429 se marca con
- * `res.status(429)`, no con un rechazo de `next`, asi que lo que se observa es
- * el status que el limitador escribe.
- */
 describe('Rate limiting por identidad, no por IP (X-07)', () => {
-  // El require va adentro del describe (o de un beforeAll), no en el cuerpo de
-  // la funcion: Jest evalua el cuerpo del describe en tiempo de carga, antes de
-  // que el modulo tenga export listo, y la desestructuracion da undefined.
   let generalLimiter;
   let authLimiter;
   let recoverPasswordLimiter;
@@ -45,7 +23,6 @@ describe('Rate limiting por identidad, no por IP (X-07)', () => {
     return r.codes.includes(429);
   };
 
-  /** Primer numero de peticion que recibe 429, o null si no se llega al tope. */
   const corte = async (limiter, makeReq, max) => {
     for (let i = 1; i <= max; i += 1) {
       if (await golpear(limiter, makeReq(i))) return i;
@@ -54,9 +31,6 @@ describe('Rate limiting por identidad, no por IP (X-07)', () => {
   };
 
   describe('authLimiter', () => {
-    // max: 20. Se sube de 10 porque con la clave por IP 5 intentos fallidos de
-    // una cuenta agotaban el bucket de la IP entera y el login legitimo del
-    // siguiente usuario caia en 429.
     it('permite 20 intentos a la misma cuenta y corta en el 21', async () => {
       const email = 'limite-cuenta@test.com';
       const n = await corte(authLimiter, () => req({ ip: '198.51.100.1', body: { email } }), 30);
@@ -64,16 +38,12 @@ describe('Rate limiting por identidad, no por IP (X-07)', () => {
     });
 
     it('rotar la IP NO da presupuesto nuevo a la misma cuenta', async () => {
-      // Con clave por IP esto no cortaba nunca: el atacante rotaba la cabecera y
-      // Cliftonican 6 intentos ilimitados. Con clave por cuenta, la cuenta manda.
       const email = 'rotacion-ip@test.com';
       const n = await corte(authLimiter, (i) => req({ ip: `198.51.100.${i}`, body: { email } }), 30);
       expect(n).toBe(21);
     });
 
     it('cuentas distintas desde la misma IP NO se bloquean entre si', async () => {
-      // El caso NAT escolar: 20 usuarios del mismo colegio, una IP publica. Con
-      // la clave por IP, los intentos de uno consumian el presupuesto de todos.
       const ip = '198.51.100.50';
       for (let i = 1; i <= 19; i += 1) {
         await golpear(authLimiter, req({ ip, body: { email: `nat-user-${i}@test.com` } }));
@@ -85,8 +55,6 @@ describe('Rate limiting por identidad, no por IP (X-07)', () => {
 
   describe('generalLimiter', () => {
     it('permite 1000 peticiones al mismo usuario y corta en la 1001', async () => {
-      // Antes eran 300 por IP: medido, la peticion 301 recibia 429. Para 20
-      // usuarios eso son 15 peticiones cada uno en 15 minutos.
       const n = await corte(generalLimiter, () => req({ ip: '198.51.100.100', user: { id_usuario: 5001 } }), 1100);
       expect(n).toBe(1001);
     });
@@ -101,10 +69,91 @@ describe('Rate limiting por identidad, no por IP (X-07)', () => {
     });
   });
 
+  describe('generalLimiter antes de authenticate', () => {
+    const { signAccessToken, signRefreshToken } = require('../../src/config/jwt');
+    const conToken = (id, ip) => req({ ip, headers: { authorization: `Bearer ${signAccessToken({ id })}` } });
+
+    it('cuenta por el usuario del token aunque todavia no exista req.user', async () => {
+      const token = signAccessToken({ id: 7001 });
+      const n = await corte(generalLimiter, (i) => req({
+        ip: `198.51.100.${(i % 200) + 1}`,
+        headers: { authorization: `Bearer ${token}` }
+      }), 1100);
+      expect(n).toBe(1001);
+    });
+
+    it('lee el token de la cookie igual que authenticate', async () => {
+      const token = signAccessToken({ id: 7002 });
+      const n = await corte(generalLimiter, () => req({ ip: '198.51.100.102', cookies: { accessToken: token } }), 1100);
+      expect(n).toBe(1001);
+    });
+
+    it('una escuela detras de una IP no se agota entre usuarios', async () => {
+      const ip = '198.51.100.103';
+      for (let i = 0; i < 1100; i += 1) {
+        await golpear(generalLimiter, conToken(7100, ip));
+      }
+      expect(await golpear(generalLimiter, conToken(7100, ip))).toBe(true);
+      expect(await golpear(generalLimiter, conToken(7101, ip))).toBe(false);
+    });
+
+    it('sin token el limite sigue existiendo y es por IP', async () => {
+      const n = await corte(generalLimiter, () => req({ ip: '198.51.100.104' }), 3100);
+      expect(n).toBe(3001);
+    });
+
+    it('un token falsificado o de otro tipo no consigue cupo propio', async () => {
+      const ip = '198.51.100.105';
+      const invalidos = ['no-es-un-jwt', `${signAccessToken({ id: 7200 })}x`, signRefreshToken({ id: 7200 })];
+      const n = await corte(generalLimiter, (i) => req({
+        ip,
+        headers: { authorization: `Bearer ${invalidos[i % invalidos.length]}` }
+      }), 3100);
+      expect(n).toBe(3001);
+    });
+  });
+
+  describe('sessionLimiter', () => {
+    const { signAccessToken, signRefreshToken } = require('../../src/config/jwt');
+    let sessionLimiter;
+
+    beforeAll(() => {
+      ({ sessionLimiter } = require('../../src/middleware/rate-limit'));
+    });
+
+    it('agotar el login desde una IP no afecta a refresh, logout ni loginStatus', async () => {
+      const ip = '198.51.100.110';
+      expect(await corte(authLimiter, () => req({ ip }), 30)).toBe(21);
+      expect(await golpear(sessionLimiter, req({ ip }))).toBe(false);
+    });
+
+    it('agotar la sesion desde una IP no afecta al login', async () => {
+      const ip = '198.51.100.111';
+      expect(await corte(sessionLimiter, () => req({ ip }), 1100)).toBe(1001);
+      expect(await golpear(authLimiter, req({ ip }))).toBe(false);
+    });
+
+    it('cada sesion cuenta por su usuario aunque compartan IP', async () => {
+      const ip = '198.51.100.112';
+      const deUsuario = (id) => () => req({ ip, cookies: { refreshToken: signRefreshToken({ id }) } });
+      expect(await corte(sessionLimiter, deUsuario(7300), 80)).toBe(61);
+      expect(await golpear(sessionLimiter, deUsuario(7301)())).toBe(false);
+    });
+
+    it('sin refresh token usa la identidad del access token', async () => {
+      const ip = '198.51.100.113';
+      const token = signAccessToken({ id: 7302 });
+      expect(await corte(sessionLimiter, () => req({ ip, cookies: { accessToken: token } }), 80)).toBe(61);
+    });
+
+    it('un refresh token invalido cae al cupo de la IP', async () => {
+      const ip = '198.51.100.114';
+      const n = await corte(sessionLimiter, () => req({ ip, cookies: { refreshToken: 'falso' } }), 1100);
+      expect(n).toBe(1001);
+    });
+  });
+
   describe('recoverPasswordLimiter', () => {
-    // Es un array de dos limitadores encadenados: uno por IP y otro por cuenta.
-    // `golpear` los corre en orden, como hace Express, y corta en el primero
-    // que responde 429.
     const recovery = (request) => (async () => {
       for (const limiter of recoverPasswordLimiter) {
         const r = res();
@@ -124,8 +173,6 @@ describe('Rate limiting por identidad, no por IP (X-07)', () => {
     });
 
     it('corta por IP aunque cada request use un correo distinto', async () => {
-      // Esta es la vía de enumeración. Con clave solo por email no se frenaba:
-      // el atacante cambiaba de correo y el contador nunca llegaba a 3.
       const ip = '198.51.100.211';
       let cortada = false;
       for (let i = 1; i <= 12 && !cortada; i += 1) {
@@ -135,8 +182,6 @@ describe('Rate limiting por identidad, no por IP (X-07)', () => {
     });
 
     it('permite pasar los 3 primeros intentos con correos distintos', async () => {
-      // El límite por IP es 10, no 3: un colegio entero detrás de una NAT no
-      // debe quedar bloqueado entre sí tras tres recuperaciones legitimas.
       const ip = '198.51.100.212';
       for (let i = 1; i <= 3; i += 1) {
         const cortada = await recovery(req({ ip, body: { email: `legit-${i}@test.com` } }));

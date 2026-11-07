@@ -32,9 +32,7 @@ module.exports = {
   deleteByPresentacion: (id_presentacion) =>
     knex(TABLE).where('id_presentacion', id_presentacion).del(),
 
-  // Reordenar salidas
   reordenar: (id_presentacion, orden) => {
-    // orden = [{id_equipo, orden_salida}, ...]
     const trx = knex.transaction();
     return Promise.all(
       orden.map(({ id_equipo, orden_salida }) =>

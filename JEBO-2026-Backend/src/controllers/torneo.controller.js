@@ -2,8 +2,6 @@ const { HTTP_STATUS } = require('../constants');
 const torneoService = require('../services/torneo.service');
 const { formatResponse, formatPaginatedResponse, soloCampos, bindAll } = require('../utils');
 
-// El servicio solo saca `etapas` del payload; el resto pasaba entero al
-
 const CAMPOS_TORNEO = [
   'id_disciplina',
   'nombre',
@@ -32,7 +30,6 @@ class TorneoController {
       const { page, limit, id_disciplina, estado, scope } = req.query;
       const result = await torneoService.findAll({
         page, limit, id_disciplina, estado, scope,
-        // Aislamiento por institución (X-05), por participación en el torneo.
         alcance: req.alcance
       });
       res.status(HTTP_STATUS.OK).json(
@@ -99,7 +96,6 @@ class TorneoController {
 
   async uploadReglamento(req, res, next) {
     try {
-      // El alcance va por acá porque `findById` filtra por institución a través
 
       const torneo = await torneoService.findById(req.params.id, { alcance: req.alcance });
       if (!req.file) {

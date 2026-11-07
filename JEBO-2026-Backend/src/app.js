@@ -12,8 +12,6 @@ const app = express();
 app.set('trust proxy', env.trustProxy);
 app.use(helmet());
 
-// `credentials: true` es lo que hace que el navegador mande las cookies de
-
 const corsConCredenciales = {
   credentials: true,
   origin: env.cors.origin === '*'
@@ -22,15 +20,12 @@ const corsConCredenciales = {
 };
 app.use(cors(corsConCredenciales));
 
+app.use(cookieParser());
 app.use(generalLimiter);
-// Morgan solo en desarrollo: en producción loguea IPs, paths, user-agents...
 if (env.nodeEnv !== 'production') {
   app.use(morgan('dev'));
 }
 app.use(express.json({ limit: '100kb' }));
-app.use(cookieParser());
-
-// Los reglamentos NO se sirven como estático: ese mount era una vía
 
 app.use(routes);
 

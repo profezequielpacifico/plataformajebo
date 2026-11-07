@@ -6,21 +6,6 @@ const { formatResponse, bindAll } = require('../utils');
 const { UnauthorizedError } = require('../utils/errors');
 const env = require('../config/env');
 
-/**
- * Cookies de sesion.
- *
- * Los tokens no viajan en el cuerpo de la respuesta ni en un header: viajan en
- * cookies `httpOnly`. La razon es que `httpOnly` saca la credencial del alcance
- * de JavaScript. Con el token en `localStorage`, cualquier XSS —una sola— lo
- * lee con un `localStorage.getItem` y se lo lleva; con la cookie `httpOnly` el
- * mismo XSS puede disparar requests como el usuario, pero no puede exfiltrar el
- * token para reutilizarlo desde otro lado.
- *
- * `path` va explicito en `/`: por defecto `res.cookie` usa el path de la URL que
- * se esta respondiendo, y como `/auth/login` es la que setea, el navegador la
- * mandaria solo a `/auth/*`. Los endpoints de datos (`/disciplinas`, `/partidos`)
- * nunca la verian y todo responderia 401.
- */
 const OpcionesCookie = (maxAge) => ({
   httpOnly: true,
   secure: env.cookie.secure,
@@ -32,11 +17,6 @@ const OpcionesCookie = (maxAge) => ({
 const COOKIE_REFRESH = () => OpcionesCookie(env.cookie.refreshMaxAge);
 const COOKIE_ACCESS = () => OpcionesCookie(env.cookie.accessMaxAge);
 
-/**
- * Para borrar una cookie no alcanza con `maxAge: 0`: el navegador solo la borra
- * si el `path` y el `domain` coinciden con los del `Set-Cookie` original. Por eso
- * se reutilizan las mismas opciones y solo se anula la duracion.
- */
 const COOKIE_REFRESH_BORRADA = () => ({ ...OpcionesCookie(0), maxAge: 0 });
 const COOKIE_ACCESS_BORRADA = () => ({ ...OpcionesCookie(0), maxAge: 0 });
 
@@ -50,7 +30,6 @@ class AuthController {
   }
 
   async login(req, res, next) {
-    // El lockout se indexa por la cuenta, no solo por la IP. El email sale del
 
     const email = req.body && req.body.email;
     try {
@@ -58,19 +37,12 @@ class AuthController {
       const result = await authService.login(email, password, this._context(req));
       await loginLockout.limpiarEstado(email, req.ip);
 
-      // Cualquier cookie de una sesion anterior se sobreescribe con esta: el
-
       res.cookie('accessToken', result.accessToken, COOKIE_ACCESS());
       res.cookie('refreshToken', result.refreshToken, COOKIE_REFRESH());
-
-      // El cuerpo lleva solo el perfil. Si el token volviera en el JSON,
-      // volveria a estar disponible para JavaScript y la cookie `httpOnly` no
 
       res.status(HTTP_STATUS.OK).json(formatResponse({ user: result.user }, 'Login exitoso'));
     } catch (err) {
       if (err.isOperational && Number(err.statusCode) === HTTP_STATUS.UNAUTHORIZED) {
-        // Se espera la escritura: si el contador se perdiera por no awaitear,
-        // el atacante gana intentos gratis y ademas es una condicion de carrera.
         await loginLockout.registroFallo(email, req.ip);
       }
       next(err);
@@ -85,14 +57,11 @@ class AuthController {
       }
       const result = await authService.refresh(refreshToken);
 
-      // Rotacion: el refresh token viejo se revoca en `authService.refresh` y
-
       res.cookie('accessToken', result.accessToken, COOKIE_ACCESS());
       res.cookie('refreshToken', result.refreshToken, COOKIE_REFRESH());
 
       res.status(HTTP_STATUS.OK).json(formatResponse({ user: result.user }, 'Sesión renovada'));
     } catch (err) {
-      // Un refresh fallido deja la sesion inservible: el navegador va a seguir
 
       res.clearCookie('accessToken', COOKIE_ACCESS_BORRADA());
       res.clearCookie('refreshToken', COOKIE_REFRESH_BORRADA());
@@ -103,7 +72,6 @@ class AuthController {
   async logout(req, res, next) {
     try {
       const refreshToken = req.cookies && req.cookies.refreshToken;
-      // Sin `authenticate` no hay `req.user`, y sin access token valido
 
       const userId = req.user && req.user.id ? req.user.id : this._idDesdeRefresh(refreshToken);
       await authService.logout(refreshToken, userId);

@@ -48,12 +48,12 @@ export function QualifiedPage() {
 
     return h(Card, null,
         h(CardHeader, { title: 'Equipos Clasificados' }),
-        h('p', { style: { color: '#6b7280', fontSize: '13px' } },
+        h('p', { style: { color: '#6b7280', fontSize: '13px', padding: '16px 16px 0' } },
             'Equipos que han clasificado para la siguiente ronda.'
         ),
 
-        h('div', { style: { display: 'flex', gap: '16px', margin: '15px 0' } },
-            h('div', null,
+        h('div', { style: { display: 'flex', gap: '16px', margin: '15px 0', padding: '0 16px', flexWrap: 'wrap' } },
+            h('div', { style: { minWidth: 0, maxWidth: '100%' } },
                 h('label', { style: { marginRight: '10px', fontWeight: 'bold', color: '#374151' } }, 'Torneo:'),
                 h('select', {
                     value: selectedTournament,
@@ -64,7 +64,7 @@ export function QualifiedPage() {
                     tournaments.map(t => h('option', { key: t.id_torneo || t.id, value: String(t.id_torneo || t.id) }, t.nombre || t.name))
                 )
             ),
-            h('div', null,
+            h('div', { style: { minWidth: 0, maxWidth: '100%' } },
                 h('label', { style: { marginRight: '10px', fontWeight: 'bold', color: '#374151' } }, 'Deporte:'),
                 h('select', {
                     value: selectedSport,
@@ -77,7 +77,7 @@ export function QualifiedPage() {
             )
         ),
 
-        h('table', { style: { width: '100%', borderCollapse: 'collapse', marginTop: '10px', backgroundColor: '#ffffff', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e5e7eb' } },
+        h('div', { style: { overflowX: 'auto' } }, h('table', { style: { width: '100%', borderCollapse: 'collapse', marginTop: '10px', backgroundColor: '#ffffff', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e5e7eb' } },
             h('thead', null,
                 h('tr', { style: { backgroundColor: '#f3f4f6' } },
                     h('th', { style: { padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' } }, 'Equipo'),
@@ -100,7 +100,7 @@ export function QualifiedPage() {
                             )
                         )
             )
-        )
+        ))
     );
 }
 

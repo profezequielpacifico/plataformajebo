@@ -14,17 +14,6 @@ import { useAuth } from '../../providers/AuthProvider.js';
 
 const { createElement: h } = React;
 
-/**
- * Alta de equipo.
- *
- * Va separada de la consulta a proposito: la consulta es de solo lectura y esta
- * es la unica pagina que escribe. El campo de disciplina va segundo, despues del
- * nombre, porque es lo que define contra que compite el equipo.
- *
- * La disciplina se elige de las ya creadas: no hay alta de disciplina desde
- * aca. Si falta la que se necesita, se carga en "Deportes"/"Disciplinas" y se
- * vuelve.
- */
 export function TeamFormPage({ onNavigate, pageParams }) {
     const teamId = pageParams?.id;
     const isEdit = !!teamId;
@@ -50,7 +39,6 @@ export function TeamFormPage({ onNavigate, pageParams }) {
 
     const loadInitialData = async () => {
         try {
-            // `?rol=Profesor` lo resuelve el servidor. Antes se traian TODOS los
 
             const [instRes, discRes, userRes, distRes, locRes] = await Promise.all([
                 institutionService.getAll().catch(() => []),
@@ -97,7 +85,6 @@ export function TeamFormPage({ onNavigate, pageParams }) {
         loadInitialData();
     }, []);
 
-    // Autorellenar profesor cuando el usuario logueado es profesor y no estamos editando
     useEffect(() => {
         if (isEdit) return;
         if (!user) return;

@@ -11,14 +11,6 @@ import { IconEdit } from '../../components/icons/index.js';
 
 const { createElement: h } = React;
 
-/**
- * Consulta de equipos.
- *
- * Ahora incluye columna de acciones con botón de editar.
- * Permisos de edición:
- * - Admin (3) y SuperAdmin (20): pueden editar TODOS los equipos
- * - Profesor (1): solo puede editar el equipo donde es entrenador (id_usuario coincide)
- */
 export function TeamListPage({ user, onNavigate }) {
     const [teams, setTeams] = useState([]);
     const [disciplines, setDisciplines] = useState([]);
@@ -32,19 +24,15 @@ export function TeamListPage({ user, onNavigate }) {
     const [idDisciplina, setIdDisciplina] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterBy, setFilterBy] = useState('nombre');
-    // Texto realmente aplicado. While se escribe se consulta `searchTerm`, pero
 
     const [busqueda, setBusqueda] = useState('');
 
-    // Verifica si el usuario actual puede editar un equipo
     const puedeEditar = (team) => {
         if (!user) return false;
         const roleId = user.id_rol ? Number(user.id_rol) : null;
-        // Admin y SuperAdmin pueden editar todo
         if (roleId === ROLE_IDS.ADMINISTRADOR || roleId === ROLE_IDS.SUPERADMIN) {
             return true;
         }
-        // Profesor solo puede editar su propio equipo
         if (roleId === ROLE_IDS.PROFESOR) {
             const teamCoachId = team.id_usuario ? Number(team.id_usuario) : null;
             const currentUserId = user.id_usuario ? Number(user.id_usuario) : null;
@@ -72,7 +60,6 @@ export function TeamListPage({ user, onNavigate }) {
             });
 
             setTeams(Array.isArray(res) ? res : res?.data || res?.rows || []);
-            // `pagination` no siempre viene: `/teams` lo manda, pero un mock o
 
             setTotal(res?.pagination?.total ?? (Array.isArray(res) ? res.length : (res?.data?.length ?? 0)));
         } catch (err) {
@@ -85,8 +72,6 @@ export function TeamListPage({ user, onNavigate }) {
     }, [page, limit, idDisciplina, busqueda, filterBy]);
 
     useEffect(() => { loadTeams(); }, [loadTeams]);
-
-    // Cualquier cambio de filtro vuelve a la primera pagina: quedarse en la 3
 
     const cambiarDisciplina = (e) => {
         setIdDisciplina(e.target.value);
@@ -132,7 +117,7 @@ export function TeamListPage({ user, onNavigate }) {
                 placeholder: 'Buscar equipo...',
                 value: searchTerm,
                 onChange: (e) => setSearchTerm(e.target.value),
-                style: { ...formInput, width: '200px', marginBottom: 0 }
+                style: { ...formInput, width: '200px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
             }),
             h('button', { type: 'submit', style: buttonPrimarySmall }, 'Buscar'),
             h('button', {

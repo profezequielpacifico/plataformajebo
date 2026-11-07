@@ -49,10 +49,6 @@ describe('AutoFixturePage', () => {
     expect(opciones().some(o => o.includes('Copa JEBO'))).toBe(true);
   });
 
-  // Un fixture ES una lista de partidos local/visitante. En un torneo de
-  // Gimnasia no generaba un fixture raro: generaba el modelo equivocado entero.
-  // Con dos trios inscriptos armaba un round-robin de partidos que en la
-  // disciplina no existen.
   it('no ofrece el torneo de Gimnasia', async () => {
     renderPage();
     await esperarSelector();
@@ -60,8 +56,6 @@ describe('AutoFixturePage', () => {
     expect(opciones().some(o => o.includes('Gimnasia'))).toBe(false);
   });
 
-  // El filtro va antes del chequeo de estado: preguntar el estado de un
-  // torneo que no se puede elegir es una request al pedo.
   it('no consulta el estado de los torneos de Gimnasia', async () => {
     renderPage();
     await esperarSelector();
@@ -76,16 +70,12 @@ describe('AutoFixturePage', () => {
     await esperarSelector();
 
     await userEvent.selectOptions(selector(), '30');
-    // El boton es "Confirmar": primero verifica que el torneo no tenga fixture
-    // y despues abre un modal de confirmacion.
     await userEvent.click(screen.getByRole('button', { name: /confirmar/i }));
     await userEvent.click(await screen.findByRole('button', { name: /sí, continuar/i }));
 
     await waitFor(() => expect(fixtureService.generate).toHaveBeenCalledWith('30'));
   });
 
-  // Un torneo sin tipo viene de una respuesta vieja de la API. Si se tratara
-  // como Gimnasia, desaparecerían de la pantalla sin avisar.
   it('deja pasar los torneos que no traen tipo', async () => {
     tournamentService.getAll.mockResolvedValue({
       data: [{ id_torneo: 40, nombre: 'Torneo Sin Tipo' }]

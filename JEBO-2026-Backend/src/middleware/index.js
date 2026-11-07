@@ -1,5 +1,4 @@
 const errorHandler = require('./error');
-// Este barril es la unica forma de declarar "que guards existen": si un guard
 
 const {
   authenticate,
@@ -14,7 +13,7 @@ const {
   evaluarPresentacion,
   gestionarEquipoPropio
 } = require('./autorizacion');
-const { generalLimiter, registerLimiter, recoverPasswordLimiter, authLimiter } = require('./rate-limit');
+const { generalLimiter, registerLimiter, recoverPasswordLimiter, authLimiter, sessionLimiter } = require('./rate-limit');
 const loginLockout = require('./login-lockout');
 const { verificarContenido } = require('./verificar-contenido');
 
@@ -24,7 +23,6 @@ module.exports = {
   requireRole,
   requireSuperAdmin,
   requireAdminOrAbove,
-  // Guards de recurso (rol + fila + estado + asignacion), F1.3.
   operarPartido,
   gestionarPresentacion,
   evaluarPresentacion,
@@ -34,6 +32,7 @@ module.exports = {
   registerLimiter,
   recoverPasswordLimiter,
   authLimiter,
+  sessionLimiter,
   loginLockout,
   verificarContenido
 };

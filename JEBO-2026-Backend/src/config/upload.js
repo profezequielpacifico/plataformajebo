@@ -17,8 +17,6 @@ const storage = multer.diskStorage({
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.jpg', '.jpeg', '.png'];
 
-// La extensión sola no dice nada: un .jpg puede contener HTML. Se valida
-
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'application/msword',
@@ -42,18 +40,12 @@ const fileFilter = (_req, file, cb) => {
   cb(null, true);
 };
 
-// Techo de 8 MB, no de 10: es el limite recomendado para subidas de archivo
-
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
-// Multipart envuelve el archivo en campos y boundaries, asi que el body llega
 
 const MAX_BODY_BYTES = MAX_FILE_BYTES + 64 * 1024;
 const MAX_FIELD_BYTES = 64 * 1024;
 const MAX_FIELDS = 20;
 const MAX_PARTS = MAX_FIELDS + 1;
-
-// El mensaje sale de la constante y no al reves: con el texto escrito a mano,
-// bajar el limite dejaba diciendo "10 MB" a un upload que corta en 8 (S5693 se
 
 const ERROR_TAMANO = `El archivo supera el tamano maximo permitido (${MAX_FILE_BYTES / (1024 * 1024)} MB).`;
 const errorTamano = () => {
@@ -62,8 +54,6 @@ const errorTamano = () => {
   err.isOperational = true;
   return err;
 };
-
-// multer Limita el archivo, pero el body igual se lee entero antes de que
 
 const limitarCuerpo = (req, res, next) => {
   const declarado = Number.parseInt(req.headers['content-length'], 10);

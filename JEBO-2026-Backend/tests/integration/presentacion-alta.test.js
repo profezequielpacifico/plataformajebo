@@ -6,28 +6,6 @@ const crypto = require('crypto');
 const { contrasenaDePrueba } = require('../helpers/credentials');
 const { accessTokenDe } = require('../helpers/cookies');
 
-/**
- * Alta de presentaciones de Gimnasia Artística (`POST /presentaciones`).
- *
- * Este suite existe porque el endpoint era inalcanzable desde la aplicación, y
- * no por falta de permisos sino por cuatro defectos encadenados que ningún test
- * cubría:
- *
- *  1. `findAll` no filtraba por `orden`, así que el chequeo de orden repetido
- *     comparaba contra todas las presentaciones del torneo y siempre rechazaba.
- *  2. `EquipoIntegranteRepository.validarTrio` consultaba `usuario.genero`, una
- *     columna que no existe: toda presentación con trío moría con un 500.
- *  3. La creación no era transaccional. Cuando un paso del medio fallaba
- *     quedaban presentaciones a medio armar, visibles en el listado de admin.
- *  4. `PresentacionRepository.findAll` ignoraba `orden`, que es el mismo punto 1.
- *
- * Los tres primeros eran invisibles sin pasar por HTTP: el control de orden y el
- * rollback viven en el service, no en un repositorio que se pueda probar suelto.
- *
- * Monta su propia fixture en vez de usar las filas de la base: los ids cambian en
- * cada corrida y las aserciones tienen que ser sobre relaciones.
- */
-
 const sufijo = crypto.randomBytes(6).toString('hex');
 const TAG = `gymalt_${sufijo}`;
 
@@ -67,8 +45,6 @@ beforeAll(async () => {
   idLocalidad = loc.rows[0].id_localidad;
   idDistrito = loc.rows[0].id_distrito;
 
-  // La disciplina tiene que ser de tipo EVALUACION: `create` rechaza el resto.
-  // Esto solo se puede insertar así porque la columna tiene default MARCADOR.
   const disc = await dbQuery(
     `INSERT INTO disciplina (nombre, reglamento, jugadores_por_equipo, descripcion, tipo_competencia)
      VALUES ($1, 'Reglamento de prueba', 3, $2, 'EVALUACION') RETURNING id_disciplina`,
@@ -76,21 +52,17 @@ beforeAll(async () => {
   );
   idDisciplinaEvaluacion = disc.rows[0].id_disciplina;
 
-  // Se toma una instancia existente en vez de crear una: `instancia` solo tiene
-  // `descripcion_instancia` y no es lo que se prueba aca.
   const inst = await dbQuery('SELECT id_instancia FROM instancia ORDER BY id_instancia LIMIT 1');
 
   const torneo = await dbQuery(
-    `INSERT INTO torneo (id_disciplina, id_instancia, nombre, fecha_inicio, fecha_fin, estado)
-     VALUES ($1, $2, $3, CURRENT_DATE, CURRENT_DATE + 30, 'Activo') RETURNING id_torneo`,
-    [idDisciplinaEvaluacion, inst.rows[0].id_instancia, `${TAG} torneo`]
+    `INSERT INTO torneo (id_disciplina, nombre, fecha_inicio, fecha_fin, estado)
+     VALUES ($1, $2, CURRENT_DATE, CURRENT_DATE + 30, 'Activo') RETURNING id_torneo`,
+    [idDisciplinaEvaluacion, `${TAG} torneo`]
   );
   idTorneo = torneo.rows[0].id_torneo;
 
   const idUsuarioDueño = admin.id;
 
-  // El admin no tiene institucion asignada, asi que se le da una antes de armar
-  // los equipos: `equipo.id_institucion` es NOT NULL.
   const insti = await dbQuery(
     `INSERT INTO institucion (nombre, tipo, direccion, telefono, id_distrito, id_localidad)
      VALUES ($1, 'Escuela', $2, '0000000', $3, $4) RETURNING id_institucion`,
@@ -114,16 +86,10 @@ beforeAll(async () => {
   idEquipoA = await crearEquipo(`${TAG} trio A`);
   idEquipoB = await crearEquipo(`${TAG} trio B`);
 
-  // El jurado se arma con el propio admin. El alta solo necesita que el usuario
-  // exista y se guarde en `staff_presentacion`: el rol "Juez" (id 11) lo exige
-  // `detalle-evaluacion` para cargar la hoja, que es otro suite, y la base de
-  // test todavia no tiene ese rol cargado.
   idJuez = idUsuarioDueño;
 });
 
 afterAll(async () => {
-  // Orden por dependencia: las presentaciones se van por cascada desde el
-  // torneo, pero borrar el torneo antes dejaria huerfanos si la cascada falla.
   await dbQuery('DELETE FROM presentacion WHERE id_torneo IN (SELECT id_torneo FROM torneo WHERE nombre LIKE $1)', [`${TAG}%`]);
   await dbQuery('DELETE FROM configuracion_puntaje WHERE id_torneo IN (SELECT id_torneo FROM torneo WHERE nombre LIKE $1)', [`${TAG}%`]);
   await dbQuery('DELETE FROM torneo WHERE nombre LIKE $1', [`${TAG}%`]);
@@ -131,7 +97,6 @@ afterAll(async () => {
   await dbQuery('DELETE FROM equipo WHERE nombre LIKE $1', [`${TAG}%`]);
   await dbQuery('DELETE FROM institucion WHERE nombre LIKE $1', [`${TAG}%`]);
   await dbQuery('DELETE FROM disciplina WHERE nombre LIKE $1', [`${TAG}%`]);
-  // `bitacora` y `refresh_token_revocado` tienen FK a `usuario` sin cascada.
   await dbQuery(
     'DELETE FROM bitacora WHERE id_usuario IN (SELECT id_usuario FROM usuario WHERE email LIKE $1)',
     [`${TAG}%`]
@@ -146,8 +111,6 @@ const crear = (payload) =>
     .set('Authorization', `Bearer ${tokenAdmin}`)
     .send(payload);
 
-// Un encuentro es de un solo trío: sale solo, se lo evalúa y termina. El
-// segundo trío queda para el caso que comprueba que se lo rechaza.
 const base = (orden, equipo = idEquipoA) => ({
   id_torneo: idTorneo,
   id_disciplina: idDisciplinaEvaluacion,
@@ -171,19 +134,13 @@ describe('Alta de presentaciones (POST /presentaciones)', () => {
       .set('Authorization', `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
-    // Este endpoint devuelve un array plano, no el sobre `{ data, total }` de los
-    // listados con paginacion.
     const creada = (Array.isArray(res.body) ? res.body : res.body.data || []).find((p) => p.orden === 1);
     expect(creada).toBeDefined();
-    // Los agregados que la pantalla de listado muestra: sin ellos la columna
-    // "Trío" salía vacía y la de torneo mostraba el id en crudo.
     expect(creada.equipo_nombre).toBe(`${TAG} trio A`);
     expect(creada.torneo_nombre).toBe(`${TAG} torneo`);
   });
 
   it('rechaza un orden repetido en el mismo torneo', async () => {
-    // El defecto 1: sin filtro por `orden` el chequeo comparaba contra todas las
-    // presentaciones del torneo y rechazaba siempre, con cualquier orden.
     const res = await crear(base(1));
 
     expect(res.status).toBe(409);
@@ -196,9 +153,6 @@ describe('Alta de presentaciones (POST /presentaciones)', () => {
     expect(res.status).toBe(201);
   });
 
-  // El modelo viejo juntaba N tríos en la misma grilla de evaluación. En
-  // Gimnasia Artística no hay enfrentamiento: cada trío se presenta solo, así
-  // que una presentación con dos tríos no significaba nada.
   it('rechaza una presentación con más de un trío', async () => {
     const res = await crear({
       ...base(3),
@@ -211,8 +165,6 @@ describe('Alta de presentaciones (POST /presentaciones)', () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/un solo trío/);
 
-    // Y no queda nada a medias: el guard corre antes de abrir la transacción,
-    // así que no se inserta ni la presentación ni el trío.
     const huerfanas = await dbQuery(
       'SELECT count(*)::int AS n FROM presentacion WHERE id_torneo = $1 AND orden = 3', [idTorneo]
     );
@@ -220,9 +172,6 @@ describe('Alta de presentaciones (POST /presentaciones)', () => {
   });
 
   it('no deja agregar un segundo trío a una presentación que ya tiene uno', async () => {
-    // El guard del service es el mensaje que ve el usuario. Este es el otro
-    // lado: un INSERT directo por SQL tiene que rebotar igual, o un seed
-    // volvería a meter el modelo viejo.
     const creada = await crear(base(4, idEquipoB));
     expect(creada.status).toBe(201);
 
@@ -234,12 +183,6 @@ describe('Alta de presentaciones (POST /presentaciones)', () => {
   });
 
   it('no acepta un orden de salida distinto de 1', async () => {
-    // Con un solo trío no hay a qué ordenar. La columna quedó libre y un INSERT
-    // directo metía valores que la aplicación leía después como "orden de
-    // salida" sin serlo.
-    //
-    // Se prueba contra una presentación sin trío porque, si ya tuviera uno, el
-    // trigger del test anterior saltaría antes y dejaría este CHECK sin probar.
     const creada = await crear({ ...base(5), participantes: [] });
     expect(creada.status).toBe(201);
 
@@ -251,9 +194,6 @@ describe('Alta de presentaciones (POST /presentaciones)', () => {
   });
 
   it('no deja la presentación a medio crear si un paso del medio falla', async () => {
-    // El defecto 3: `create` no era transaccional. Con un id_usuario
-    // inexistente, la presentación y sus participantes ya estaban insertados
-    // cuando el fallo de la FK lo detenía, y quedaba visible en el listado.
     const antes = await dbQuery(
       'SELECT count(*)::int AS n FROM presentacion WHERE id_torneo = $1', [idTorneo]
     );
@@ -270,16 +210,6 @@ describe('Alta de presentaciones (POST /presentaciones)', () => {
     );
     expect(despues.rows[0].n).toBe(antes.rows[0].n);
 
-    // "Huerfano" es un `presentacion_participante` cuya presentacion no existe. La
-    // FK es ON DELETE CASCADE, asi que ese estado no puede quedar: si aparece, es
-    // que algo inserto participating sin su presentacion.
-    //
-    // El filtro de la consulta anterior era `NOT IN (... presentacion WHERE
-    // id_torneo = $1)`, que cuenta tambien los participantes de las presentaciones
-    // de OTROS torneos. Parecia equivalente y no lo es: en cuanto otra suite crea
-    // una presentación en paralelo (jest corre una suite por worker y todas
-    // comparten la base), el conteo daba 1 y el test fallaba sin que hubiera un solo
-    // registro huerfano.
     const huerfanos = await dbQuery(
       `SELECT count(*)::int AS n FROM presentacion_participante pp
         WHERE pp.id_presentacion NOT IN (SELECT id_presentacion FROM presentacion)`

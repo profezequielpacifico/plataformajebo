@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { styles } from '../../styles/theme/index.js';
-import { Card, CardHeader, CardTitle } from '../../components/ui/Card.js';
+import { Card, CardHeader } from '../../components/ui/Card.js';
 import { Table, TableHeader, TableHeaderCell, TableRow, TableCell } from '../../components/ui/Table.js';
 import { Badge } from '../../components/ui/Badge.js';
 import { Loading } from '../../components/ui/Loading.js';
@@ -103,35 +103,35 @@ export function StandingsPage() {
     }, [selectedTournament, selectedDiscipline, selectedRegion, activeTab]);
 
     const renderFilters = () =>
-        h('div', { style: { display: 'flex', gap: '16px', marginBottom: '20px', padding: '16px' } },
-            h('div', { style: { ...styles.formGroup, marginBottom: 0 } },
+        h('div', { style: { display: 'flex', gap: '16px', marginBottom: '20px', padding: '16px', flexWrap: 'wrap' } },
+            h('div', { style: { ...styles.formGroup, marginBottom: 0, flex: '1 1 200px', maxWidth: '320px' } },
                 h('label', { style: styles.formLabel }, 'Deporte'),
                 h('select', {
                     value: selectedDiscipline,
                     onChange: (e) => setSelectedDiscipline(e.target.value),
-                    style: { ...styles.formSelect, width: '200px' }
+                    style: { ...styles.formSelect, width: '100%' }
                 },
                     h('option', { value: '' }, 'Todos los deportes'),
                     disciplines.map(d => h('option', { key: d.value, value: d.value }, d.label))
                 )
             ),
-            h('div', { style: { ...styles.formGroup, marginBottom: 0 } },
+            h('div', { style: { ...styles.formGroup, marginBottom: 0, flex: '1 1 200px', maxWidth: '320px' } },
                 h('label', { style: styles.formLabel }, 'Torneo'),
                 h('select', {
                     value: selectedTournament,
                     onChange: (e) => setSelectedTournament(e.target.value),
-                    style: { ...styles.formSelect, width: '250px' }
+                    style: { ...styles.formSelect, width: '100%' }
                 },
                     h('option', { value: '' }, 'Todos los torneos'),
                     tournaments.map(t => h('option', { key: t.value, value: t.value }, t.label))
                 )
             ),
-            h('div', { style: { ...styles.formGroup, marginBottom: 0 } },
+            h('div', { style: { ...styles.formGroup, marginBottom: 0, flex: '1 1 200px', maxWidth: '320px' } },
                 h('label', { style: styles.formLabel }, 'Región'),
                 h('select', {
                     value: selectedRegion,
                     onChange: (e) => setSelectedRegion(e.target.value),
-                    style: { ...styles.formSelect, width: '200px' }
+                    style: { ...styles.formSelect, width: '100%' }
                 },
                     h('option', { value: '' }, 'Todas las regiones'),
                     regions.map(r => h('option', { key: r.value, value: r.value }, r.label))
@@ -224,7 +224,7 @@ export function StandingsPage() {
     };
 
     return h(Card, null,
-        h(CardHeader, null, h(CardTitle, null, 'Clasificación')),
+        h(CardHeader, { title: 'Clasificación' }),
         h('div', { style: { display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 16px' } },
             h('button', { style: tabStyle(activeTab === 'posiciones'), onClick: () => setActiveTab('posiciones') }, 'Posiciones'),
             h('button', { style: tabStyle(activeTab === 'clasificados'), onClick: () => setActiveTab('clasificados') }, 'Clasificados')

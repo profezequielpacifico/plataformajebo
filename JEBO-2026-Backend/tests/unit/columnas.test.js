@@ -5,9 +5,6 @@ const knex = require('../../src/config/knex');
 
 jest.mock('../../src/config/knex', () => jest.fn());
 
-// columnas.js es la barrera anti mass-assignment: decide que campos del body
-// pueden llegar al INSERT. Un campo que se cuela aqui termina siendo escrito por
-// el repositorio, asi que los casos que importan son los rechazos.
 describe('columnas', () => {
   const conColumnas = (lista) => {
     knex.mockImplementation(() => {
@@ -65,7 +62,6 @@ describe('columnas', () => {
     });
 
     it('rechaza una columna que no existe en la tabla', async () => {
-      // Sin esto la clave terminaba en el INSERT y Postgres devolvia 500.
       await expect(validarColumnas('usuario', { nombre: 'Ana', hack: 1 }))
         .rejects.toBeInstanceOf(ValidationError);
     });
@@ -86,14 +82,12 @@ describe('columnas', () => {
     });
 
     it('rechaza la PK aunque sea una columna real', async () => {
-      // Sin esto un PUT podria renumerar la fila y dejar referencias colgadas.
       await expect(validarColumnas('usuario', { id_usuario: 5 }, { pk: 'id_usuario' }))
         .rejects.toThrow(/id_usuario no se puede enviar/);
     });
 
     it('no confunde la PK con una columna cualquiera', async () => {
       const data = { id_usuario: 5 };
-      // La PK solo se bloquea si viene en las opciones; sin pk no se chequea.
       expect(await validarColumnas('usuario', data)).toBe(data);
     });
 
@@ -115,8 +109,6 @@ describe('columnas', () => {
     });
 
     it('chequea columnas desconocidas antes que la PK', async () => {
-      // Si un body trae las dos cosas, el primer error que ve el cliente es el
-      // de la columna que ni existe, que es el mas util para corregir.
       await expect(validarColumnas('usuario', { hack: 1, id_usuario: 2 }, { pk: 'id_usuario' }))
         .rejects.toThrow(/hack/);
     });
@@ -140,8 +132,6 @@ describe('columnas', () => {
 
   describe('COLUMNAS_SISTEMA', () => {
     it('incluye todo lo que no se puede dejar escribir desde el body', () => {
-      // El repo arma payloads legitimos con id_rol y estado: el filtro va en el
-      // borde (middleware), no aca. Esta lista es la que usa ese filtro.
       for (const col of ['password', 'password_hash', 'id_rol', 'rol', 'estado',
         'ultimo_acceso', 'created_at', 'updated_at']) {
         expect(COLUMNAS_SISTEMA.has(col)).toBe(true);

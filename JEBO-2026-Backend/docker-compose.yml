@@ -6,32 +6,18 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-jebo_2026}
       POSTGRES_USER: ${DB_USER:-jebo}
-      # Sin default: `jebo_secret_change_me` era el valor real en el despliegue
-      # (verificado contra .env.docker) y pgAdmin, en la misma red de Docker,
-      # podía llegar a `db:5432` con él.
       POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     expose:
       - "5432"
     volumes:
-      # Postgres 18+ alpine expects the mount at /var/lib/postgresql
       - jebo_pgdata:/var/lib/postgresql
-      # Place a prepared dump as docker/db/init/01_backup.sql (gitignored).
-      # Generate it with: node scripts/prepare-dump.js <path-to-dump.sql>
       - ./docker/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-jebo} -d ${DB_NAME:-jebo_2026}"]
       interval: 5s
       timeout: 5s
       retries: 20
-    # `db` NO lleva `security_opt: no-new-privileges`, a diferencia de los otros
-    # dos servicios. La imagen oficial de Postgres arranca como root y baja al
-    # usuario `postgres` con `gosu`, que necesita setuid para poder hacerlo.
-    # Poner la bandera hace que el `gosu` falle y el contenedor no arranca. La
-    # entrada sigue siendo root dentro del contenedor; lo que lo mantiene
-    # acotado es que en producción el puerto 5432 no se publica (solo `expose`
-    # en la red interna de Docker) y el overlay de desarrollo lo publica atado
-    # a `127.0.0.1`.
 
   api:
     build:
@@ -50,63 +36,28 @@ services:
       DB_NAME: ${DB_NAME:-jebo_2026}
       DB_USER: ${DB_USER:-jebo}
       DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
-      # Sin default a propósito, aunque `env.js` ya aborta el arranque con un
-      # valor conocido. Que el compose también falle es lo que impide que un
-      # `docker compose up` sin `.env` arranque la API con un secreto débil.
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:15173}
-      # Flag `Secure` de la cookie de sesión. Explícitamente en `false` y no
-      # derivado de NODE_ENV: la app se publica por HTTP plano en la red del
-      # colegio, y con `Secure` el navegador descarta la cookie, el login
-      # devuelve 200 y la primera llamada autenticada responde 401. Ponerlo en
-      # `true` solo cuando haya un TLS adelante.
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
-      # nginx es el unico proxy delante de la API
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+      UV_THREADPOOL_SIZE: ${UV_THREADPOOL_SIZE:-4}
+      DB_POOL_TOTAL: ${DB_POOL_TOTAL:-20}
       TRUST_PROXY: 1
     volumes:
       - jebo_uploads:/app/uploads
-    # Endurecimiento del contenedor (X-11). Los tres van juntos y se apoyan en el
-    # `USER node` del Dockerfile: sin usuario sin privilegios, `cap_drop: ALL` y
-    # `no-new-privileges` no dan nada, porque root recupera las capabilities.
-    #
-    # `read_only` es seguro acá porque el proceso solo escribe en dos lugares, y
-    # los dos están fuera de la capa de solo lectura:
-    #   - `/app/logs`    -> tmpfs, escrito por winston.
-    #   - `/app/uploads` -> volumen con nombre, escrito por multer.
-    # `/app` es imagen de solo lectura: `npm install` no está en runtime, así
-    # que no hay nada que necesite escribir ahí. Si alguna vez se agrega un
-    # `require()` dinámico o un cache en disco, esto lo va a delatar con ENOENT
-    # en el arranque en vez de dejarlo pasar.
-    read_only: false
+    read_only: true
     tmpfs:
-      # Entre comillas, y no es cosmético: sin ellas compose parsea mal la
-      # opción y monta el tmpfs en `/logs` en vez de `/app/logs`. El síntoma es
-      # silencioso —el tmpfs existe y es escribible, solo que en otro lado—, y
-      # `/app/logs` queda dentro del rootfs de solo lectura, así que winston
-      # pierde el log sin que nada falle visiblemente. Verificado montando un
-      # contenedor de prueba y leyendo /proc/mounts.
       - "/app/logs:uid=1000,gid=1000,mode=0750"
       - "/tmp:uid=1000,gid=1000,mode=1770"
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    # No se publica el puerto: dejarlo accesible por red con trust proxy=1
-    # hace que req.ip tome el X-Forwarded-For que manda el cliente, y el
-    # lockout por IP pasa a ser evadible. Todo entra por el puerto 80 de `web`.
     expose:
       - "3000"
-    # Requerido por `depends_on: service_healthy` de `web`. Sin este healthcheck
-    # esa condición no puede satisfacerse, y nginx arrancaría antes de que la API
-    # pueda resolver dependencias (X-12).
-    #
-    # La ruta es `/health`, NO `/api/health`: dentro del contenedor Express monta
-    # el router en la raíz, y es nginx quien rebasea a `/api` con el `proxy_pass`
-    # que termina en `/`. Preguntar por `/api/health` por dentro da 404 siempre y
-    # deja el contenedor permanentemente unhealthy.
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval: 10s
@@ -120,22 +71,14 @@ services:
       dockerfile: Dockerfile
     container_name: jebo-web
     restart: unless-stopped
-    # Con healthcheck + service_healthy en vez de solo `depends_on`: sin esto,
-    # `docker compose up -d` levanta `web` antes de que la API responda, y nginx
-    # resuelve `api` una sola vez al arrancar. Un redeploy de `api` dejaba la
-    # web sirviendo 502 hasta que también se recreara `web` (X-12, medido).
     depends_on:
       api:
         condition: service_healthy
     ports:
       - "${WEB_PORT:-15173}:80"
-    # nginx corre como root porque tiene que escuchar en :80 y hacer bind-mount
-    # de /etc/nginx/conf.d. Lo que sí se le quita es todo lo demás (X-11).
     cap_drop:
       - ALL
     cap_add:
-      # CHOWN y DAC_OVERRIDE son los que necesita para escribir el pid y los
-      # logs montados por la imagen; NET_BIND_SERVICE para el puerto 80.
       - CHOWN
       - DAC_OVERRIDE
       - NET_BIND_SERVICE
@@ -143,7 +86,6 @@ services:
       - SETUID
     security_opt:
       - no-new-privileges:true
-
 
 volumes:
   jebo_pgdata:

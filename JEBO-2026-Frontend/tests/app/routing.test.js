@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 
 import { resolverRuta } from '../../src/routing.js';
 
-/**
- * Mapa mínimo con las dos formas que conviven en la app: rutas planas
- * (`users`) y rutas anidadas con parametro (`gymnastics/presentaciones/:id/detalle`).
- */
 const RUTAS = {
     login: 'x',
     dashboard: 'x',
@@ -31,9 +27,6 @@ describe('resolverRuta', () => {
         expect(resolverRuta('users-edit/42', RUTAS)).toEqual({ ruta: 'users-edit', matchId: '42' });
     });
 
-    // El bug que hacia que el modulo de gimnasia fuera inalcanzable: la base de
-    // `gymnastics/presentaciones/5/resultado` es `gymnastics`, que no es clave de
-    // ningun renderer, asi que la pagina caia en el login.
     it('resuelve las rutas anidadas de gimnasia', () => {
         expect(resolverRuta('gymnastics/presentaciones', RUTAS)).toEqual({
             ruta: 'gymnastics/presentaciones',
@@ -57,8 +50,6 @@ describe('resolverRuta', () => {
     });
 
     it('no confunde un id con el literal nueva', () => {
-        // `nueva` es un id valido en la BD, asi que la busqueda tiene que ir por
-        // numero de segmentos, no por "la ruta mas corta que prefixe".
         expect(resolverRuta('gymnastics/presentaciones/nueva/detalle', RUTAS)).toEqual({
             ruta: 'gymnastics/presentaciones/:id/detalle',
             matchId: 'nueva'
@@ -75,9 +66,6 @@ describe('resolverRuta', () => {
     });
 
     it('no resuelve una ruta plana si sobran dos segmentos', () => {
-        // `gymnastics/presentaciones/5/resultado` necesita su ruta declarativa:
-        // si la base aceptara dos segmentos de mas, el id y el sufijo se
-        // mezclarian y la pantalla de resultado se abriria con la de detalle.
         expect(resolverRuta('gymnastics/presentaciones/5/extra', RUTAS)).toEqual({
             ruta: null,
             matchId: null

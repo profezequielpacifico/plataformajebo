@@ -4,19 +4,6 @@ const { assertTorneoAceptaPartidos } = require('./tipoCompetencia.service');
 const { NotFoundError, BusinessError } = require('../utils/errors');
 
 class FixtureService {
-  /**
-   * Estado del fixture de un torneo.
-   *
-   * `alcance` es obligatorio (X-05). El endpoint es `authenticate` sin
-   * `requireRole`, así que lo puede pedir un Profesor: sin el filtro, alcanzaba
-   * con adivinar un `id_torneo` para leer el nombre y las fechas de un torneo
-   * ajenos, y para saber si su fixture ya estaba generado.
-   *
-   * Devuelve la MISMA forma que antes —`{ generado: false, torneo: null }`—
-   * cuando el torneo no existe o cuando existe pero no es visible. Indistinguir
-   * los dos casos confirmaría que el `id_torneo` es válido, que es justo lo que
-   * se está evitando.
-   */
   async getByIdTorneo(idTorneo, alcance) {
     if (!alcance || typeof alcance.global !== 'boolean') {
       throw new Error(
@@ -52,12 +39,6 @@ class FixtureService {
     const torneo = await knex('torneo').where('id_torneo', idTorneo).first();
     if (!torneo) throw new NotFoundError('Torneo no encontrado');
 
-    // Un fixture ES una lista de partidos local/visitante, así que generarlo en
-    // un torneo de Gimnasia no produce un fixture raro: produce el modelo
-    // equivocado entero. Con dos trios inscriptos armaba un round-robin de 2
-    // partidos que en la disciplina no existen. El guard va antes de leer
-    // `posicion` para que el mensaje sea el del tipo de competencia y no el de
-    // "necesita al menos 2 equipos".
     await assertTorneoAceptaPartidos(idTorneo);
 
     const equipos = await knex('posicion')

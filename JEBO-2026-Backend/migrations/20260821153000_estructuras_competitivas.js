@@ -1,7 +1,3 @@
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function(knex) {
   await knex.schema.createTable('etapa', (table) => {
     table.increments('id_etapa').primary();
@@ -54,10 +50,6 @@ exports.up = async function(knex) {
   `);
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function(knex) {
   await knex.schema.alterTable('torneo', (table) => {
     table.dropColumn('fecha_inscripcion_inicio');

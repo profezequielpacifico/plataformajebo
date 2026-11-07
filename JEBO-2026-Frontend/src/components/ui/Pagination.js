@@ -4,14 +4,8 @@ import { PAGINATION } from '../../config/constants.js';
 
 const { createElement: h } = React;
 
-// Tope de botones visibles. Con 18 equipos y limit=10 son 2 paginas; el tope
-
 const MAX_BOTONES = 7;
 
-/**
- * Arma la lista de paginas a dibujar, con `null` en el lugar de los saltos.
- * 1 … 4 5 [6] 7 … 12 en vez de los 12 numeros sueltos.
- */
 export function paginasVisibles(page, totalPages) {
     const total = Math.max(1, totalPages || 1);
     const actual = Math.min(Math.max(1, page || 1), total);
@@ -20,7 +14,6 @@ export function paginasVisibles(page, totalPages) {
     }
 
     const paginas = new Set([1, total, actual]);
-    // Dos vecinos a cada lado: suficiente para orientar sin llenar la barra.
     for (let d = 1; d <= 2; d++) {
         if (actual - d > 1) paginas.add(actual - d);
         if (actual + d < total) paginas.add(actual + d);
@@ -64,21 +57,11 @@ function renderBoton(texto, destino, { activo = false, deshabilitado = false, on
     }, texto);
 }
 
-/**
- * Pie de tabla con "mostrando X-Y de Z", navegacion de paginas y selector de
- * cantidad por pagina.
- *
- * El rango se calcula desde `total`, no desde el largo del arreglo de la pagina:
- * cuando la ultima pagina viene incompleta, `(page-1)*limit` sigue siendo la
- * cuenta de equipos que quedaron atras. Con los datos de la pagina,
- * `rows.length` daria el total y el pie diria "mostrando 1 de 1" en la ultima.
- */
 export function Pagination({ page = 1, limit = PAGINATION.DEFAULT_LIMIT, total = 0, onPageChange, onLimitChange }) {
     const totalPaginas = Math.max(1, Math.ceil((total || 0) / (limit || PAGINATION.DEFAULT_LIMIT)));
     const actual = Math.min(Math.max(1, page || 1), totalPaginas);
     const desde = total === 0 ? 0 : (actual - 1) * limit + 1;
     const hasta = Math.min(actual * limit, total);
-    // Con `total = 0` el backend manda `totalPages: 0` y la barra quedaria con
 
     const hayPaginas = total > 0;
 

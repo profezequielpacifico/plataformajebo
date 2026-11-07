@@ -1,17 +1,7 @@
 const loginLockout = require('../../src/middleware/login-lockout');
 const { query: dbQuery } = require('../../src/config/database.js');
 
-// El lockout se persiste en login_intentos. Estos tests corren contra la base
-// real porque el comportamiento interesante (onConflict/merge, umbrales,
-// expiracion) vive en el SQL, no en el JS: mockear knex probaria el mock.
 describe('login-lockout', () => {
-  // Esta suite comparte `jebo_2026_test` con las demás, y varias hacen login de
-  // verdad: cada una deja su fila `email:<random>` y su fila `ip:<loopback>` en
-  // `login_intentos`. Consultar la tabla entera hacía que estos tests pasaran o
-  // fallaran según qué suite corriera en paralelo en ese momento.
-  //
-  // Todos los datos de esta suite viven bajo el rango 10.0.0.0/24 y el dominio
-  // x.com. CUALQUIER consulta de conteo o de contenido pasa por acá.
   const SOLO_MIO = "(ip LIKE '10.0.0.%' OR identificador LIKE '%@x.com' OR identificador = 'no-es-un-email')";
 
   beforeEach(async () => {
@@ -38,7 +28,6 @@ describe('login-lockout', () => {
 
   describe('registroFallo', () => {
     it('el primer fallo cuenta 1 y no bloquea', async () => {
-      // Devuelve la peor etapa entre cuenta e IP, ya reducida a un objeto.
       const etapa = await loginLockout.registroFallo('a@x.com', '10.0.0.1');
 
       expect(etapa.indice).toBe(0);
@@ -62,8 +51,6 @@ describe('login-lockout', () => {
     });
 
     it('el off-by-one esta arreglado: el INSERT ya arranca en 1', async () => {
-      // Si el merge se aplicara tambien en el primer INSERT, el contador
-      // arrancaria en 0 y el atacante ganaria un intento gratis.
       await loginLockout.registroFallo('nuevo@x.com', '10.0.0.9');
 
       const { rows } = await dbQuery(
@@ -123,15 +110,8 @@ describe('login-lockout', () => {
     });
 
     it('sin identificador solo cuenta la IP', async () => {
-      // normalizarEmail no valida el formato, solo que sea string no vacio: un
-      // garbage genera su propia fila, que no protege a nadie pero tampoco
-      // afecta a una cuenta real. La limpieza periodica las poda.
       await loginLockout.registroFallo('', '10.0.0.6');
 
-      // Filtrado por IP y no sobre la tabla entera: esta suite comparte base con
-      // las demás, y cualquier login real que otra suite haga deja su fila de
-      // IP. Contar toda la tabla hacía que el test pasara o fallara según qué
-      // suite corrió en paralelo, que es la peor forma de test posible.
       const { rows } = await dbQuery(
         "SELECT identificador, ip FROM login_intentos WHERE ip = '10.0.0.6'"
       );
@@ -176,7 +156,6 @@ describe('login-lockout', () => {
 
     it('la cuenta manda cuando tiene mas fallos que la IP', async () => {
       for (let i = 0; i < 6; i++) await loginLockout.registroFallo('h@x.com', '10.0.0.10');
-      // Otra IP, para que la fila de la IP no sume por encima de la cuenta.
       await loginLockout.registroFallo('otra-cuenta@x.com', '10.0.0.99');
 
       const e = await loginLockout.estadoBloqueo('h@x.com', '10.0.0.10');
@@ -185,15 +164,8 @@ describe('login-lockout', () => {
     });
 
     it('la IP con 6 fallos NO bloquea: su umbral es 20, no el de la cuenta', async () => {
-      // La misma IP prueba cuentas distintas: es la señal de credential stuffing.
       for (let i = 0; i < 6; i++) await loginLockout.registroFallo(`saco${i}@x.com`, '10.0.0.11');
 
-      // Antes esta IP con 6 fallos ganaba la comparacion por cantidad y bloqueaba
-      // a todo el que salia por ella. Medido contra el despliegue: tras 5 fallos
-      // de `admin`, el login LEGITIMO de `carlos` desde la misma IP daba 429.
-      //
-      // Lo que se devuelve es el estado de la CUENTA (su propio fallo), que es
-      // el que le importa a quien esta intentando entrar.
       const e = await loginLockout.estadoBloqueo('saco0@x.com', '10.0.0.11');
 
       expect(e.bloqueado).toBe(false);
@@ -202,7 +174,6 @@ describe('login-lockout', () => {
     });
 
     it('la IP manda cuando supera SU umbral de 20', async () => {
-      // 20 cuentas distintas desde la misma IP: el volumen que si es un ataque.
       for (let i = 0; i < 20; i++) await loginLockout.registroFallo(`bomb${i}@x.com`, '10.0.0.13');
 
       const e = await loginLockout.estadoBloqueo('bomb0@x.com', '10.0.0.13');
@@ -213,7 +184,6 @@ describe('login-lockout', () => {
     });
 
     it('la cuenta bloqueada a 5 manda sobre una IP con 6 fallos', async () => {
-      // 6 en la IP, 5 en la cuenta. La cuenta ya bloqueo; la IP todavia no.
       for (let i = 0; i < 6; i++) await loginLockout.registroFallo(`ip6_${i}@x.com`, '10.0.0.14');
       for (let i = 0; i < 5; i++) await loginLockout.registroFallo('cuenta5@x.com', '10.0.0.15');
 
@@ -252,7 +222,7 @@ describe('login-lockout', () => {
 
       expect(borrados).toBe(1);
       const { rows } = await dbQuery(`SELECT 1 FROM login_intentos WHERE ${SOLO_MIO}`);
-      expect(rows).toHaveLength(1); // queda solo la fila ip:10.0.0.14
+      expect(rows).toHaveLength(1);
     });
 
     it('limpiarPorIdentificador con valor vacio no toca nada', async () => {
@@ -266,7 +236,6 @@ describe('login-lockout', () => {
       await loginLockout.registroFallo('m@x.com', '10.0.0.17');
 
       expect(await loginLockout.limpiarPorIp('10.0.0.16')).toBe(1);
-      // Se va la fila de la IP; la de la cuenta tiene ip = '' y sobrevive.
       const { rows } = await dbQuery(
         `SELECT identificador FROM login_intentos WHERE ${SOLO_MIO}`
       );
@@ -282,8 +251,6 @@ describe('login-lockout', () => {
       await loginLockout.registroFallo('n@x.com', '10.0.0.18');
       await loginLockout.limpiarTodo();
 
-      // Consulta la tabla entera a propósito: `limpiarTodo` también borra las
-      // filas que dejaron las otras suites, y eso es lo que se está probando.
       const { rows } = await dbQuery('SELECT 1 FROM login_intentos');
       expect(rows).toHaveLength(0);
     });
@@ -367,9 +334,6 @@ describe('login-lockout', () => {
     });
 
     it('los rebotes 429 NO escalan la cuenta a bloqueo permanente', async () => {
-      // Es el DoS que se midio en vivo: el gate sumo el intento bloqueado y 14
-      // POST con una contrasena cualquiera dejaban la cuenta en permanente, sin
-      // que el atacante supiera la contrasena. Solo hacía falta el email.
       for (let i = 0; i < 5; i++) await loginLockout.registroFallo('dos@x.com', '10.0.0.27');
 
       for (let i = 0; i < 200; i++) {
@@ -389,9 +353,6 @@ describe('login-lockout', () => {
     );
 
     it('la escalera avanza al expirar la ventana, sin ayuda del gate', async () => {
-      // Vencida la ventana, el gate deja pasar y el controlador vuelve a fallar.
-      // El contador avanza con fallos REALES, no con los rebotes 429: ese era el
-      // unico camino que el gate inventaba para pasar de etapa 1 a 2.
       for (let i = 0; i < 5; i++) await loginLockout.registroFallo('esc@x.com', '10.0.0.28');
       expect((await loginLockout.estadoBloqueo('esc@x.com', '10.0.0.28')).etapa).toBe(1);
 

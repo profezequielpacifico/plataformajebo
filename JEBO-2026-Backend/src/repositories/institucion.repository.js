@@ -9,7 +9,6 @@ const baseSelect = () => knex('institucion as i')
   .leftJoin('region as r', 'l.id_region', 'r.id_region');
 
 module.exports = {
-  // Listar instituciones es el padrón de todas las instituciones del sistema, y
 
   findAll: ({ alcance: alc } = {}) => {
     const query = baseSelect();
@@ -21,8 +20,10 @@ module.exports = {
     alcance.filtrarPorInstitucion(query, alc, 'i.id_institucion');
     return query.where('i.id_institucion', id).first();
   },
-  // `findByName` NO lleva filtro a propósito: lo usa el servicio de escritura
 
-  findByName: (nombre) => baseSelect().where('i.nombre', nombre).first(),
+  findByName: (nombre, idDistrito) => baseSelect()
+    .whereRaw('lower(btrim(i.nombre)) = lower(btrim(?))', [nombre])
+    .where('i.id_distrito', idDistrito)
+    .first(),
   ...crud('institucion', 'id_institucion', ['creado_en', 'actualizado_en'])
 };

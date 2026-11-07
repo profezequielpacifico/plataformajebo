@@ -2,8 +2,6 @@ const { HTTP_STATUS, MENSAJES } = require('../constants');
 const { BusinessError, ValidationError } = require('../utils/errors');
 const logger = require('../config/logger');
 
-// Postgres reportaba estas violaciones como 500 "error inesperado" cuando en
-
 const POR_CODIGO = {
   '23502': { status: HTTP_STATUS.BAD_REQUEST, mensaje: 'Falta un campo obligatorio' },
   '23503': { status: HTTP_STATUS.CONFLICT, mensaje: 'La referencia indicada no existe o el recurso sigue en uso' },
@@ -16,8 +14,6 @@ const POR_CODIGO = {
   '22008': { status: HTTP_STATUS.BAD_REQUEST, mensaje: 'Alguna fecha está fuera de rango' },
   '22012': { status: HTTP_STATUS.BAD_REQUEST, mensaje: 'Se produjo un desbordamiento al procesar un valor' }
 };
-
-// El 23503 es el unico codigo con mensaje util por tabla: en vez de un
 
 const FK_CONSTRAINT_MESSAGES = {
   torneo: 'No se puede eliminar el torneo porque tiene partidos, equipos o posiciones asociadas. Eliminá primero esos registros.',
@@ -33,11 +29,6 @@ const FK_CONSTRAINT_MESSAGES = {
 
 const FK_GENERICO = 'No se puede eliminar porque tiene registros asociados. Eliminá primero los registros dependientes.';
 
-// Los mensajes de arriba están redactados para un DELETE. Un 23503 en un INSERT o
-// en un UPDATE significa otra cosa: la clave foránea apunta a un registro que no
-// existe. Antes no se distinguia, y `POST /presentaciones` con un id_usuario
-// inexistente contestaba "No se puede eliminar el usuario porque tiene registros
-// asociados", mandando al admin a hacer justamente la operación contraria.
 const FK_REFERENCIA = (tabla) =>
   tabla
     ? `El registro relacionado en "${tabla}" no existe`
@@ -45,8 +36,6 @@ const FK_REFERENCIA = (tabla) =>
 
 const esClaseDeIntegridad = (codigo) => /^23/.test(codigo);
 const esClaseDeDatos = (codigo) => /^22/.test(codigo);
-
-// Postgres no siempre manda la tabla en el mismo lugar: suele venir en detail
 
 const extractTableName = (err) => {
   const detail = err.detail || '';
@@ -66,8 +55,6 @@ const traducirErrorDePostgres = (err, req = {}) => {
     const esBorrado = req.method === 'DELETE';
     const mensaje = esBorrado
       ? (FK_CONSTRAINT_MESSAGES[extractTableName(err)] || FK_GENERICO)
-      // `err.table` es la tabla *referenciada* en un 23503, que en un insert es
-      // justo lo que hay que corregir.
       : FK_REFERENCIA(err.table);
     return new BusinessError(mensaje);
   }
@@ -90,28 +77,6 @@ const traducirErrorDePostgres = (err, req = {}) => {
   return null;
 };
 
-/**
- * Errores de `express.json()` / `body-parser` (X-15).
- *
- * El problema medido: `POST /auth/login` con `Content-Type: application/json;
- * charset=utf-16` respondia
- *
- *   {"error":"Unexpected token '物', \"物箿攢慭汩㨢愢所挮浯索\" is not valid JSON"}
- *
- * o sea, el mensaje crudo del parser con los primeros bytes del cuerpo tal
- * cual, interpretados con el charset que declaro el cliente. Es un eco de
- * entrada: el cliente ve su propio input devuelto, lo que confirma que hay un
- * parser detras y filtra la version exacta de Node, ademas de ensuciar el
- * mensaje para un usuario legitimo que mando un typo.
- *
- * Se maneja aca y no en el parser porque es el unico lugar que ve el error ya
- * envuelto por Express. Se distinguen por `type` y no por el texto del mensaje,
- * que cambia entre versiones de body-parser.
- *
- * `entity.too.large` va con el mismo grupo: el mensaje crudo de body-parser
- * incluye el limite y el tamano recibido, que no es un problema de seguridad
- * pero tampoco es un mensaje que deba escribir el servidor.
- */
 const TRADUCCIONES_BODY_PARSER = {
   'entity.parse.failed': {
     status: HTTP_STATUS.BAD_REQUEST,
@@ -134,7 +99,6 @@ const TRADUCCIONES_BODY_PARSER = {
 const errorHandler = (err, req, res, _next) => {
   const deBodyParser = err && TRADUCCIONES_BODY_PARSER[err.type];
   if (deBodyParser) {
-    // Se registra el tipo, nunca el `err.body`: el body puede contener la
 
     logger.debug('Cuerpo rechazado por el parser (' + err.type + '): ' + err.message);
     return res.status(deBodyParser.status).json({

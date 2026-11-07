@@ -1,8 +1,3 @@
-/**
- * Elimina la columna id_instancia de la tabla torneo.
- * El campo ya no se usa en el frontend ni es necesario para la lógica de negocio.
- */
-
 exports.up = function (knex) {
   return knex.raw(`
     DO $$

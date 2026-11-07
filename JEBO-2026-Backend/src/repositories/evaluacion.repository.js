@@ -47,7 +47,6 @@ module.exports = {
 
   delete: (id_evaluacion) => knex(TABLE).where('id_evaluacion', id_evaluacion).del(),
 
-  // Calcula totales por juez para una presentación
   totalesPorJuez: (id_presentacion) =>
     knex.raw(`
       SELECT
@@ -80,7 +79,6 @@ module.exports = {
       ORDER BY e.id_participante_equipo, e.id_juez
     `, [id_presentacion]),
 
-  // Resultado final usando la vista
   resultadoFinal: (id_presentacion) =>
     knex('v_resultado_presentacion')
       .where('id_presentacion', id_presentacion)

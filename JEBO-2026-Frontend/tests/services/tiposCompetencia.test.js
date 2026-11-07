@@ -16,10 +16,6 @@ describe('tiposCompetencia', () => {
             expect(esTorneoDeEncuentros({ id_torneo: 30, tipo_competencia: TIPO_MARCADOR })).toBe(false);
         });
 
-        // Un torneo sin tipo viene de una respuesta vieja de la API, o de una
-        // disciplina dada de alta antes de que existiera la columna. Tratarlo
-        // como Gimnasia haría desaparecer los torneos de fútbol de todos los
-        // selectores de la app.
         it('sin tipo, asume MARCADOR para no esconder torneos de fútbol', () => {
             expect(esTorneoDeEncuentros({ id_torneo: 30 })).toBe(false);
         });
@@ -59,9 +55,6 @@ describe('tiposCompetencia', () => {
             expect(lista).toEqual(original);
         });
 
-        // La respuesta de /tournaments puede venir envuelta o no según cómo la
-        // tipifique el service. Devolver [] es lo seguro: `undefined` en un
-        // `.map` del selector rompe la pantalla entera.
         it('devuelve [] con una lista vacia o no-array', () => {
             expect(soloTorneosConPartidos([])).toEqual([]);
             expect(soloTorneosConPartidos(null)).toEqual([]);
@@ -75,8 +68,6 @@ describe('tiposCompetencia', () => {
         });
 
         it('deja pasar todo si la disciplina es Gimnasia pero el tipo no llego', () => {
-            // Filtra por tipo, no por nombre: el nombre de la disciplina puede
-            // cambiar sin que cambie el modelo de competencia.
             const porNombre = [{ id_torneo: 32, disciplina_nombre: 'Gimnasia Artística' }];
             expect(soloTorneosConPartidos(porNombre)).toHaveLength(1);
         });

@@ -5,14 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JEBO 2026 - Sistema Administrativo</title>
     <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,">
-    <!--
-        El fondo del login se pinta desde un elemento que crea React, asi que sin
-        este preload las imagenes no se empiezan a bajar hasta que el bundle termino
-        de descargarse, parsearse y montar. Con el preload arrancan junto con el
-        documento y las descargas van en paralelo.
-
-        Son los cuatro SVG de las esquinas del fondo (ver loginContainer en el tema).
-    -->
     <link rel="preload" as="image" type="image/svg+xml" href="/login-assets/bg-tl.svg">
     <link rel="preload" as="image" type="image/svg+xml" href="/login-assets/bg-tr.svg">
     <link rel="preload" as="image" type="image/svg+xml" href="/login-assets/bg-bl.svg">
@@ -28,6 +20,10 @@
             width: 100vw;
             overflow: hidden;
         }
+        body { overflow-wrap: break-word; }
+        select, input, textarea { max-width: 100%; }
+        select { text-overflow: ellipsis; }
+        img { max-width: 100%; }
         #root {
             height: 100vh;
             width: 100vw;

@@ -14,8 +14,6 @@ module.exports = {
         { column: 'p.gf', order: 'desc' }
       ]);
 
-    // La tabla de posiciones (X-05). Era el mismo cruce de tenant que el resto
-
     alcanceService.filtrarPorEquipos(query, alcance, ['p.id_equipo']);
 
     return query;

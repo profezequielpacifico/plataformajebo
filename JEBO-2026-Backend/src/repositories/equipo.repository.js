@@ -31,8 +31,6 @@ module.exports = {
   findAll: ({ page = 1, limit = 10, id_disciplina, id_institucion, search, filter, id_torneo, id_region, id_distrito, id_localidad, alcance: alc } = {}) => {
     const query = baseQuery();
 
-    // Aislamiento por institución (X-05). Va PRIMERO y con `andWhere`
-
     alcance.filtrarPorInstitucion(query, alc, 'e.id_institucion');
 
     if (id_disciplina) query.where('e.id_disciplina', id_disciplina);
@@ -83,7 +81,6 @@ module.exports = {
 
     return knex.paginate(query, { page, limit });
   },
-  // `findById` lleva el MISMO filtro que `findAll`. Sin esto, aislar el listado
 
   findById: (id, { alcance: alc } = {}) =>
     alcance
@@ -92,11 +89,6 @@ module.exports = {
       .groupBy('e.id_equipo', 'd.nombre', 'i.nombre', 'u.nombre', 'l.id_distrito', 'di.nombre', 'l.id_region', 'r.nombre')
       .first(),
 
-  // Reglas del alta de un Profesor: maximo 3 equipos y nombre unico entre los
-  // suyos. Ambas consultas son sobre la tabla `equipo` y viven aca; la unica
-  // decision (a quien se le aplican) toma el servicio. El borrado es hard
-  // (`crud.delete` tira la fila), asi que el conteo no arrastra equipos dados
-  // de baja.
   countDelDuenio: (idUsuario) =>
     knex('equipo').where('id_usuario', idUsuario).count({ total: '*' }).first(),
 

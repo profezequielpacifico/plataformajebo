@@ -1,5 +1,3 @@
-/* MATCH LIST PAGE */
-
 .match-page {
   padding: 24px;
 }
@@ -199,8 +197,6 @@
   gap: var(--spacing-sm);
 }
 
-/* STANDINGS TABLE */
-
 .standings-table-header {
   background-color: #1f2937;
   color: white;
@@ -222,7 +218,6 @@
   transition: background-color 0.2s ease;
 }
 
-/* Alternar colores de fila */
 .standings-table-row:nth-child(odd) {
   background-color: #f9fafb;
 }
@@ -281,8 +276,6 @@ font-weight: 600;
   border-color: #d1d5db;
 }
 
-/* GYMNASTICS EVALUATION TABLE */
-
 .gymnastics-evaluation-container {
   display: flex;
   gap: 24px;
@@ -338,7 +331,6 @@ font-weight: 600;
   transition: all 0.2s ease;
 }
 
-
 .gymnastics-filters {
   display: flex;
   gap: 12px;
@@ -362,7 +354,6 @@ font-weight: 600;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-/* la barra horizontal de la tabla */
 .gymnastics-table-container {
   width: 100%;
   overflow-x: auto;
@@ -371,7 +362,6 @@ font-weight: 600;
 .gymnastics-table-container table {
   min-width: 1200px;
 }
-/* el   header de la tabla  */
 .gymnastics-header-cell {
   background-color: #c2ccdb; 
   color: black;
@@ -408,7 +398,7 @@ font-weight: 600;
 .gymnastics-number-indicator {
   width: 32px;
   height: 32px;
-  background-color: #95accf; /* azul claro */
+  background-color: #95accf;
   color: white;
   border-radius: 50%;
   display: flex;

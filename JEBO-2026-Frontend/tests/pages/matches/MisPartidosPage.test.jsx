@@ -17,10 +17,6 @@ vi.mock('../../../src/services/disciplineService.js', () => ({
   default: { getAll: vi.fn() }
 }));
 
-// Un partido por cada estado con acciones distintas, para cubrir la columna de
-// acciones y las variantes del badge.
-// IMPORTANTE: Los partidos Pendiente/Programado usan la fecha de HOY para que
-// el botón "Comenzar" esté habilitado (regla: solo se inicia el día de la fecha).
 const HOY = (() => {
   const d = new Date();
   const mes = String(d.getMonth() + 1).padStart(2, '0');
@@ -51,8 +47,6 @@ const PARTIDOS = [
     goles_local: null
   },
   {
-    // La tabla arma el nombre desde local/visitante, no desde
-    // equipo_local_nombre, y arma el marcador desde resultado_cargado.
     id_partido: 3,
     estado: 'En Juego',
     local: 'Local FC',
@@ -104,34 +98,36 @@ describe('MisPartidosPage', () => {
     vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
 
-  // `onNavigate` es como el router le entrega la navegacion a la pagina. Se
-  // inyecta aca para poder afirmar sobre el destino en vez de tener que montar
-  // un router entero.
   const onNavigate = vi.fn();
   const renderPage = (props = {}) =>
     render(<MisPartidosPage user={{ rol: 'Profesor' }} onNavigate={onNavigate} {...props} />);
 
-  /**
-   * Fila de la tabla que contiene el texto dado. La busca dentro de la tabla
-   * porque los <select> de filtros repiten los mismos nombres de estado.
-   */
   const fila = (texto) => within(screen.getByRole('table')).getAllByText(texto)[0].closest('tr');
 
-  /**
-   * Los botones de los modales tienen el mismo nombre que los de la tabla, y la
-   * pagina dibuja primero la tabla y despues los modales: el ultimo es el del
-   * modal abierto.
-   */
   const botonDelModal = (nombre) => {
     const botones = screen.getAllByRole('button', { name: nombre });
     return botones[botones.length - 1];
   };
 
-  /** Espera a que la tabla deje de mostrar la fila de carga. */
   const esperarCarga = () =>
     waitFor(() => expect(screen.queryByText('Cargando...')).not.toBeInTheDocument());
+
+  it('muestra el mismo dia que devuelve la API en hora de Argentina', async () => {
+    vi.stubEnv('TZ', 'America/Argentina/Buenos_Aires');
+    matchService.getMine.mockResolvedValue({
+      data: [{ ...PARTIDOS[3], fecha: '2026-09-30' }]
+    });
+    renderPage();
+    await esperarCarga();
+    const tabla = within(screen.getByRole('table'));
+    expect(tabla.getByText('30/09/2026')).toBeInTheDocument();
+    expect(tabla.queryByText('29/9/2026')).not.toBeInTheDocument();
+  });
 
   it('carga los partidos del arbitro con el paginado por defecto', async () => {
     renderPage();
@@ -158,7 +154,6 @@ describe('MisPartidosPage', () => {
     expect(within(primera).getByText('Pendiente')).toBeInTheDocument();
     expect(within(primera).getByText('—')).toBeInTheDocument();
 
-    // El partido sin datos de torneo ni cancha cae en los guiones por defecto.
     const segunda = fila('A');
     expect(within(segunda).getAllByText('—').length).toBeGreaterThan(3);
   });
@@ -178,14 +173,10 @@ describe('MisPartidosPage', () => {
     renderPage();
     await esperarCarga();
 
-    // Pendiente y programado: se puede comenzar.
     expect(screen.getAllByRole('button', { name: /comenzar/i })).toHaveLength(2);
-    // En juego y en progreso: abrir en vivo y finalizar. Ya no hay "cargar
-    // resultado": el marcador no se tipea, se registra evento por evento.
     expect(screen.getAllByRole('button', { name: /abrir en vivo/i })).toHaveLength(2);
     expect(screen.queryByRole('button', { name: /cargar resultado/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^finalizar$/i })).toHaveLength(2);
-    // Finalizado y cancelado: sin acciones, solo el guion.
     expect(within(fila('Cancelado')).getAllByText('—').length).toBeGreaterThan(0);
     expect(within(fila('Finalizado')).queryByRole('button')).not.toBeInTheDocument();
   });
@@ -232,7 +223,6 @@ describe('MisPartidosPage', () => {
     const [, select] = screen.getAllByRole('combobox');
     await user.selectOptions(screen.getAllByRole('combobox')[0], '1');
 
-    // Solo queda el torneo de esa disciplina; el de la otra desaparece.
     expect(within(select).getByRole('option', { name: /Torneo Otoño/ })).toBeInTheDocument();
     expect(within(select).queryByRole('option', { name: /Copa Primavera/ })).not.toBeInTheDocument();
   });
@@ -247,7 +237,6 @@ describe('MisPartidosPage', () => {
     await user.selectOptions(torneos, '1');
     await user.selectOptions(deportes, '2');
 
-    // El torneo de la disciplina anterior ya no aplica.
     expect(torneos).toHaveValue('');
     await waitFor(() =>
       expect(matchService.getMine).toHaveBeenLastCalledWith({ limit: 100, id_disciplina: '2' })
@@ -290,7 +279,6 @@ describe('MisPartidosPage', () => {
     await user.click(screen.getAllByRole('button', { name: /comenzar/i })[0]);
     await user.click(botonDelModal(/^comenzar$/i));
 
-    // Verificamos que se intentó la llamada y el componente no rompió
     await waitFor(() => expect(matchService.updateStatus).toHaveBeenCalled());
   });
   
@@ -301,11 +289,7 @@ describe('MisPartidosPage', () => {
 
     await user.click(screen.getAllByRole('button', { name: /abrir en vivo/i })[0]);
 
-    // El destino lleva el id del partido. La carga de eventos vive en su propia
-    // pantalla: mezclarla con la administracion del partido obligaria a
-    // mostrar la edicion de cancha y arbitros en pleno juego.
     expect(onNavigate).toHaveBeenCalledWith('match-live/3');
-    // Y en el camino no se escribe ningun resultado.
     expect(matchService.updateResult).not.toHaveBeenCalled();
   });
 
@@ -318,8 +302,6 @@ describe('MisPartidosPage', () => {
     await user.click(botones[0]);
     await user.click(botones[1]);
 
-    // Los dos partidos en juego de la mocked son el 3 y el 6. Mandar siempre al
-    // primero seria un bug silencioso: el arbitro abriria el partido ajeno.
     expect(onNavigate).toHaveBeenNthCalledWith(1, 'match-live/3');
     expect(onNavigate).toHaveBeenNthCalledWith(2, 'match-live/6');
   });
@@ -329,8 +311,6 @@ describe('MisPartidosPage', () => {
     renderPage();
     await esperarCarga();
 
-    // Un partido "Pendiente" solo ofrece comenzar. Abrirlo en vivo no tendria
-    // sentido: no hay arbitro asignado ni reloj corriendo.
     expect(screen.getByRole('button', { name: /comenzar/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /abrir en vivo/i })).not.toBeInTheDocument();
     expect(onNavigate).not.toHaveBeenCalled();
@@ -356,7 +336,6 @@ describe('MisPartidosPage', () => {
 
   it('avisa que el partido todavia no tiene resultado cargado', async () => {
     const user = userEvent.setup();
-    // El partido 6 esta en progreso y sin goles cargados.
     matchService.getMine.mockResolvedValue({ data: [PARTIDOS[5]] });
     renderPage();
     await esperarCarga();

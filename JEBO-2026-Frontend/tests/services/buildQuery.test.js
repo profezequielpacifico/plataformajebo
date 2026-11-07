@@ -10,16 +10,11 @@ vi.mock('../../src/api/index.js', () => ({
 
 describe('buildQuery', () => {
   it('descarta undefined, null y cadena vacia', () => {
-    // El caso que importa: `new URLSearchParams({search: undefined})` produce
-    // `search=undefined`, y el backend lo toma como una busqueda legitima de la
-    // cadena "undefined" y responde 200 con data: [].
     const q = buildQuery({ a: undefined, b: null, c: '', d: 'ok' });
     expect(q).toBe('d=ok');
   });
 
   it('conserva el 0 y el false porque son parametros con significado', () => {
-    // Borrarlos cambiaria el significado: `?page=0` y `?incluir_cerradas=false`
-    // no son lo mismo que no mandar el parametro.
     expect(buildQuery({ page: 0, incluir_cerradas: false })).toBe('page=0&incluir_cerradas=false');
   });
 
@@ -38,9 +33,6 @@ describe('teamService.getAll', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('no manda parametros vacios a la API', async () => {
-    // Regresion: la consulta de equipos armaba `id_disciplina: undefined` y
-    // `search: undefined` para dejar de filtrar. Llegaban al backend como la
-    // cadena "undefined" y la tabla se vaciaba sin error visible.
     api.get.mockResolvedValue({ data: [] });
     await teamService.getAll({ page: 1, limit: 10, id_disciplina: undefined, search: undefined, filter: undefined });
 

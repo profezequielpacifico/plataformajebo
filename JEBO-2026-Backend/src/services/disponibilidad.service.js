@@ -14,7 +14,6 @@ const disponibilidadService = {
     let fc = await knex('fecha_cancha').where('fecha', fecha).first();
     if (!fc) [fc] = await knex('fecha_cancha').insert({ fecha }).returning('*');
 
-    // Se compara por HH:MM para no exigir que el cliente mande los segundos.
     const horarios = await knex('horarios_cancha').orderBy('hora_inicio');
     const horario = horarios.find((h) => aHHMM(h.hora_inicio) === aHHMM(horaInicio));
     if (!horario) {

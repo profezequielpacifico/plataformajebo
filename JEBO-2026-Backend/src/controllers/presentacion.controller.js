@@ -127,17 +127,6 @@ async function guardarEvaluacion(req, res, next) {
 async function getEvaluacionesJuez(req, res, next) {
   try {
     const id_presentacion = parseInt(req.params.id, 10);
-    // El juez es el que pregunta, no el que el cliente nombra (F1.5, §8.2).
-    //
-    // Antes aceptaba `?id_juez=` y, si venía, ganaba sobre el token. Con el guard
-    // `evaluarPresentacion` el corte es de nivel y de jurado, pero elegir de
-    // *qué* hoja leer sí venía del cliente: un juez del jurado de esa presentación
-    // podía pedir las hojas de los demás jueces del mismo jurado y verlas
-    // completas. El filtro de jurado no protege contra eso —el que entra es
-    // jurado—, por eso el id tiene que salir del token y no de la query.
-    //
-    // Lo que se devuelve es "mis evaluaciones en esta presentación", que es lo que
-    // la pantalla de evaluación necesita para habilitar el guardado.
     const id_juez = req.user.id_usuario;
     const data = await evaluacionService.getEvaluacionesPorJuez(id_presentacion, id_juez);
     res.json(data);

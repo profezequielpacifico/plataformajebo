@@ -23,6 +23,7 @@ export const ROUTES = {
     TOURNAMENTS_EDIT: 'tournaments-edit',
     TOURNAMENTS_VIEW: 'tournaments-view',
     TOURNAMENT_REGISTRATION: 'tournament-registration',
+    TOURNAMENT_STAGES: 'tournaments-stages',
     ENROLLED_TEAMS: 'enrolled-teams',
     STAGES: 'stages',
     COMPETENCIAS: 'competencias',
@@ -36,8 +37,6 @@ export const ROUTES = {
     MATCHES_NEW: 'matches-new',
     MATCHES_EDIT: 'matches-edit',
     MATCHES_DETAIL: 'matches-detail',
-    // Pantalla de partido en vivo. Va aparte de MATCHES_DETAIL a proposito:
-    // una es la administracion del partido (programacion, cancha, arbitros) y
 
     MATCH_LIVE: 'match-live',
     REGIONS: 'regions',
@@ -64,7 +63,6 @@ export const ROUTES = {
     ADVANCED_OPTIONS: 'advanced-options',
     AUTO_FIXTURE: 'auto-fixture',
     LOCKOUTS: 'login-lockouts',
-    // Gimnasia
     GYM_PRESENTACIONES: 'gymnastics/presentaciones',
     GYM_PRESENTACIONES_NUEVA: 'gymnastics/presentaciones/nueva',
     GYM_PRESENTACIONES_DETALLE: 'gymnastics/presentaciones/:id/detalle',
@@ -79,7 +77,6 @@ export const STORAGE_KEYS = {
     THEME: ENV.STORAGE.THEME
 };
 
-// IDs reales de la BD (deben coincidir con backend/src/constants/roles.js)
 export const ROLE_IDS = {
     PROFESOR: 1,
     ARBITRO: 2,

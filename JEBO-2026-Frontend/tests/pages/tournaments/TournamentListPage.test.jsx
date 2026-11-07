@@ -12,12 +12,12 @@ vi.mock('../../../src/services/tournamentService.js', () => ({
 const TORNEOS = [
   {
     id_torneo: 1, nombre: 'Torneo Otoño', categoria: 'Senior',
-    fecha_inicio: '2026-03-01', fecha_fin: '2026-06-30',
+    fecha_inicio: '2026-03-01T00:00:00.000Z', fecha_fin: '2026-06-30T00:00:00.000Z',
     cantidad_equipos: 8, estado: 'Finalizado'
   },
   {
     id_torneo: 2, nombre: 'Copa Primavera', categoria: 'Junior',
-    fecha_inicio: '2026-09-01', fecha_fin: '2026-11-30',
+    fecha_inicio: '2026-09-01T00:00:00.000Z', fecha_fin: '2026-11-30T00:00:00.000Z',
     cantidad_equipos: 6, estado: 'En Progreso'
   }
 ];
@@ -33,8 +33,6 @@ describe('TournamentListPage', () => {
     render(<TournamentListPage onNavigate={vi.fn()} {...props} />);
 
   it('pide solo losarchivados al montar', async () => {
-    // Esta pagina es el historial: el filtro scope=archived evita que los
-    // torneos en curso se mezclen con los terminados.
     renderPage();
     await waitFor(() =>
       expect(tournamentService.getAll).toHaveBeenCalledWith(1, 100, { scope: 'archived' })
@@ -50,8 +48,8 @@ describe('TournamentListPage', () => {
   it('lista los torneos con sus fechas y cantidad de equipos', async () => {
     renderPage();
     expect(await screen.findByText('Torneo Otoño')).toBeInTheDocument();
-    expect(screen.getByText('2026-03-01')).toBeInTheDocument();
-    expect(screen.getByText('2026-11-30')).toBeInTheDocument();
+    expect(screen.getByText('01/03/2026')).toBeInTheDocument();
+    expect(screen.getByText('30/11/2026')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
   });
 
@@ -84,8 +82,6 @@ describe('TournamentListPage', () => {
   });
 
   it('distingue el mensaje de sin resultados del de sin torneos', async () => {
-    // "Sin torneos" sugiere que no hay datos; "Sin resultados" que el filtro
-    // no arrojo nada. La diferencia importa para saber que revisar.
     const user = userEvent.setup();
     renderPage();
     await screen.findByText('Torneo Otoño');
@@ -141,15 +137,12 @@ describe('TournamentListPage', () => {
   });
 
   it('el lapiz abre un aviso antes de editar', async () => {
-    // Editar un torneo archivado abre el formulario con los cambios sin
-    // guardar, asi que primero se advierte.
     renderPage();
     const fila = (await screen.findByText('Torneo Otoño')).closest('tr');
     await userEvent.click(within(fila).getAllByRole('button')[1]);
 
     expect(await screen.findByText('Modificar torneo')).toBeInTheDocument();
     expect(screen.getByText(/Estás por modificar el torneo "Torneo Otoño"/)).toBeInTheDocument();
-    // Abrir el aviso no debe navegar todavia: la navegacion va al confirmar.
     expect(screen.getByText(/Los cambios que realices se aplicarán recién/)).toBeInTheDocument();
   });
 
@@ -226,8 +219,6 @@ describe('TournamentListPage', () => {
   });
 
   it('acepta los nombres de campo alternativos del historial', async () => {
-    // El endpoint de historial devuelve otra forma de objeto que la lista
-    // activa: name/category/start/end/teams/status.
     tournamentService.getAll.mockResolvedValue([{
       id: 4, name: 'Viejo', category: 'Legend', start: '2020-01-01',
       end: '2020-12-31', teams: 10, status: 'Finalizado'
@@ -235,7 +226,7 @@ describe('TournamentListPage', () => {
     renderPage();
     await screen.findByText('Viejo');
     expect(screen.getByText('Legend')).toBeInTheDocument();
-    expect(screen.getByText('2020-01-01')).toBeInTheDocument();
+    expect(screen.getByText('01/01/2020')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
   });
 

@@ -53,7 +53,10 @@ describe('MatchListPage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
 
   const renderPage = (props = {}) =>
     render(<MatchListPage onNavigate={vi.fn()} {...props} />);
@@ -78,16 +81,16 @@ describe('MatchListPage', () => {
     expect(screen.getByText('Torneo Otoño')).toBeInTheDocument();
   });
 
-  it('muestra la fecha en formato local', async () => {
+  it('muestra el mismo dia que devuelve la API en hora de Argentina', async () => {
+    vi.stubEnv('TZ', 'America/Argentina/Buenos_Aires');
+    matchService.getAll.mockResolvedValue([{ ...PARTIDOS[0], fecha: '2026-09-30' }]);
     renderPage();
     await screen.findByText('Local FC');
-    const esperada = new Date('2026-10-05T00:00:00.000Z').toLocaleDateString('es-ES');
-    expect(screen.getByText(esperada)).toBeInTheDocument();
+    expect(screen.getByText('30/09/2026')).toBeInTheDocument();
+    expect(screen.queryByText('29/9/2026')).not.toBeInTheDocument();
   });
 
   it('sustituye por raya lo que falta', async () => {
-    // La segunda fila llega sin fecha, hora ni cancha: la tabla tiene que
-    // seguir alineada, con guiones en vez de celdas vacias.
     renderPage();
     await screen.findByText('Local FC');
     expect(screen.getAllByText('—').length).toBeGreaterThan(3);
@@ -99,7 +102,6 @@ describe('MatchListPage', () => {
   });
 
   it('no inventa un resultado cuando los goles son null', async () => {
-    // Un partido sin goles registrados no es un 0-0: es un partido sin jugar.
     renderPage();
     await screen.findByText('Local FC');
     expect(screen.queryByText('0 - 0')).not.toBeInTheDocument();
@@ -132,8 +134,6 @@ describe('MatchListPage', () => {
   });
 
   it('avisa cuando la carga de partidos falla', async () => {
-    // A diferencia de otras paginas, aca el error solo va a la consola; la
-    // tabla queda vacia. Se documenta el comportamiento real.
     matchService.getAll.mockRejectedValue(new Error('Fallo la API'));
     renderPage();
     await waitFor(() => expect(console.error).toHaveBeenCalled());
@@ -212,8 +212,6 @@ describe('MatchListPage', () => {
   });
 
   it('no borra si el usuario cancela la confirmacion', async () => {
-    // Se usa confirm() nativo, no un modal: si el usuario dice que no, no debe
-    // llegar una llamada de borrado.
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderPage();
     const fila = (await screen.findByText('Local FC')).closest('tr');
@@ -235,12 +233,9 @@ describe('MatchListPage', () => {
   });
 
   it('colorea el badge segun el estado', async () => {
-    // getBadgeVariant mapea el texto del estado a un color. Se comprueba el
-    // color real del span, no solo que el texto exista: el filtro de estados
-    // tiene options con los mismos textos, asi que hay que acotar a la tabla.
     const COLORES = {
-      Finalizado: '#2196f3',   // blue
-      Pendiente: '#ff9800'     // orange
+      Finalizado: '#2196f3',
+      Pendiente: '#ff9800'
     };
     renderPage();
     await screen.findByText('Local FC');
@@ -252,8 +247,6 @@ describe('MatchListPage', () => {
   });
 
   it('mapa cada estado a su color en la lista', async () => {
-    // Se recorre la tabla entera con un partido por estado para cubrir todos
-    // los brazos del mapeo de una sola vez.
     const ESPERADOS = {
       'Finalizado': '#2196f3',
       'En Juego': '#22c55e',
@@ -305,10 +298,6 @@ describe('MatchListPage', () => {
     expect(await screen.findByText('No hay partidos')).toBeInTheDocument();
   });
 
-  // Un torneo de Gimnasia Artística no tiene partidos: se presenta un equipo
-  // solo y lo evalúa un jurado. Listarlo en este filtro ofrecía una opción que
-  // siempre devolvía vacío y, si se llegaba al alta, un 409 explicando el
-  // modelo equivocado.
   describe('torneos de tipo EVALUACION (Gimnasia)', () => {
     const CON_GIMNASIA = [
       ...TORNEOS,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { styles } from '../../styles/theme/index.js';
 import { authService } from '../../services/authService.js';
-import { useResponsive } from '../../hooks/useResponsive.js';
+import { useResponsive, useUiScale } from '../../hooks/useResponsive.js';
 
 const { createElement: h } = React;
 
@@ -21,6 +21,7 @@ function formatTiempo(segundos) {
 
 export function LoginPage({ onLogin, onNavigate }) {
     const { lessThan } = useResponsive();
+    const uiScale = useUiScale();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -40,7 +41,7 @@ export function LoginPage({ onLogin, onNavigate }) {
                     setMensajeBloqueo(data.mensaje || 'Acceso bloqueado');
                     setCuentaAtras(data.retryAfterSeconds || 0);
                 }
-            } catch { /* una respuesta inesperada no debe romper el login */ }
+            } catch { }
         })();
         return () => { active = false; };
     }, []);
@@ -112,7 +113,6 @@ export function LoginPage({ onLogin, onNavigate }) {
         textAlign: 'center'
     };
 
-    // Debajo de este ancho no hay lugar al costado de la tarjeta.
     const ocultarMascota = lessThan(860);
 
     const countdownStyle = {
@@ -125,7 +125,7 @@ export function LoginPage({ onLogin, onNavigate }) {
 
     return h('div', { style: styles.loginContainer },
         h('div', { style: styles.loginArea },
-            h('div', { style: styles.loginColumn },
+            h('div', { style: { ...styles.loginColumn, zoom: uiScale } },
             !ocultarMascota && h('img', { src: '/login-assets/mascota.webp', alt: '', style: styles.loginMascot }),
             h('div', { style: styles.loginBox },
                 h('div', { style: styles.loginLogo },
@@ -190,7 +190,7 @@ export function LoginPage({ onLogin, onNavigate }) {
         )
     ),
 
-        h('div', { style: styles.loginInfo },
+        h('div', { style: { ...styles.loginInfo, zoom: uiScale } },
                 h('div', { style: styles.loginInfoLogo }, 'JEBO 2026'),
                 h('div', { style: styles.loginInfoSubtitle }, 'Sistema Administrativo para Torneos Deportivos'),
 

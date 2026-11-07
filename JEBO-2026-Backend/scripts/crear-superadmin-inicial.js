@@ -1,8 +1,3 @@
-/**
- * Crea el SuperAdmin inicial sin limpiar ni sembrar el resto de la base.
- * Ejecutar con: node scripts/crear-superadmin-inicial.js
- * La contraseña aleatoria se muestra una sola vez en stdout.
- */
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const knex = require('../src/config/knex');
@@ -11,7 +6,6 @@ const env = require('../src/config/env');
 const EMAIL = 'superadmin@jebo2026.com';
 const NOMBRE = 'SuperAdmin JEBO';
 const ROL = 'SuperAdmin';
-// ID reservado por la migración 20261004120000_add_rol_superadmin.
 const ID_ROL_SUPERADMIN = 20;
 
 function generarContrasena(longitud = 32) {
@@ -22,7 +16,6 @@ function generarContrasena(longitud = 32) {
 
 async function main() {
   const password = generarContrasena();
-  // Identificador sintético único porque documento es NOT NULL y UNIQUE.
   const documento = `SA${crypto.randomBytes(9).toString('hex')}`;
   const password_hash = await bcrypt.hash(password, env.bcrypt.rounds);
 

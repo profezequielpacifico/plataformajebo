@@ -6,7 +6,10 @@ const { REGLAMENTOS_DIR } = require('../config/upload');
 const path = require('path');
 const fs = require('fs');
 
-const CAMPOS_DISCIPLINA = ['nombre', 'jugadores_por_equipo', 'descripcion', 'tipo_competencia'];
+const CAMPOS_DISCIPLINA = [
+  'nombre', 'jugadores_por_equipo', 'descripcion', 'tipo_competencia',
+  'puntos_victoria', 'puntos_empate', 'puntos_derrota'
+];
 
 class DisciplinaController {
   async findAll(req, res, next) {

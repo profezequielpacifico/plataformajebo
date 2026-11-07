@@ -28,12 +28,6 @@ router.get('/enrolled/list', authenticate, [
 
 router.get('/:id', authenticate, equipoController.findById);
 
-// El alta es de Administracion o del Profesor que queda como duenio. En el alta
-// (sin `:id`) `gestionarEquipoPropio` mira solo el nivel: el recurso todavia no
-// existe, asi que no hay propiedad que chequear. Quien garantiza que el equipo
-// quede a nombre del Profesor que lo creo, su institucion, el maximo de 3
-// equipos y el nombre unico entre los suyos es `equipo.service.create`.
-
 router.post('/', authenticate, gestionarEquipoPropio, [
   body('nombre').notEmpty().withMessage('Nombre es requerido'),
   body('id_institucion').isInt().withMessage('Institución es requerida'),
@@ -41,8 +35,6 @@ router.post('/', authenticate, gestionarEquipoPropio, [
   body('id_localidad').optional().isInt(),
   body('id_usuario').optional().isInt()
 ], validate, equipoController.create);
-
-// El lote no tiene `:id`: el permiso no depende de que exista un id en la ruta
 
 router.post('/enroll-batch', authenticate, gestionarEquipoPropio, [
   body('registrations').isArray({ min: 1 }).withMessage('Debe haber al menos una inscripción'),

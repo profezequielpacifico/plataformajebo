@@ -1,12 +1,5 @@
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS, SHADOWS, TRANSITIONS } from './theme/index.js';
 
-/**
- * Estilos comunes reutilizables para evitar inline styles repetidos en páginas.
- * Importar: import { errorBox, warningBox, formGroup, ... } from '@/styles/commonStyles.js'
- */
-
-// ==================== FEEDBACK BOXES ====================
-
 export const errorBox = {
     color: COLORS.danger,
     padding: SPACING.md,
@@ -38,8 +31,6 @@ export const successBox = {
     backgroundColor: '#dcfce7',
     borderRadius: RADIUS.md
 };
-
-// ==================== FORM STYLES ====================
 
 export const formGroup = {
     marginBottom: SPACING.md
@@ -81,8 +72,6 @@ export const formTextarea = {
     resize: 'vertical'
 };
 
-// ==================== FORM LAYOUTS ====================
-
 export const formGrid = {
     display: 'grid',
     gap: SPACING.xl
@@ -116,8 +105,6 @@ export const filterGroup = {
     minWidth: '180px'
 };
 
-// ==================== TABLE HELPERS ====================
-
 export const tableCellBold = {
     fontWeight: TYPOGRAPHY.weights.semibold
 };
@@ -145,8 +132,6 @@ export const emptyTableCellCenter = {
     color: COLORS.textMuted,
     padding: SPACING.xl
 };
-
-// ==================== BUTTON VARIANTS ====================
 
 export const buttonPrimary = {
     padding: '12px 20px',
@@ -251,16 +236,12 @@ export const buttonWithIcon = (baseStyle = {}) => ({
     ...baseStyle
 });
 
-// ==================== MODAL HELPERS ====================
-
 export const modalActions = {
     display: 'flex',
     gap: SPACING.sm,
     justifyContent: 'flex-end',
     marginTop: SPACING.lg
 };
-
-// ==================== PAGE LAYOUT ====================
 
 export const pageContainer = {
     maxWidth: '1600px',
@@ -292,8 +273,6 @@ export const sectionTitle = {
     marginBottom: SPACING.lg
 };
 
-// ==================== CARD CONTAINERS ====================
-
 export const card = {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
@@ -314,8 +293,6 @@ export const cardContent = {
     padding: SPACING.lg
 };
 
-// ==================== LOADING / EMPTY STATES ====================
-
 export const loadingContainer = {
     display: 'flex',
     flexDirection: 'column',
@@ -335,8 +312,6 @@ export const emptyState = {
     color: COLORS.textMuted,
     padding: SPACING.xl * 2
 };
-
-// ==================== SUCCESS / ERROR BOXES ====================
 
 export const successContainer = {
     display: 'flex',
@@ -402,8 +377,6 @@ export const errorBoxDark = {
     fontWeight: TYPOGRAPHY.weights.medium
 };
 
-// ==================== TABLE STYLES ====================
-
 export const table = {
     width: '100%',
     borderCollapse: 'collapse',
@@ -433,8 +406,6 @@ export const tableActions = {
     gap: SPACING.xs
 };
 
-// ==================== STATS ====================
-
 export const statsGrid = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -460,8 +431,6 @@ export const statValue = {
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.primary
 };
-
-// ==================== BADGE STYLES ====================
 
 export const badge = {
     display: 'inline-flex',
@@ -497,8 +466,6 @@ export const badgeOrange = {
     backgroundColor: '#ff9800',
     color: 'white'
 };
-
-// ==================== MODAL STYLES ====================
 
 export const modalOverlay = {
     position: 'fixed',
@@ -539,8 +506,6 @@ export const modalButtons = {
     gap: SPACING.sm,
     justifyContent: 'flex-end'
 };
-
-// ==================== UTILITY ====================
 
 export const visuallyHidden = {
     position: 'absolute',

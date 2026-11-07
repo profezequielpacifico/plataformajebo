@@ -27,21 +27,6 @@ let idDisciplina;
 let idUsuario;
 let dirTemporal;
 
-/**
- * Los archivos que YA estaban en `uploads/reglamentos/` cuando arrancó la suite.
- *
- * El endpoint de subida escribe en el directorio real (`config/upload.js` monta
- * multer con `destination: REGLAMENTOS_DIR`), y este suite sube cuatro archivos
- * válidos que la app guarda de verdad. El `afterAll` limpia la base y el
- * directorio temporal de los fixtures, pero no los archivos que quedaron en el
- * directorio de la aplicación: cada corrida dejaba cuatro (pdf, png, docx, doc)
- * y el repo se llenaba de basura de test — 536 archivos, 112 de los cuales
- * llegaron a versionarse en algún commit.
- *
- * El borrado es por diferencia contra este snapshot, y no un `rm -rf` del
- * directorio: acá pueden estar los reglamentos de verdad de las discretas, y un
- * test que los borra es peor que el bug que corrige.
- */
 let presentesAlArrancar;
 
 const listarReglamentos = () =>
@@ -59,7 +44,6 @@ const subir = (ruta, nombre, mimetype) =>
     .set('Authorization', `Bearer ${token}`)
     .attach('reglamento', ruta, { filename: nombre, contentType: mimetype });
 
-/** Cuántos archivos hay en el directorio de reglamentos. */
 const enReglamentos = () => listarReglamentos().length;
 
 const reglamentoDe = async () => {
@@ -100,9 +84,6 @@ afterAll(async () => {
   await dbQuery('DELETE FROM login_intentos WHERE identificador = $1', [EMAIL]);
   fs.rmSync(dirTemporal, { recursive: true, force: true });
 
-  // Los archivos que esta corrida dejó en el directorio de la aplicación. Por
-  // diferencia contra el snapshot, no por patrón ni a ciegas: lo que ya estaba
-  // (los reglamentos reales de las discretas) no se toca.
   const nuevos = listarReglamentos().filter((nombre) => !presentesAlArrancar.has(nombre));
   for (const nombre of nuevos) {
     fs.rmSync(path.join(REGLAMENTOS_DIR, nombre), { force: true });
@@ -184,10 +165,10 @@ describe('X-13: la extension y el MIME los declara el cliente, los bytes no', ()
       [`instancia_upload_${sufijo}`]
     );
     const idTorneo = await dbQuery(
-      `INSERT INTO torneo (nombre, categoria, fecha_inicio, fecha_fin, estado, id_disciplina, id_instancia)
-       SELECT $1, 'Unica', current_date, current_date + 1, 'Programado', id_disciplina, $3
+      `INSERT INTO torneo (nombre, categoria, fecha_inicio, fecha_fin, estado, id_disciplina)
+       SELECT $1, 'Unica', current_date, current_date + 1, 'Programado', id_disciplina
          FROM disciplina WHERE id_disciplina = $2 RETURNING id_torneo`,
-      [`torneo_upload_${sufijo}`, idDisciplina, inst.rows[0].id_instancia]
+      [`torneo_upload_${sufijo}`, idDisciplina]
     );
 
     try {

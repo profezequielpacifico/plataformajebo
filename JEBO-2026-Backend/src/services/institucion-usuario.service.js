@@ -3,33 +3,7 @@ const alcanceService = require('./alcance.service');
 const { NotFoundError, BusinessError } = require('../utils/errors');
 const bitacoraService = require('./bitacora.service');
 
-/**
- * Asignación de profesores a instituciones.
- *
- * Por qué existe esto: X-05 se cerró haciendo que las lecturas respeten
- * `usuario_institucion`, y la tabla se pobló con la regla "un Profesor pertenece
- * a las instituciones de los equipos que creó". Esa regla deja afuera a todo
- * Profesor que todavía no creó un equipo, y en la base de despliegue son 10 de
- * 16: ven cero datos en vez de ver los suyos. No es un bug del filtro —el filtro
- * está haciendo exactamente lo que debe—, es que faltaba la otra mitad: la
- * forma de decir explícitamente a qué institución pertenece un Profesor.
- *
- * Sin esta pieza el aislamiento es correcto e inoperable. Con ella, el
- * Administrador asigna y el alcance se recalcula en la petición siguiente: la
- * pertenencia se resuelve desde la base en cada request, no desde un claim del
- * token, así que no hace falta que el Profesor vuelva a loguearse.
- *
- * Todo es `requireAdminOrAbove` en la ruta y además se revalida el rol acá. La ruta
- * alcanza, pero un servicio público que se pueda llamar desde otro lado del
- * código no debería depender de que el único llamador sea el router.
- */
 class InstitucionUsuarioService {
-  /**
-   * Instituciones asignadas a un usuario.
-   *
-   * Devuelve el nombre junto al id porque la pantalla de asignación muestra la
-   * lista con nombres, no ids.
-   */
   async listarDe(idUsuario) {
     const existe = await knex('usuario').where('id_usuario', idUsuario).first();
     if (!existe) throw new NotFoundError('Usuario no encontrado');
@@ -41,14 +15,6 @@ class InstitucionUsuarioService {
       .orderBy('i.nombre');
   }
 
-  /**
-   * Asigna un usuario a una institución. Idempotente.
-   *
-   * Un Administrador o un Árbitro no necesita asignación: `alcance.service` les
-   * da alcance global antes de mirar `usuario_institucion`. Asignarles produce
-   * filas que no cambian nada y que después confunden a quien lea la tabla, así
-   * que se rechaza con un mensaje que lo dice.
-   */
   async asignar(idUsuario, idInstitucion, context = {}) {
     const usuario = await knex('usuario')
       .leftJoin('rol as r', 'r.id_rol', 'usuario.id_rol')
@@ -74,7 +40,6 @@ class InstitucionUsuarioService {
       .returning('id_usuario');
 
     if (!insertada) {
-      // Ya estaba asignado. Idempotencia deliberada: reasignar lo mismo desde
 
       return { asignada: false, usuario: idUsuario, institucion: institucion.nombre };
     }
@@ -92,13 +57,6 @@ class InstitucionUsuarioService {
     return { asignada: true, usuario: idUsuario, institucion: institucion.nombre };
   }
 
-  /**
-   * Quita la asignación.
-   *
-   * Con esto el usuario vuelve a `instituciones: []`, es decir, a no ver nada.
-   * Es la dirección peligrosa: por eso se audita igual que la asignación, para
-   * que quede registro de quién dejó a un Profesor sin acceso y cuándo.
-   */
   async quitar(idUsuario, idInstitucion, context = {}) {
     const usuario = await knex('usuario').where('id_usuario', idUsuario).first();
     if (!usuario) throw new NotFoundError('Usuario no encontrado');
@@ -124,14 +82,6 @@ class InstitucionUsuarioService {
     return { quitada: true, usuario: idUsuario, institucion: idInstitucion };
   }
 
-  /**
-   * Reemplaza el conjunto completo de instituciones de un usuario.
-   *
-   * Es la operación que la pantalla de asignación necesita: editar una lista
-   * en un `PUT` es idempotente y no depende de que el cliente sepa qué hay.
-   * Valida todo ANTES de borrar: si la tercera institución no existe, no se
-   * Haber desasignado las dos primeras.
-   */
   async reemplazar(idUsuario, idsInstitucion, context = {}) {
     const usuario = await knex('usuario')
       .leftJoin('rol as r', 'r.id_rol', 'usuario.id_rol')

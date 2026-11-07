@@ -14,6 +14,7 @@
     "migrate:rollback": "node node_modules/knex/bin/cli.js migrate:rollback",
     "migrate:status": "node node_modules/knex/bin/cli.js migrate:list",
     "db:seed": "node scripts/seed.js",
+    "db:seed-territorial": "node scripts/seed-territorial.js",
     "db:seed-gimnasia": "node scripts/demo-gimnasia.js"
   },
   "keywords": [
@@ -23,7 +24,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "@express-rate-limit/cluster-memory-store": "^0.3.1",
+    "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -39,6 +41,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "bcryptjs": "^2.4.3",
     "jest": "^29.7.0",
     "pm2": "^7.0.1",
     "supertest": "^6.3.3"

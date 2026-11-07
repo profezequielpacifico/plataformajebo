@@ -3,47 +3,10 @@ const { HTTP_STATUS } = require('../constants');
 
 const MS = 1000;
 const UMBRAL_PERMANENTE = 14;
-const SENTINEL_CUENTA = ''; // marca la fila que agrega los fallos de una cuenta
+const SENTINEL_CUENTA = '';
 
-/**
- * Umbral de bloqueo para la fila de IP, en fallos DISTINTOS.
- *
- * El de la cuenta sigue en 5. El de la IP tiene que ser mucho más alto, y la
- * razón es que la fila de IP no distingue usuarios: 5 intentos fallidos de
- * `admin` desde una IP bloquean a TODOS los que salen por ella.
- *
- * Medido antes de este cambio: tras 5 intentos fallidos de una cuenta, el login
- * LEGÍTIMO de otra cuenta desde la misma IP devolvía 429. En un colegio donde
- * los 20 usuarios salen por una sola IP pública, un solo alumno que se Equivoque
- * tres veces bloquea la escuela entera durante 5 minutos.
- *
- * Con 20 cuentas distintas fallando desde la misma IP, el bloqueo por IP se
- * sigue activando — que es su trabajo real: detectar credential stuffing y
- * distribución de ataques. Pero un usuario legítimo ya no queda atrapado en el
- * fuego cruzado de los errores de otro.
- *
- * La escalera por IP arranca entonces en 20/30/40/50 en vez de 5/8/11/14. El
- * bloqueo permanente por IP queda en 50: es un volumen que ningún uso legítimo
- * produce.
- */
 const UMBRAL_IP = 20;
 
-/**
- * Lockout por cuenta, con IP como senal secundaria.
- *
- * El esquema es una fila por (identificador, ip) y se usan dos tipos de fila:
- *
- *   - Fila de CUENTA: identificador = email, ip = ''. Es el contador primario.
- *     Una sola fila por cuenta, compartida entre todas las IP de las que se
- *     intente entrar. Por eso rotar la IP no sirve: el atacante sigue
- *     acumulando sobre la misma fila.
- *   - Fila de IP: identificador = 'ip:<ip>', ip = <ip>. Suma el mismo fallo para
- *     cada cuenta distinta que falla desde ese origen, que es la senal de
- *     credential stuffing. Se conserva porque evita que un atacante lockee a su
- *     victima desde cualquier IP, pero no reemplaza al contador de cuenta.
- *
- * El bloqueo se activa si se supera cualquiera de los dos.
- */
 const normalizarEmail = (email) =>
   typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
 
@@ -54,17 +17,8 @@ const claveCuenta = (identificador) => ({
 
 const claveIp = (ip) => ({ identificador: `ip:${ip}`, ip: ip || 'desconocida' });
 
-/** Umbral de bloqueo que corresponde a la fila: 5 para la cuenta, UMBRAL_IP para la IP. */
 const _umbralDe = (k) => (k.ip === SENTINEL_CUENTA ? 5 : UMBRAL_IP);
 
-/**
- * Etapa de bloqueo para un número de intentos.
- *
- * `umbral` es la base de la escalera: 5 para la cuenta, `UMBRAL_IP` para la IP.
- * Las etapas siguientes se derivan de esa base con los mismos escalones del
- * código original (+3, +6, +9 fallos), de modo que subir el umbral de la IP sube
- * toda su escalera y no solo el primer peldaño.
- */
 function _etapaDe(intentos, umbral = 5) {
   if (intentos >= umbral + 9) return { indice: 4, permanente: true, minutos: null };
   if (intentos >= umbral + 6) return { indice: 3, permanente: false, minutos: 30 };
@@ -85,13 +39,6 @@ function _mensaje(e) {
 
 const _fila = (k) => knex('login_intentos').where(k).first();
 
-/**
- * Estado de bloqueo de una fila.
- *
- * `umbral` es el de la fila que se está leyendo (5 o `UMBRAL_IP`): sin él, una
- * fila de IP con 6 fallos se leería con la escalera de la cuenta y saltaría a
- * etapa 2 sin tener 20.
- */
 function _toEstado(row, umbral = 5) {
   if (!row) return null;
   const base = { failures: row.failures };
@@ -114,16 +61,6 @@ function _toEstado(row, umbral = 5) {
     etapa: 0, mensaje: null };
 }
 
-/**
- * Suma un fallo a una fila.
- *
- * El off-by-one anterior venía de encadenar `.insert()` con
- * `.onConflict().merge()`: si la fila no existía, el INSERT se cumplía y la
- * parte `merge` no corría, así que el primer fallo no contaba y el atacante se
- * ganaba un intento gratis. Se arregla poniendo `failures: 1` en el propio
- * INSERT: `merge` solo se aplica si hubo conflicto, y ahí suma sobre el valor
- * existente.
- */
 async function _sumarFallo(k) {
   const raw = await knex('login_intentos')
     .insert({ identificador: k.identificador, ip: k.ip, failures: 1 })
@@ -152,12 +89,6 @@ async function _sumarFallo(k) {
   return etapa;
 }
 
-/**
- * Registra un fallo contra la cuenta y contra la IP del origen.
- *
- * Se cuentan las dos filas en la misma peticion para que un login fallido
- * siempre deje rastro en los dos ejes.
- */
 async function registroFallo(email, ip) {
   const identificador = normalizarEmail(email);
   const etapas = [];
@@ -166,24 +97,15 @@ async function registroFallo(email, ip) {
   return etapas.reduce((peor, e) => (e.indice > peor.indice ? e : peor), _etapaDe(0));
 }
 
-/**
- * Bloqueo efectivo: el peor entre el contador de la cuenta y el de la IP.
- *
- * El de la cuenta manda salvo que la IP este peor. Ambos salen de filas que el
- * cliente no controla: el email del cuerpo y req.ip con trustProxy en 0.
- */
 async function estadoBloqueo(email, ip) {
   const identificador = normalizarEmail(email);
   const porCuenta = identificador ? _toEstado(await _fila(claveCuenta(identificador)), 5) : null;
   const porIp = ip ? _toEstado(await _fila(claveIp(ip)), UMBRAL_IP) : null;
 
-  // Se compara contra si la fila esta BLOQUEADA, no contra `failures`. Antes se
-
   if (porIp && porIp.bloqueado && (!porCuenta || !porCuenta.bloqueado)) {
     return { ...porIp, alcance: 'ip' };
   }
   if (porCuenta && porCuenta.bloqueado) return { ...porCuenta, alcance: 'cuenta' };
-  // Nadie bloqueado: se devuelve el peor estado informative para la UI, pero
 
   if (porCuenta) return { ...porCuenta, bloqueado: false, alcance: 'cuenta' };
   if (porIp) return { ...porIp, bloqueado: false, alcance: 'ip' };
@@ -215,7 +137,6 @@ async function limpiarTodo() {
 async function listar() {
   const rows = await knex('login_intentos').orderBy('failures', 'desc');
   return rows.map((r) => {
-    // Mismo umbral que usa el gate: una fila de IP leída con la escalera de la
 
     const e = _toEstado(r, r.ip === SENTINEL_CUENTA ? 5 : UMBRAL_IP);
     return {
@@ -238,15 +159,6 @@ async function estado(email, ip) {
   return estadoBloqueo(email, ip);
 }
 
-/**
- * Limpia filas cuyo bloqueo ya vencio.
- *
- * El filtro anterior era `failures < 5`, pero las filas que dispararon un
- * bloqueo tienen `failures >= 5`: nunca satisfacian el filtro, asi que se
- * acumulaban para siempre. Ahora se borra por `locked_until` vencido, que es lo
- * que deja una fila sin efecto, y ademas se purgan los contadores sin bloqueo
- * viejo para que la tabla no crezca sin limite.
- */
 setInterval(async () => {
   try {
     await knex('login_intentos')
@@ -258,39 +170,9 @@ setInterval(async () => {
       .whereNull('locked_until')
       .where('actualizado_en', '<', knex.raw("now() - interval '24 hours'"))
       .del();
-  } catch (_) { /* best effort: la limpieza periodica no debe tumbar el proceso */ }
+  } catch (_) { }
 }, 30 * 60 * MS).unref();
 
-/**
- * Gate de bloqueo. Corta con 429 si la cuenta o la IP están bloqueadas.
- *
- * Este gate NO suma el intento bloqueado contra el contador. Antes lo hacía, con
- * el argumento de que si no las etapas 2, 3 y 4 quedaban inalcanzables. Ese
- * argumento era falso y el arreglo era peor que el problema:
- *
- *  - La escalera avanza sola al expirar la ventana. `estadoBloqueo` solo marca
- *    `bloqueado` mientras `locked_until` esta en el futuro. Vencido el plazo, el
- *    gate llama a `next()`, el controlador corre, la contraseña falla y
- *    `registroFallo` vuelve a sumar. El contador pasa de 5 a 6, 7 y 8 — etapa 2
- *    — sin ninguna ayuda del gate.
- *
- *  - Sumar en el gate convertía el bloqueo en un DoS sin autenticar. Medido
- *    contra el despliegue: catorce peticiones POST /auth/login con una
- *    contraseña cualquiera contra `admin@jebo2026.com` dejaron la fila en 12
- *    fallos y etapa 3, y a 14 llega `permanente: true`. Ningún atacante necesita
- *    la contraseña para bloquear una cuenta ajena de forma permanente y sin
- *    vencimiento: solo conocer el email, que es justo lo que permite enumerar
- *    en X-07.
- *
- *  - La escalera existe para lo contrario: dar pocas oportunidades al atacante
- *    y crecer la espera entre ellas, de modo que un ataque automatizado agote su
- *    tiempo antes de alcanzar el bloqueo permanente. Contar los rebotes 429
- *    invertía esa protección.
- *
- * Unico requisito para que esto no se rompa: el umbral por defecto (5) tiene que
- * ser el mismo en la escalera de `registroFallo` y en la del gate. Por eso vive
- * en un solo lugar, `_umbralDe`.
- */
 const loginLockout = async (req, res, next) => {
   try {
     const email = req.body && req.body.email;

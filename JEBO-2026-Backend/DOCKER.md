@@ -81,3 +81,14 @@ docker compose --env-file .env.docker up --build
 ## New schema changes
 
 Add a file under `migrations/` (Knex), then rebuild/restart `api` (entrypoint runs `migrate:latest`).
+
+## Capacity settings
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `WEB_CONCURRENCY` | `1` | API worker processes (`src/cluster.js`). Rate-limit counters are shared between workers through the primary process. |
+| `UV_THREADPOOL_SIZE` | `4` | Threads per worker for bcrypt. Workers × threads should not exceed the CPUs available to the API. Never set it empty: libuv would start a single thread. |
+| `DB_POOL_TOTAL` | `20` | Postgres connections across all workers; each worker gets `DB_POOL_TOTAL / WEB_CONCURRENCY`. Keep it well below `max_connections` (100). |
+| `DB_ACQUIRE_TIMEOUT_MS` | `5000` | Maximum wait for a free connection before the request fails. |
+
+Raise `WEB_CONCURRENCY` only if a worker sits near 100% CPU while Postgres has headroom. In load tests Postgres saturated first, and 2 workers delivered about 25% less throughput than 1.

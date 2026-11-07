@@ -21,14 +21,6 @@ class LoginLockoutController {
     }
   }
 
-  /**
-   * Levanta el bloqueo de una cuenta o de una IP.
-   *
-   * Con el lockout indexado por cuenta, el parametro de la ruta puede ser
-   * cualquiera de las dos: si parece un email se borran todos los bloqueos de
-   * esa cuenta (vengan de las IP que sean), si no, todos los de esa IP. Asi el
-   * admin no necesita saber de que IP vino el intento que quiere levantar.
-   */
   async desbloquear(req, res, next) {
     try {
       const objetivo = String(req.params.ip || '').trim();

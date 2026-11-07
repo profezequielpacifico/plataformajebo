@@ -7,9 +7,6 @@ const { accessTokenDe } = require('../helpers/cookies');
 
 const crypto = require('crypto');
 
-// Sufijo unico por corrida para las filas que crea esta suite. Todas las
-// limpiezas de las demas suites filtran por `nombre LIKE '<tag>%'`, asi que una
-// fila con este nombre no puede ser alcanzada por un cleanup ajeno.
 const TAG = crypto.randomBytes(4).toString('hex');
 
 const EMAIL = 'test_massassign@jebo.test';
@@ -54,8 +51,6 @@ describe('Mass assignment', () => {
 
   describe('PUT /users/:id', () => {
     it('ignora password_hash enviado en el body', async () => {
-      // id_usuario tiene que estar en el SELECT: se usa para armar la URL del
-      // PUT. Sin esta columna la peticion sale como /users/undefined.
       const before = await dbQuery(
         'SELECT id_usuario, password_hash, id_rol FROM usuario WHERE email = $1',
         [EMAIL]
@@ -71,9 +66,7 @@ describe('Mass assignment', () => {
         [EMAIL]
       );
 
-      // El campo legitimo del allowlist si se aplica...
       expect(after.rows[0].nombre).toBe('Renombrado');
-      // ...y los que no estan en el allowlist se descartan en silencio.
       expect(after.rows[0].password_hash).toBe(before.rows[0].password_hash);
       expect(after.rows[0].id_rol).toBe(before.rows[0].id_rol);
     });
@@ -85,11 +78,7 @@ describe('Mass assignment', () => {
         .post('/auth/login')
         .send({ email: EMAIL, password: PASS });
 
-      // La contrasena real sigue funcionando: el hash inyectado no la piso.
       expect(login.status).toBe(200);
-      // Y ademas: la credencial ya no esta en el cuerpo. Con el token en el
-      // body, `httpOnly` no compra nada, porque el token sigue disponible para
-      // cualquier script de la pagina via `response.data.accessToken`.
       expect(login.body.data.accessToken).toBeUndefined();
       expect(login.body.data.refreshToken).toBeUndefined();
       expect(accessTokenDe(login)).toBeTruthy();
@@ -98,24 +87,6 @@ describe('Mass assignment', () => {
   });
 
   describe('PUT /matches/:id', () => {
-    // El partido es de esta suite y de nadie más.
-    //
-    // Antes se tomaba `SELECT ... FROM partido JOIN torneo LIMIT 1`, o sea el
-    // primero que hubiera, que es una fila compartida con todas las demás
-    // suites. `aislamiento-institucion` borra sus partidos y sus torneos en el
-    // `afterAll`, y `partido.id_equipo_*` tiene `ON DELETE CASCADE`: si el
-    // `LIMIT 1` elegía una de esas filas, el partido desaparecía ENTRE las dos
-    // SELECT de la aserción y el test reventaba con un `TypeError` sobre
-    // `undefined`. Pasaba una de cada diez corridas, según el orden en que
-    // Jest repartiera los workers, y el error señalaba la aserción cuando el
-    // problema era de aislamiento.
-    //
-    // La disciplina también es de esta suite. No se puede tomar prestada: el
-    // trigger `partido_requiere_marcador` rechaza los partidos de un torneo cuya
-    // disciplina es de tipo `EVALUACION`, y en la base de test las únicas que
-    // quedan son de ese tipo (las que dejaron `presentacion-alta`). Con una
-    // disciplina ajena el INSERT del partido falla, y con el select prestado el
-    // test no se enteraba: el `return` de abajo lo salteaba en silencio.
     let idPartido;
     let idTorneo;
     let idDisciplina;
@@ -129,8 +100,6 @@ describe('Mass assignment', () => {
       ]);
 
       if (!inst.rows.length || !insti.rows.length || !base.rows.length) {
-        // Sin estructura minima no hay partido posible. Se deja `idPartido` en
-        // null y los tests se saltan, en vez de fallar por una base vacía.
         return;
       }
 
@@ -151,10 +120,10 @@ describe('Mass assignment', () => {
       }
 
       const t = await dbQuery(
-        `INSERT INTO torneo (nombre, categoria, fecha_inicio, fecha_fin, estado, id_disciplina, id_instancia)
-         VALUES ($1, 'Unica', current_date, current_date + 1, 'Programado', $2, $3)
+        `INSERT INTO torneo (nombre, categoria, fecha_inicio, fecha_fin, estado, id_disciplina)
+         VALUES ($1, 'Unica', current_date, current_date + 1, 'Programado', $2)
          RETURNING id_torneo`,
-        [`${TAG} mass torneo`, idDisciplina, inst.rows[0].id_instancia]
+        [`${TAG} mass torneo`, idDisciplina]
       );
       idTorneo = t.rows[0].id_torneo;
 
@@ -168,8 +137,6 @@ describe('Mass assignment', () => {
 
     afterAll(async () => {
       if (!idTorneo) return;
-      // El orden lo fija la base: `partido.id_torneo` no tiene cascada y
-      // `torneo.id_disciplina` tampoco, así que hay que bajar de hoja en hoja.
       await dbQuery('DELETE FROM partido WHERE id_partido = $1', [idPartido]);
       await dbQuery('DELETE FROM torneo WHERE id_torneo = $1', [idTorneo]);
       if (equipos.length) {
@@ -178,11 +145,6 @@ describe('Mass assignment', () => {
       await dbQuery('DELETE FROM disciplina WHERE id_disciplina = $1', [idDisciplina]);
     });
 
-    // Devolver `undefined` cuando la fixture no se pudo armar haría que estos
-    // tests PASEN sin comprobar nada, que es como este bloque se comportaba
-    // antes: se salteaba solo cuando la base no tenía partidos, y fallaba con
-    // un `TypeError` cuando otra suite le había dejado uno. Si `beforeAll` no
-    // pudo construir el partido, hay que decirlo.
     const partidoDeLaSuite = () => {
       expect(idPartido).toBeDefined();
       return idPartido;
@@ -191,9 +153,6 @@ describe('Mass assignment', () => {
     it('descarta id_partido, creado_en y resultado_cargado', async () => {
       const id = partidoDeLaSuite();
 
-      // `creado_en` tiene que estar tambien en el SELECT de "antes". Comparar
-      // contra una columna que no se pidio es comparar un timestamp contra
-      // `undefined`: el test pasaba por otra via.
       const antes = await dbQuery(
         'SELECT resultado_cargado, creado_en FROM partido WHERE id_partido = $1',
         [id]
@@ -257,8 +216,6 @@ describe('Mass assignment', () => {
       const creado = await dbQuery('SELECT id_rol FROM usuario WHERE documento = $1', [documento]);
       const profesor = await dbQuery("SELECT id_rol FROM rol WHERE descripcion = 'Profesor'");
 
-      // id_rol=1 (Administrador) venia en el body y fue descartado: el rol
-      // efectivo es el que corresponde al nombre 'Profesor'.
       expect(creado.rows[0].id_rol).toBe(profesor.rows[0].id_rol);
 
       await dbQuery('DELETE FROM usuario WHERE documento = $1', [documento]);

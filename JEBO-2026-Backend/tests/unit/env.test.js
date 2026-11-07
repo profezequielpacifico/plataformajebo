@@ -23,6 +23,9 @@ const cargarCon = (variables) => {
         nodeEnv: env.nodeEnv,
         cors: env.cors.origin,
         rounds: env.bcrypt.rounds,
+        concurrency: env.web.concurrency,
+        poolMax: env.db.poolMax,
+        acquireTimeoutMs: env.db.acquireTimeoutMs,
         expiresIn: env.jwt.expiresIn,
         cookieSecure: env.cookie.secure,
         cookieSameSite: env.cookie.sameSite,
@@ -89,8 +92,6 @@ describe('env.js', () => {
     });
 
     it('mide en bytes y no en caracteres', () => {
-      // 16 emojis son 64 bytes de UTF-8 pero 16 unidades de string: un check por
-      // longitud de string aceptaria un secreto de 16 caracteres.
       const r = cargarCon({ JWT_SECRET: '🙂'.repeat(16) });
       expect(r.ok).toBe(true);
     });
@@ -148,6 +149,25 @@ describe('env.js', () => {
       expect(cargarCon(base).env.cors).toBe('*');
       expect(cargarCon({ ...base, CORS_ORIGIN: 'https://app.jebo.test' }).env.cors)
         .toBe('https://app.jebo.test');
+    });
+
+    it('un solo proceso con 20 conexiones si no se configura nada', () => {
+      const r = cargarCon({ JWT_SECRET: SECRETO_VALIDO });
+      expect(r.env.concurrency).toBe(1);
+      expect(r.env.poolMax).toBe(20);
+      expect(r.env.acquireTimeoutMs).toBe(5000);
+    });
+
+    it('reparte el total de conexiones entre los workers', () => {
+      const r = cargarCon({ JWT_SECRET: SECRETO_VALIDO, WEB_CONCURRENCY: '2', DB_POOL_TOTAL: '20' });
+      expect(r.env.concurrency).toBe(2);
+      expect(r.env.poolMax).toBe(10);
+    });
+
+    it('nunca deja a un worker con menos de 2 conexiones ni acepta valores invalidos', () => {
+      expect(cargarCon({ JWT_SECRET: SECRETO_VALIDO, WEB_CONCURRENCY: '8', DB_POOL_TOTAL: '8' }).env.poolMax).toBe(2);
+      expect(cargarCon({ JWT_SECRET: SECRETO_VALIDO, WEB_CONCURRENCY: 'muchos' }).env.concurrency).toBe(1);
+      expect(cargarCon({ JWT_SECRET: SECRETO_VALIDO, WEB_CONCURRENCY: '-2' }).env.concurrency).toBe(1);
     });
 
     it('bcrypt con 12 rondas por defecto', () => {

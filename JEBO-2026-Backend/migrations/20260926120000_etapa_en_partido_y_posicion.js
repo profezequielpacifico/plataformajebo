@@ -1,19 +1,3 @@
-/**
- * Corrige la deriva entre los modelos y el esquema real de la base.
- *
- * 1) `partido.id_etapa` y `posicion.id_etapa` están declarados en
- *    src/models/partido.model.js y src/models/posicion.model.js, y el `down()` de
- *    20260821153000_estructuras_competitivas.js los dropea, pero su `up()` nunca los
- *    creó. Sin esas columnas, `actualizar_posiciones()` (creada en
- *    20260826000002) es plpgsql no validado y revienta en tiempo de ejecución, y
- *    POST /matches con `id_etapa` responde 500.
- *
- * 2) La versión anterior de `actualizar_posiciones()` hacía DELETE FROM posicion y
- *    acto seguido re-inserta desde un SELECT que leía esa misma tabla ya vacía
- *    (INNER JOIN posicion existing), por lo que insertaba 0 filas y además perdía
- *    `estado_torneo` y `creado_en`. Se reemplaza por un UPSERT que preserva ambas
- *    columnas y sigue incluyendo a los equipos inscritos que aún no jugaron.
- */
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasColumn('partido', 'id_etapa'))) {
     await knex.schema.alterTable('partido', (table) => {
@@ -41,8 +25,6 @@ exports.up = async function up(knex) {
     });
   }
 
-  // Una fila de posicion por (equipo, torneo): si el torneo tiene etapas, la fila
-  // guarda la etapa que se está contabilizando, no una fila por etapa.
   await knex.raw(`
     CREATE OR REPLACE FUNCTION actualizar_posiciones(p_id_torneo INT, p_id_etapa INT)
     RETURNS VOID AS $$

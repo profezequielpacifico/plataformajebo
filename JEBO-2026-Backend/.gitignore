@@ -9,12 +9,9 @@ docker/db/init/*.sql
 !docker/db/init/.gitkeep
 !docker/db/init/README.md
 
-# Dumps de base de datos: contienen PII y hashes de contrasena
 backups/
 dump_data.json
 
-# graphify (knowledge graph generado)
 graphify-out/
 
-# Uploads de usuario (reglamentos, imagenes): datos de prueba, no versionar
 uploads/

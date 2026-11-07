@@ -7,9 +7,9 @@ const pool = new Pool({
   database: env.db.name,
   user: env.db.user,
   password: env.db.password,
-  max: 20,
+  max: 5,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000
+  connectionTimeoutMillis: env.db.acquireTimeoutMs
 });
 
 pool.on('error', (err) => {

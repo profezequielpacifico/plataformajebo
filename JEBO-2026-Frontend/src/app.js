@@ -1,61 +1,65 @@
 import './react-shim.js';
-import React, { useState, useEffect } from 'react';
+import './styles/components.css';
+import React, { Suspense, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ROUTES, ROLE_IDS } from './config/constants.js';
 import { authService } from './services/authService.js';
 import { LoginPage } from './pages/auth/LoginPage.js';
-import { RecoverPasswordPage } from './pages/auth/RecoverPasswordPage.js';
-import { RegisterPage } from './pages/auth/RegisterPage.js';
 import { MainLayout } from './layouts/MainLayout.js';
-import { DashboardPage } from './pages/dashboard/DashboardPage.js';
-import { TournamentPage } from './pages/tournaments/TournamentPage.js';
-import { TournamentListPage } from './pages/tournaments/TournamentListPage.js';
-import { TournamentFormPage } from './pages/tournaments/TournamentFormPage.js';
-import { TournamentRegistrationPage } from './pages/tournaments/TournamentRegistrationPage.js';
-import { CompetenciasListPage } from './pages/competencias/CompetenciasListPage.js';
-import { CompetenciaFormPage } from './pages/competencias/CompetenciaFormPage.js';
-import { EnrolledTeamsPage } from './pages/teams/EnrolledTeamsPage.js';
-import { StagesListPage } from './pages/stages/StagesListPage.js';
-import { TeamListPage } from './pages/teams/TeamListPage.js';
-import { TeamFormPage } from './pages/teams/TeamFormPage.js';
-import { UserListPage } from './pages/users/UserListPage.js';
-import { UserFormPage } from './pages/users/UserFormPage.js';
-import { MatchListPage } from './pages/matches/MatchListPage.js';
-import { MatchFormPage } from './pages/matches/MatchFormPage.js';
-import { MatchDetailPage } from './pages/matches/MatchDetailPage.js';
-import { MatchLivePage } from './pages/matches/MatchLivePage.js';
-import { MisPartidosPage } from './pages/matches/MisPartidosPage.js';
-import { StandingsPage } from './pages/standings/StandingsPage.js';
-import { QualifiedPage } from './pages/standings/QualifiedPage.js';
-import { FinalPage } from './pages/standings/FinalPage.js';
-import { RegionsPage } from './pages/configuration/RegionsPage.js';
-import { LocalitiesListPage } from './pages/localities/LocalitiesListPage.js';
-import { LocalitiesFormPage } from './pages/localities/LocalitiesFormPage.js';
-import { DistrictsListPage } from './pages/districts/DistrictsListPage.js';
-import { DistrictsFormPage } from './pages/districts/DistrictsFormPage.js';
-import { RegionFormPage } from './pages/configuration/RegionFormPage.js';
-import { CourtListPage } from './pages/courts/CourtListPage.js';
-import { CourtFormPage } from './pages/courts/CourtFormPage.js';
-import { DisciplinesListPage } from './pages/disciplines/DisciplinesListPage.js';
-import { DisciplineFormPage } from './pages/disciplines/DisciplineFormPage.js';
-import { InstitutionsListPage } from './pages/institutions/InstitutionsListPage.js';
-import { InstitutionFormPage } from './pages/institutions/InstitutionFormPage.js';
-import { InstanciasListPage } from './pages/instancias/InstanciasListPage.js';
-import { AuditPage } from './pages/audit/AuditPage.js';
-import { AdvancedOptionsPage } from './pages/advanced/AdvancedOptionsPage.js';
-import { AutoFixturePage } from './pages/advanced/AutoFixturePage.js';
-import { LockedIpsPage } from './pages/advanced/LockedIpsPage.js';
 import { resolverRuta } from './routing.js';
-import { GymPresentationsPage } from './pages/gymnastics/GymPresentationsPage.js';
-import { GymScoringPage } from './pages/gymnastics/GymScoringPage.js';
+import { lazyPage } from './lazyPage.js';
 
 const { createElement: h } = React;
 
+const RecoverPasswordPage = lazyPage(() => import('./pages/auth/RecoverPasswordPage.js'), 'RecoverPasswordPage');
+const RegisterPage = lazyPage(() => import('./pages/auth/RegisterPage.js'), 'RegisterPage');
+const DashboardPage = lazyPage(() => import('./pages/dashboard/DashboardPage.js'), 'DashboardPage');
+const TournamentPage = lazyPage(() => import('./pages/tournaments/TournamentPage.js'), 'TournamentPage');
+const TournamentListPage = lazyPage(() => import('./pages/tournaments/TournamentListPage.js'), 'TournamentListPage');
+const TournamentFormPage = lazyPage(() => import('./pages/tournaments/TournamentFormPage.js'), 'TournamentFormPage');
+const TournamentRegistrationPage = lazyPage(() => import('./pages/tournaments/TournamentRegistrationPage.js'), 'TournamentRegistrationPage');
+const CompetenciasListPage = lazyPage(() => import('./pages/competencias/CompetenciasListPage.js'), 'CompetenciasListPage');
+const CompetenciaFormPage = lazyPage(() => import('./pages/competencias/CompetenciaFormPage.js'), 'CompetenciaFormPage');
+const EnrolledTeamsPage = lazyPage(() => import('./pages/teams/EnrolledTeamsPage.js'), 'EnrolledTeamsPage');
+const StagesListPage = lazyPage(() => import('./pages/stages/StagesListPage.js'), 'StagesListPage');
+const TournamentStagesPage = lazyPage(() => import('./pages/tournaments/TournamentStagesPage.js'), 'TournamentStagesPage');
+const TeamListPage = lazyPage(() => import('./pages/teams/TeamListPage.js'), 'TeamListPage');
+const TeamFormPage = lazyPage(() => import('./pages/teams/TeamFormPage.js'), 'TeamFormPage');
+const UserListPage = lazyPage(() => import('./pages/users/UserListPage.js'), 'UserListPage');
+const UserFormPage = lazyPage(() => import('./pages/users/UserFormPage.js'), 'UserFormPage');
+const MatchListPage = lazyPage(() => import('./pages/matches/MatchListPage.js'), 'MatchListPage');
+const MatchFormPage = lazyPage(() => import('./pages/matches/MatchFormPage.js'), 'MatchFormPage');
+const MatchDetailPage = lazyPage(() => import('./pages/matches/MatchDetailPage.js'), 'MatchDetailPage');
+const MatchLivePage = lazyPage(() => import('./pages/matches/MatchLivePage.js'), 'MatchLivePage');
+const MisPartidosPage = lazyPage(() => import('./pages/matches/MisPartidosPage.js'), 'MisPartidosPage');
+const StandingsPage = lazyPage(() => import('./pages/standings/StandingsPage.js'), 'StandingsPage');
+const QualifiedPage = lazyPage(() => import('./pages/standings/QualifiedPage.js'), 'QualifiedPage');
+const FinalPage = lazyPage(() => import('./pages/standings/FinalPage.js'), 'FinalPage');
+const RegionsPage = lazyPage(() => import('./pages/configuration/RegionsPage.js'), 'RegionsPage');
+const LocalitiesListPage = lazyPage(() => import('./pages/localities/LocalitiesListPage.js'), 'LocalitiesListPage');
+const LocalitiesFormPage = lazyPage(() => import('./pages/localities/LocalitiesFormPage.js'), 'LocalitiesFormPage');
+const DistrictsListPage = lazyPage(() => import('./pages/districts/DistrictsListPage.js'), 'DistrictsListPage');
+const DistrictsFormPage = lazyPage(() => import('./pages/districts/DistrictsFormPage.js'), 'DistrictsFormPage');
+const RegionFormPage = lazyPage(() => import('./pages/configuration/RegionFormPage.js'), 'RegionFormPage');
+const CourtListPage = lazyPage(() => import('./pages/courts/CourtListPage.js'), 'CourtListPage');
+const CourtFormPage = lazyPage(() => import('./pages/courts/CourtFormPage.js'), 'CourtFormPage');
+const DisciplinesListPage = lazyPage(() => import('./pages/disciplines/DisciplinesListPage.js'), 'DisciplinesListPage');
+const DisciplineFormPage = lazyPage(() => import('./pages/disciplines/DisciplineFormPage.js'), 'DisciplineFormPage');
+const InstitutionsListPage = lazyPage(() => import('./pages/institutions/InstitutionsListPage.js'), 'InstitutionsListPage');
+const InstitutionFormPage = lazyPage(() => import('./pages/institutions/InstitutionFormPage.js'), 'InstitutionFormPage');
+const InstanciasListPage = lazyPage(() => import('./pages/instancias/InstanciasListPage.js'), 'InstanciasListPage');
+const AuditPage = lazyPage(() => import('./pages/audit/AuditPage.js'), 'AuditPage');
+const AdvancedOptionsPage = lazyPage(() => import('./pages/advanced/AdvancedOptionsPage.js'), 'AdvancedOptionsPage');
+const AutoFixturePage = lazyPage(() => import('./pages/advanced/AutoFixturePage.js'), 'AutoFixturePage');
+const LockedIpsPage = lazyPage(() => import('./pages/advanced/LockedIpsPage.js'), 'LockedIpsPage');
+const GymPresentationsPage = lazyPage(() => import('./pages/gymnastics/GymPresentationsPage.js'), 'GymPresentationsPage');
+const GymScoringPage = lazyPage(() => import('./pages/gymnastics/GymScoringPage.js'), 'GymScoringPage');
+
+const pageFallback = h('div', { role: 'status', 'aria-live': 'polite', style: { padding: '32px', textAlign: 'center' } }, 'Cargando…');
+
 const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.RECOVER_PASSWORD, ROUTES.REGISTER];
 
-// Mapeo de ruta -> roles permitidos (por ROLE_IDS)
 const ROUTE_PERMISSIONS = {
-    // Admin-only: gestión de usuarios, auditoría, territorios, opciones avanzadas
     [ROUTES.USERS]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.USERS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.USERS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
@@ -72,22 +76,16 @@ const ROUTE_PERMISSIONS = {
     [ROUTES.AUTO_FIXTURE]: [ROLE_IDS.SUPERADMIN],
     [ROUTES.LOCKOUTS]: [ROLE_IDS.SUPERADMIN],
 
-    // Admin + SuperAdmin: gestión de competencia (torneos legacy)
     [ROUTES.TOURNAMENTS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.TOURNAMENTS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.TOURNAMENTS_VIEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.STAGES]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
+    [ROUTES.TOURNAMENT_STAGES]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
 
-    // Admin + SuperAdmin: módulo de Competencias (nueva arquitectura)
     [ROUTES.COMPETENCIAS]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.COMPETENCIAS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.COMPETENCIAS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.COMPETENCIAS_VIEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    // Equipos: el Profesor da de alta y edita (el recorte a SUS equipos lo hace
-    // el backend en `gestionarEquipoPropio` y el botón en TeamListPage, no este
-    // mapa — acá solo se decide quién puede ABRIR la pantalla). Sin el Profesor
-    // acá, el dashboard le mostraba el botón y `renderProtectedPage` lo rebotaba
-    // al dashboard: la página existía pero nunca se renderizaba.
     [ROUTES.TEAMS_NEW]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.TEAMS_EDIT]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.MATCHES_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
@@ -103,7 +101,6 @@ const ROUTE_PERMISSIONS = {
     [ROUTES.INSTITUTIONS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.INSTANCIAS]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
 
-    // Profesor + Admin + SuperAdmin: lectura de torneos/partidos/clasificaciones
     [ROUTES.TOURNAMENTS]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.TOURNAMENTS_HISTORY]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.TOURNAMENT_REGISTRATION]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
@@ -114,17 +111,14 @@ const ROUTE_PERMISSIONS = {
     [ROUTES.QUALIFIED]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.FINAL]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
 
-    // Arbitro: solo mis partidos
     [ROUTES.MIS_PARTIDOS]: [ROLE_IDS.ARBITRO, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.MATCH_LIVE]: [ROLE_IDS.ARBITRO, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.MATCHES_DETAIL]: [ROLE_IDS.ARBITRO, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
 
-    // Juez + Admin + SuperAdmin: gimnasia
     [ROUTES.GYM_PRESENTACIONES]: [ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.GYM_PRESENTACIONES_NUEVA]: [ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.GYM_PRESENTACIONES_DETALLE]: [ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
 
-    // Dashboard: todos los autenticados
     [ROUTES.DASHBOARD]: [ROLE_IDS.PROFESOR, ROLE_IDS.ARBITRO, ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
 };
 
@@ -143,7 +137,7 @@ function getRoleId(user) {
 
 function hasRoutePermission(user, route) {
     const allowed = ROUTE_PERMISSIONS[route];
-    if (!allowed) return true; // ruta sin restricción explícita = permitida
+    if (!allowed) return true;
     const roleId = getRoleId(user);
     return roleId && allowed.includes(roleId);
 }
@@ -151,7 +145,9 @@ function hasRoutePermission(user, route) {
 function withLayout(Component, props = {}) {
     return function LayoutWrapper({ user, onLogout, currentPage, onNavigate, ...rest }) {
         return h(MainLayout, { user, onLogout, currentPage, onNavigate },
-            h(Component, { user, onNavigate, ...props, ...rest })
+            h(Suspense, { fallback: pageFallback },
+                h(Component, { user, onNavigate, ...props, ...rest })
+            )
         );
     };
 }
@@ -162,7 +158,7 @@ function renderProtectedPage(ctx, Page, extraProps) {
     }
 
     if (!hasRoutePermission(ctx.user, ctx.currentPage)) {
-        return ctx.navigate(ROUTES.DASHBOARD); // o una página 403
+        return ctx.navigate(ROUTES.DASHBOARD);
     }
     return h(withLayout(Page), {
         user: ctx.user,
@@ -186,8 +182,8 @@ const PAGE_RENDERERS = {
             onNavigate: ctx.navigate
         })
         : renderLoginPage(ctx),
-    [ROUTES.REGISTER]: (ctx) => h(RegisterPage, { onNavigate: ctx.navigate }),
-    [ROUTES.RECOVER_PASSWORD]: (ctx) => h(RecoverPasswordPage, { onNavigate: ctx.navigate }),
+    [ROUTES.REGISTER]: (ctx) => h(Suspense, { fallback: pageFallback }, h(RegisterPage, { onNavigate: ctx.navigate })),
+    [ROUTES.RECOVER_PASSWORD]: (ctx) => h(Suspense, { fallback: pageFallback }, h(RecoverPasswordPage, { onNavigate: ctx.navigate })),
     [ROUTES.DASHBOARD]: (ctx) => renderProtectedPage(ctx, DashboardPage),
     [ROUTES.TOURNAMENT]: (ctx) => renderProtectedPage(ctx, TournamentPage),
     [ROUTES.CREATE_MATCHES]: (ctx) => renderProtectedPage(ctx, MatchFormPage),
@@ -204,8 +200,8 @@ const PAGE_RENDERERS = {
     [ROUTES.TOURNAMENT_REGISTRATION]: (ctx) => renderProtectedPage(ctx, TournamentRegistrationPage),
     [ROUTES.ENROLLED_TEAMS]: (ctx) => renderProtectedPage(ctx, EnrolledTeamsPage),
     [ROUTES.STAGES]: (ctx) => renderProtectedPage(ctx, StagesListPage),
+    [ROUTES.TOURNAMENT_STAGES]: (ctx) => renderProtectedPage(ctx, TournamentStagesPage, { pageParams: { id: ctx.matchId } }),
 
-    // Módulo de Competencias (nueva arquitectura)
     [ROUTES.COMPETENCIAS]: (ctx) => renderProtectedPage(ctx, CompetenciasListPage),
     [ROUTES.COMPETENCIAS_NEW]: (ctx) => renderProtectedPage(ctx, CompetenciaFormPage),
     [ROUTES.COMPETENCIAS_EDIT]: (ctx) => renderProtectedPage(ctx, CompetenciaFormPage, { pageParams: { id: ctx.matchId } }),
@@ -282,7 +278,7 @@ function App() {
         }
 
         if (user && !hasRoutePermission(user, page)) {
-            return; // Silenciosamente no navega; podría mostrar toast
+            return;
         }
         setCurrentPage(page);
     };

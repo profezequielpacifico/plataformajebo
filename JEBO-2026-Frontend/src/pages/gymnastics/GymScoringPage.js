@@ -26,27 +26,16 @@ const ESCALA = [
     { valor: 5, label: 'Muy Bien', color: '#dcfce7', text: '#166534' }
 ];
 
-// Los ocho puntajes de cada trío, con el nombre con el que se los muestra al
-
 const CAMPOS_HOJA = [1, 2, 3, 4].flatMap(n => ([
     { campo: `coord_${n}`, etiqueta: `Coordinación M${n}` },
     { campo: `desem_${n}`, etiqueta: `Desempeño M${n}` }
 ]));
 
-/**
- * Qué puntajes de una hoja no están en condiciones de guardarse.
- *
- * El backend los valida uno por uno y devuelve `coord_3 1-5`: el mensaje dice qué
- * campo, pero no qué trío, y con el guardado por participante el juez se
- * enteraba del error cuando ya tenía la mitad de la hoja escrita.
- */
 const faltantesDe = (ev) => CAMPOS_HOJA.filter(({ campo }) => {
     const v = ev[campo];
     const n = Number(v);
     return v === null || v === undefined || v === '' || !Number.isInteger(n) || n < 1 || n > 5;
 }).map(({ etiqueta }) => etiqueta);
-
-// `Badge` solo acepta `variant`: el `style` que se le pasaba antes se descartaba y
 
 function getBadgeVariant(estado) {
     const e = (estado || '').toUpperCase();
@@ -102,7 +91,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
         presentacionService.getDetalleEvaluacion(presentacionId)
             .then(d => {
                 setData(d);
-                // `evaluaciones` trae una fila por participante y por juez, o sea
 
                 const evals = {};
                 const uid = String(d.currentUserId);
@@ -122,8 +110,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
             .finally(() => setLoading(false));
     }, [presentacionId]);
 
-    // Los errores no se auto-cercan a los 3 s: el de puntajes incompletos nombra
-
     useEffect(() => {
         if (!notif || notif.type === 'error') return;
         const t = setTimeout(() => setNotif(null), 3000);
@@ -139,8 +125,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
 
     const handleSave = async () => {
         if (!data) return;
-
-        // Revisar la hoja entera ANTES de mandar el primer request. Antes el
 
         const incompletos = data.participantes
             .map(p => ({ p, campos: faltantesDe(evaluacion[p.id_equipo] || {}) }))
@@ -161,7 +145,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
 
         setSaving(true);
         try {
-            // El backend resuelve el juez desde el token, así que acá no hay que
 
             for (const p of data.participantes) {
                 const ev = evaluacion[p.id_equipo] || {};
@@ -188,7 +171,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
     };
 
     if (loading) return h(Loading, { message: 'Cargando hoja de evaluación...' });
-    // Misma caja de error que el resto de las paginas, no un texto suelto.
     if (!data) return h('div', {
         style: { color: '#ef4444', padding: '12px', marginBottom: '16px', backgroundColor: '#fee2e2', borderRadius: '6px' }
     }, 'No se pudo cargar la presentación');
@@ -196,22 +178,17 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
     const { presentacion, participantes, jueces } = data;
     const esJuez = jueces.some(j => j.id_usuario === data.currentUserId);
     const esAdmin = esAdministrador(user);
-    // El administrador carga su propia hoja aunque no figure en el jurado de esta
 
     const puedePuntuar = esJuez || esAdmin;
-    // `guardarHoja` rechaza con "Solo se puede evaluar una presentacion EN_CURSO"
 
     const enCurso = presentacion.estado === 'EN_CURSO';
     const puedeEditar = puedePuntuar && enCurso;
-    // Por que el boton esta apagado, escrito donde uno lo busca en vez de
 
     const motivoGuardar = !puedePuntuar
         ? 'Solo el jurado de esta presentación y el administrador pueden cargar la hoja'
         : !enCurso
             ? `La hoja se guarda con el encuentro en EN_CURSO (ahora está ${presentacion.estado})`
             : '';
-
-    // Sin padding ni `height: '100%'` en la raiz: `MainLayout` ya pone el
 
     return h('div', null,
         h('div', { style: { marginBottom: '16px' } },
@@ -226,8 +203,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
             )
         ),
 
-        // Aviso con el mismo formato de los demas recuadros del app (ver el de
-
         esAdmin && !esJuez
             ? h('div', {
                 style: {
@@ -236,8 +211,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
                 }
             }, 'Estás puntuando como administrador y no figuras en el jurado de esta presentación. Se guarda como una hoja aparte y NO suma al resultado oficial, que es el promedio de las hojas de los jueces del jurado.')
             : null,
-
-        // El encuentro todavia no empezo (o ya termino) y el backend no acepta
 
         puedePuntuar && !puedeEditar
             ? h('div', {
@@ -249,7 +222,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
             : null,
 
         h(Card, null,
-            // Titulo, leyenda y acciones en el `CardHeader`, como en el alta de
 
             h(CardHeader, { title: 'Puntuación' },
                 h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' } },
@@ -267,8 +239,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
                     }, saving ? 'Guardando...' : 'Guardar evaluación')
                 )
             ),
-
-            // La grilla de la hoja se arma con `<table>` a mano y no con el
 
             h('div', { style: { overflowX: 'auto' } },
                 h('table', { style: { ...styles.table, fontSize: '12px' } },
@@ -319,14 +289,12 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
                             const totalCoord = getTotalCoord(p.id_equipo);
                             const totalDesem = getTotalDesem(p.id_equipo);
                             const total = totalCoord + totalDesem;
-                            // `completo` estaba calculado y no se usaba en ninguna
 
                             const completo = CAMPOS_HOJA.every(({ campo }) => ev[campo]);
 
                             return h('tr', { key: p.id_equipo, style: styles.tableRow },
                                 h('td', { style: { ...styles.tableCell, fontWeight: 500, position: 'sticky', left: 0, background: COLORS.surface, zIndex: 1 } },
                                     h('div', null, p.equipo_nombre),
-                                    // Sin el nombre de institucion se muestra el id
 
                                     p.institucion_nombre && h('div', { style: { fontSize: '11px', color: COLORS.textMuted } }, p.institucion_nombre),
                                     !completo && puedeEditar && h('div', {
@@ -367,10 +335,9 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
             )
         ),
 
-        // Sin `marginTop`: `styles.card` ya separa las tarjetas de la pantalla.
         h(Card, null,
             h(CardHeader, { title: 'Observaciones' }),
-            h('div', { style: { display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' } },
+            h('div', { style: { display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))' } },
                 participantes.map(p => {
                     const ev = evaluacion[p.id_equipo] || {};
                     return h('div', { key: p.id_equipo, style: { border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '12px' } },
@@ -386,8 +353,6 @@ function GymScoringPage({ match: presentacionId, onNavigate, user }) {
                 })
             )
         ),
-
-        // `Notification` en vez del recuadro fijo hecho a mano: mismo cartelito
 
         notif && h(Notification, {
             message: notif.message,

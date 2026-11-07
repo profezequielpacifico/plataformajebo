@@ -9,12 +9,15 @@ import { districtService } from '../../services/districtService.js';
 
 const { createElement: h } = React;
 
+const normalizar = (texto) => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 export function DistrictsListPage({ onNavigate }) {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [search, setSearch] = useState('');
 
     const load = async () => {
         try {
@@ -35,6 +38,11 @@ export function DistrictsListPage({ onNavigate }) {
         setShowModal(false);
     };
 
+    const termino = normalizar(search);
+    const filtered = termino
+        ? items.filter(i => normalizar(i.nombre || i.name).includes(termino))
+        : items;
+
     if (loading) return h(Loading);
 
     return h('div', null,
@@ -47,7 +55,15 @@ export function DistrictsListPage({ onNavigate }) {
 
         h(Card, null,
             h(CardHeader, { title: 'Distritos' },
-                h('div', { style: { display: 'flex', gap: '8px' } },
+                h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+                    h('input', {
+                        type: 'text',
+                        placeholder: 'Buscar distrito...',
+                        'aria-label': 'Buscar distrito',
+                        value: search,
+                        onChange: (e) => setSearch(e.target.value),
+                        style: { ...styles.formInput, width: '200px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
+                    }),
                     h('button', {
                         style: styles.buttonPrimary,
                         onClick: () => onNavigate('districts-new')
@@ -60,9 +76,9 @@ export function DistrictsListPage({ onNavigate }) {
                     h(TableHeaderCell, null, 'Acciones')
                 ),
                 h('tbody', null,
-                    items.length === 0
-                        ? h(TableRow, null, h(TableCell, { colSpan: 3, style: { textAlign: 'center', color: '#9ca3af' } }, 'No hay distritos registrados'))
-                        : items.map(item => {
+                    filtered.length === 0
+                        ? h(TableRow, null, h(TableCell, { colSpan: 2, style: { textAlign: 'center', color: '#9ca3af' } }, termino ? 'Sin resultados para la búsqueda' : 'No hay distritos registrados'))
+                        : filtered.map(item => {
                             const id = item.id || item.id_distrito;
                             return h(TableRow, { key: id },
                                 h(TableCell, { style: { fontWeight: 500 } }, item.nombre || item.name),

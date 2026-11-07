@@ -11,9 +11,6 @@ const app = express();
 app.use(express.json());
 app.use('/api', routes);
 
-/**
- * Helper: Obtener ID del superadmin
- */
 async function obtenerSuperAdminId() {
   const [sa] = await knex.raw(
     "SELECT id_usuario FROM usuario ORDER BY id_usuario LIMIT 1"
@@ -26,10 +23,6 @@ async function obtenerSuperAdminId() {
   return sa.id_usuario;
 }
 
-/**
- * Helper: Obtener token de autenticación real
- * Mantiene el middleware de alcance y permisos activos
- */
 async function obtenerToken() {
   const idUsuario = await obtenerSuperAdminId();
 
@@ -40,10 +33,6 @@ async function obtenerToken() {
   );
 }
 
-/**
- * Helper: Crear fixtures completos (distrito, disciplina, institucion, usuario_institucion)
- * Retorna los IDs para usarlos como parámetros
- */
 async function crearFixtures() {
   const idUsuario = await obtenerSuperAdminId();
 
@@ -70,9 +59,6 @@ async function crearFixtures() {
   return { distrito, disciplina, institucion, usuarioId: idUsuario };
 }
 
-/**
- * Helper: Crear N equipos y retornar sus IDs
- */
 async function crearEquipos(cantidad, fixtures) {
   const equipos = [];
   for (let i = 0; i < cantidad; i++) {
@@ -86,31 +72,18 @@ async function crearEquipos(cantidad, fixtures) {
   return equipos;
 }
 
-/**
- * Helper: Limpiar fixtures en orden correcto (respetando FKs)
- */
 async function limpiarFixtures(fixtures, equipos = []) {
-  // Primero etapa_participante (FK RESTRICT a equipo)
   if (equipos.length > 0) {
     await knex('etapa_participante').whereIn('equipo_id', equipos).del();
   }
-  // Luego equipos (tienen FK a institucion)
   if (equipos.length > 0) {
     await knex('equipo').whereIn('id_equipo', equipos).del();
   }
-  // Luego usuario_institucion (tiene FK a institucion)
   await knex.raw('DELETE FROM usuario_institucion WHERE id_institucion = ?', [fixtures.institucion.id_institucion]);
-  // Luego institucion (tiene FK a distrito)
   await knex.raw('DELETE FROM institucion WHERE id_institucion = ?', [fixtures.institucion.id_institucion]);
-  // Luego disciplina
   await knex.raw('DELETE FROM disciplina WHERE id_disciplina = ?', [fixtures.disciplina.id_disciplina]);
-  // Finalmente distrito
   await knex.raw('DELETE FROM distrito WHERE id_distrito = ?', [fixtures.distrito.id_distrito]);
 }
-
-// =============================================================================
-// TESTS DE INTEGRACIÓN - COMPETENCIA API
-// =============================================================================
 
 describe('Competencia API - Integración', () => {
   describe('POST /api/competencias', () => {
@@ -183,7 +156,6 @@ describe('Competencia API - Integración', () => {
     it('obtiene competencia por id', async () => {
       const token = await obtenerToken();
 
-      // Crear competencia primero
       const createResp = await request(app)
         .post('/api/competencias')
         .set('Authorization', `Bearer ${token}`)
@@ -207,7 +179,6 @@ describe('Competencia API - Integración', () => {
     it('evalua etapa con StageEngine', async () => {
       const token = await obtenerToken();
 
-      // Crear competencia con etapas
       const createResp = await request(app)
         .post('/api/competencias')
         .set('Authorization', `Bearer ${token}`)
@@ -241,7 +212,6 @@ describe('Competencia API - Integración', () => {
       const token = await obtenerToken();
       const fixtures = await crearFixtures(token);
 
-      // Crear competencia con etapa
       const createResp = await request(app)
         .post('/api/competencias')
         .set('Authorization', `Bearer ${token}`)
@@ -256,10 +226,8 @@ describe('Competencia API - Integración', () => {
 
       const etapaId = etapasResp.body.data[0].id_competencia_etapa;
 
-      // Crear equipos usando helper
       const equipos = await crearEquipos(16, fixtures);
 
-      // Primera llamada: debe crear participantes
       const resp1 = await request(app)
         .post(`/api/competencias/${etapaId}/generar-participantes`)
         .set('Authorization', `Bearer ${token}`)
@@ -268,7 +236,6 @@ describe('Competencia API - Integración', () => {
       expect(resp1.status).toBe(201);
       expect(resp1.body.data.length).toBeGreaterThan(0);
 
-      // Segunda llamada: idempotente, no duplica
       const resp2 = await request(app)
         .post(`/api/competencias/${etapaId}/generar-participantes`)
         .set('Authorization', `Bearer ${token}`)
@@ -277,7 +244,6 @@ describe('Competencia API - Integración', () => {
       expect(resp2.status).toBe(201);
       expect(resp2.body.data).toHaveLength(0);
 
-      // Limpiar usando helper
       await limpiarFixtures(fixtures, equipos);
     });
   });

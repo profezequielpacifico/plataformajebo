@@ -21,7 +21,7 @@ async function loadRegistrationData(setTeams, setDisciplines, setLoading) {
     try {
         setLoading(true);
         const [teamsRes, disciplinesRes] = await Promise.all([
-            teamService.getAll({ limit: 100 }).catch((e) => { console.error('Error loading teams:', e); return []; }),
+            teamService.getTodos().catch((e) => { console.error('Error loading teams:', e); return []; }),
             disciplineService.getAll().catch((e) => { console.error('Error loading disciplines:', e); return []; })
         ]);
         const teamsList = Array.isArray(teamsRes) ? teamsRes : (teamsRes?.data || teamsRes?.rows || []);
@@ -89,6 +89,9 @@ function validateNewRegistration(state) {
     const tournament = tournaments.find(t => String(t.id_torneo) === String(selectedTournament));
     if (!team || !tournament) {
         return { ok: false };
+    }
+    if (String(team.id_disciplina) !== String(tournament.id_disciplina)) {
+        return { ok: false, error: 'El equipo no es de la disciplina del torneo' };
     }
     const exists = registrations.some(
         r => r.id_equipo === selectedTeam && r.id_torneo === selectedTournament
@@ -390,7 +393,7 @@ export function TournamentRegistrationPage({ onNavigate }) {
             h('div', { style: { display: 'grid', gap: '20px' } },
                 renderDisciplineField(selectedDiscipline, disciplines, handleDisciplineChange),
 
-                h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '12px', alignItems: 'end' } },
+                h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', alignItems: 'end' } },
                     renderTeamField({
                         teamDropdownRef,
                         teamSearch,

@@ -22,13 +22,10 @@ describe('paginasVisibles', () => {
   });
 
   it('marca el tope de 7 botones', () => {
-    // Con 7 no hay salto: la barra entra justa.
     expect(paginasVisibles(1, 7)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
   it('colapsa el medio con … y deja primera y ultima a la vista', () => {
-    // La primera y la ultima siempre visibles: sin ellas no hay forma de
-    // llegar al final con 40 paginas.
     expect(paginasVisibles(1, 40)).toEqual([1, 2, 3, null, 40]);
   });
 
@@ -46,13 +43,10 @@ describe('Pagination', () => {
   it('dice "Sin resultados" cuando no hay nada que mostrar', () => {
     renderPagination({ total: 0 });
     expect(screen.getByText('Sin resultados')).toBeInTheDocument();
-    // `totalPages: 0` del backend no puede dejar un boton "1" que no lleva a
-    // ninguna parte.
     expect(screen.queryByRole('button', { name: /Pagina/ })).not.toBeInTheDocument();
   });
 
   it('calcula el rango desde el total, no desde las filas de la pagina', () => {
-    // Ultima pagina incompleta: 3 filas sobre un total de 23.
     renderPagination({ page: 3, limit: 10, total: 23 });
     expect(screen.getByText('Mostrando 21-23 de 23 equipos')).toBeInTheDocument();
   });
@@ -85,8 +79,6 @@ describe('Pagination', () => {
 
     await user.selectOptions(screen.getByLabelText('Equipos por pagina'), '50');
 
-    // `Number(...)` importa: la pagina se multiplica por el limite, y
-    // '50' * '10' concatena en vez de sumar.
     expect(onLimitChange).toHaveBeenCalledWith(50);
   });
 

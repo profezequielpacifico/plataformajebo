@@ -10,7 +10,6 @@ import { ROLE_IDS, ROUTES } from '../../config/constants.js';
 
 const { createElement: h } = React;
 
-// Mismo mapa de permisos que en app.js
 const ROUTE_PERMISSIONS = {
     [ROUTES.TOURNAMENTS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
     [ROUTES.TEAMS_NEW]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],

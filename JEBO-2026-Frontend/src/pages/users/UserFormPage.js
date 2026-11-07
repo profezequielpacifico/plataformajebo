@@ -86,8 +86,6 @@ export function UserFormPage({ onNavigate, userId }) {
             if (isEdit) {
                 await userService.update(userId, payload);
 
-                // El backend sube `token_version` cuando cambia una contraseña
-
                 const propio = authService.getUser()?.id_usuario;
                 if (payload.password && propio != null && String(propio) === String(userId)) {
                     await authService.logout();

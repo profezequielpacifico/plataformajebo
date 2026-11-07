@@ -13,7 +13,6 @@ const renderField = (props = {}) => {
 const campo = () => screen.getByPlaceholderText('dd/mm/aaaa');
 const campoConHora = () => screen.getByPlaceholderText('dd/mm/aaaa hh:mm');
 
-/** Abre el calendario con el click en el input. */
 const abrir = async (user) => {
   await user.click(campoConHora());
   return screen.getByText(/^\w+ \d{4}$/);
@@ -160,7 +159,6 @@ describe('CalendarField', () => {
     await user.click(campo());
     expect(screen.getByText(`${mesActual()} ${anioActual()}`)).toBeInTheDocument();
 
-    // La capa oscura cubre toda la ventana: es lo que recibe el toque de afuera.
     const capa = [...document.querySelectorAll('div')].find(d => d.style.cursor === 'default');
     await user.click(capa);
 
@@ -192,7 +190,6 @@ describe('CalendarField', () => {
       await user.click(screen.getByRole('button', { name: '15' }));
 
       expect(onChange).toHaveBeenCalledWith(expect.stringMatching(/T00:00$/));
-      // Con hora el calendario sigue abierto para ajustar el horario.
       expect(screen.getByText(`${mesActual()} ${anioActual()}`)).toBeInTheDocument();
     });
 

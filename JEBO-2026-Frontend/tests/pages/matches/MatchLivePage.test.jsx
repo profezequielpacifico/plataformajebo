@@ -17,12 +17,6 @@ vi.mock('../../../src/services/matchService.js', () => ({
   }
 }));
 
-/**
- * Respuesta de `GET /matches/:id/live`. El reloj viene con la forma unica que
- * comparten `findLive` y el endpoint del reloj: `{estado, iniciado_en,
- * acumulado_seg, segundos}`. `server_time` es lo que permite corregir la
- * desviacion del reloj del navegador.
- */
 const LIVE = (over = {}) => ({
   data: {
     partido: {
@@ -86,9 +80,6 @@ describe('MatchLivePage', () => {
   const renderPage = (matchId = 7, user = ARBITRO) =>
     render(<MatchLivePage matchId={matchId} onNavigate={onNavigate} user={user} />);
 
-  // El rotulo del marcador y el del reloj son los puntos de anclaje. Los
-  // nombres de equipo aparecen tambien en la tabla de eventos, asi que un
-  // `getByText('Local FC')` sin acotar matchearia dos elementos.
   const esperarCarga = () =>
     waitFor(() => expect(screen.getByRole('status', { name: /Marcador:/ })).toBeInTheDocument());
 
@@ -99,9 +90,7 @@ describe('MatchLivePage', () => {
     renderPage();
     await esperarCarga();
 
-    // El rotulo lleva los dos numeros y a que equipo corresponde cada uno.
     expect(marcador()).toHaveAttribute('aria-label', 'Marcador: Local FC 1, Visitante FC 0');
-    // 421 segundos de reloj = 07:01.
     expect(reloj()).toHaveAttribute('aria-label', 'Tiempo de partido: 07:01, corriendo');
     expect(reloj()).toHaveTextContent('07:01');
   });
@@ -110,10 +99,22 @@ describe('MatchLivePage', () => {
     renderPage();
     await esperarCarga();
 
-    // La garantia central del modulo: si aparezca un input numerico, el
-    // marcador tendria dos fuentes de verdad.
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
     expect(screen.getByText(/El marcador se cuenta solo/i)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['Fútbol', 'Gol'], ['football', 'Gol'],
+    ['Mini Handball', 'Gol'], ['handball', 'Gol'],
+    ['Básquet 3x3', 'Punto'], ['basketball', 'Punto'],
+    ['Mini Vóley', 'Punto'], ['voleibol', 'Punto'],
+    ['Ringosport', 'Punto'], ['ringo', 'Punto'],
+    ['Softbol', 'Carrera'], ['softbol', 'Carrera'],
+  ])('en %s la anotación se llama %s', async (disciplina, etiqueta) => {
+    matchService.getLive.mockResolvedValue(LIVE({ partido: { disciplina_nombre: disciplina } }));
+    renderPage();
+    await esperarCarga();
+    expect(screen.getByRole('button', { name: new RegExp(`${etiqueta} Local FC`, 'i') })).toBeInTheDocument();
   });
 
   it('registra el evento del equipo que se aprieta', async () => {
@@ -127,8 +128,6 @@ describe('MatchLivePage', () => {
     const [id, cuerpo] = matchService.createEvent.mock.calls[0];
     expect(id).toBe(7);
     expect(cuerpo.id_equipo).toBe(10);
-    // La clave de idempotencia la genera el cliente por click. Sin ella, un
-    // doble toque registraria dos goles.
     expect(typeof cuerpo.idempotency_key).toBe('string');
     expect(cuerpo.idempotency_key.length).toBeGreaterThan(0);
   });
@@ -157,7 +156,6 @@ describe('MatchLivePage', () => {
     await waitFor(() => expect(matchService.createEvent).toHaveBeenCalled());
 
     const cuerpo = matchService.createEvent.mock.calls[0][1];
-    // Si el cliente pudiera mandarlos, un arbitro podria retroadatar un gol.
     expect(cuerpo.numero_evento).toBeUndefined();
     expect(cuerpo.segundos_partido).toBeUndefined();
     expect(cuerpo.hora_real).toBeUndefined();
@@ -224,32 +222,26 @@ describe('MatchLivePage', () => {
     expect(tabla.getByText('#1')).toBeInTheDocument();
     expect(tabla.getByText('#2')).toBeInTheDocument();
     expect(tabla.getAllByText('Ruiz').length).toBeGreaterThan(0);
-    // 500 segundos = 08:20.
     expect(tabla.getByText('08:20')).toBeInTheDocument();
   });
 
   it('distingue quien arbitro de quien escribio el evento', async () => {
     matchService.getEvents.mockResolvedValue(EVENTOS([
-      EVENTO(),                                                   // arbitro normal
+      EVENTO(),
       EVENTO({ id_evento: 2, numero_evento: 2, arbitro_nombre: null,
-               registrado_por_nombre: 'Liparelli' })              // cargado por admin
+               registrado_por_nombre: 'Liparelli' })
     ]));
     renderPage();
     await esperarCarga();
 
     const tabla = within(screen.getByRole('table'));
     expect(tabla.getByText('Ruiz')).toBeInTheDocument();
-    // El admin no arbitra ese partido, asi que su evento no tiene arbitro. Pero
-    // si se sabe quien lo escribio, y eso es lo que sirve para auditarlo.
     expect(tabla.getByText('Liparelli')).toBeInTheDocument();
     expect(tabla.getByText('(admin)')).toBeInTheDocument();
-    // Y no se lo muestra como si fuera el arbitro del partido.
     expect(tabla.queryByText(/sin arbitro/)).not.toBeInTheDocument();
   });
 
   it('dice desconocido cuando no se sabe quien cargo el evento', async () => {
-    // Backfill de los partidos que ya tenian resultado sin arbitro asignado:
-    // ahi el dato no existe y hay que decirlo, no inventar un nombre.
     matchService.getEvents.mockResolvedValue(EVENTOS([
       EVENTO({ arbitro_nombre: null, registrado_por_nombre: null })
     ]));
@@ -287,7 +279,7 @@ describe('MatchLivePage', () => {
     await esperarCarga();
 
     await user.click(screen.getByRole('button', { name: 'Anular' }));
-    const input = await screen.findByPlaceholderText(/gol en propia/i);
+    const input = await screen.findByPlaceholderText(/cargado por error/i);
     await user.type(input, 'Gol en propia');
     await user.click(screen.getByRole('button', { name: 'Anular evento' }));
 
@@ -305,8 +297,6 @@ describe('MatchLivePage', () => {
 
     const tabla = within(screen.getByRole('table'));
     expect(tabla.getByText('Anulado')).toBeInTheDocument();
-    // Y el motivo queda a la vista: un evento anulado sin explicacion es
-    // indistinguible de un error de sistema.
     expect(tabla.getByText('Mal anotado')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument();
   });
@@ -339,25 +329,17 @@ describe('MatchLivePage', () => {
 
   it('el admin registra igual en un partido sin arbitros y no ve el aviso', async () => {
     const user = userEvent.setup();
-    // Partido sin staff: es exactamente el caso en el que el backend rechazar
-    // al admin con un 500 por violar la FK de `staff_partido`.
     matchService.getLive.mockResolvedValue(LIVE({ arbitros: [] }));
     renderPage(7, ADMIN);
     await esperarCarga();
 
-    // El aviso dice "registrar requiere estar en el staff". Para el admin es
-    // falso, y mostrarlo le aparenta un bloqueo que no tiene.
     expect(screen.queryByText(/no tiene arbitros asignados/i)).not.toBeInTheDocument();
-    // Y sobre todo: tiene los botones para hacerlo.
     expect(screen.getByRole('button', { name: /Gol Local FC/i })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: /Gol Local FC/i }));
     await waitFor(() => expect(matchService.createEvent).toHaveBeenCalledTimes(1));
   });
 
   it('tambien acepta el rol numerico del admin', async () => {
-    // `id_rol` de Administrador es 3 (el 1 es Profesor, no admin). Si la
-    // pantalla solo mirara `rol`, un perfil con el rol como numero veria el
-    // aviso.
     matchService.getLive.mockResolvedValue(LIVE({ arbitros: [] }));
     renderPage(7, { id_usuario: 12, id_rol: ROLE_IDS.ADMINISTRADOR });
     await esperarCarga();
@@ -381,7 +363,6 @@ describe('MatchLivePage', () => {
     await user.click(screen.getByRole('button', { name: /Cerrar resultado 1 - 0/ }));
 
     await waitFor(() => expect(matchService.updateResult).toHaveBeenCalledWith(7, {}));
-    // Un body con los numeros seria la puerta de atras que este modulo cierra.
     const [, cuerpo] = matchService.updateResult.mock.calls[0];
     expect(cuerpo.goles_local).toBeUndefined();
     expect(cuerpo.goles_visitante).toBeUndefined();
@@ -400,7 +381,6 @@ describe('MatchLivePage', () => {
     renderPage();
     await esperarCarga();
 
-    // Encadenadas se veria "1-0" con el reloj de antes del gol.
     expect(matchService.getLive).toHaveBeenCalledWith(7);
     expect(matchService.getEvents).toHaveBeenCalledWith(7, { limit: 100 });
   });
@@ -427,20 +407,15 @@ describe('MatchLivePage', () => {
     ['Futsal', 'Gol'],
     ['Voleibol', 'Punto'],
     ['Baloncesto', 'Punto'],
-    // El nombre de la disciplina es texto libre del administrador, asi que la
-    // palabra tiene que salir bien con o sin tilde.
     ['Vóley', 'Punto'],
     ['Voley', 'Punto'],
     ['BALONCESTO', 'Punto'],
-    // Y una disciplina desconocida cae en la palabra neutra.
     ['Disciplina Valida 1', 'Gol']
   ])('llama "%s" a la anotacion "%s"', async (disciplina, palabra) => {
     matchService.getLive.mockResolvedValue(LIVE({ partido: { disciplina_nombre: disciplina } }));
     renderPage();
     await esperarCarga();
 
-    // En la base el tipo es ANOTACION, que es el termino comun a los deportes.
-    // "Gol" y "Punto" son palabras de la disciplina, no del dato.
     expect(screen.getByRole('button', { name: new RegExp(`${palabra} Local FC`, 'i') })).toBeInTheDocument();
   });
 });

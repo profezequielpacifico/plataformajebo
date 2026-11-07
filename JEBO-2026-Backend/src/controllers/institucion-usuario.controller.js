@@ -2,13 +2,6 @@ const { HTTP_STATUS } = require('../constants');
 const institucionUsuarioService = require('../services/institucion-usuario.service');
 const { formatResponse, soloCampos, bindAll } = require('../utils');
 
-/**
- * Asignación de usuarios a instituciones (el complemento de X-05).
- *
- * Las tres rutas son `requireAdminOrAbove`. Ver el encabezado de
- * `institucion-usuario.service` para por qué además revalida el rol del
- * servicio.
- */
 class InstitucionUsuarioController {
   constructor() {
     bindAll(this);
@@ -27,16 +20,6 @@ class InstitucionUsuarioController {
     }
   }
 
-  /**
-   * `PUT` con la lista completa, no un `PATCH`. Editar un conjunto en un `PUT`
-   * es idempotente: mandarlo dos veces deja el mismo estado, y el cliente no
-   * necesita saber qué había antes para decidir qué mandar.
-   *
-   * Allowlist de un solo campo: `id_institucion` acepta un array, no un objeto
-   * con campos libres, así que no hay nada más que filtrar acá — pero el
-   * `soloCampos` mantiene la forma de las demás escrituras y evita que un campo
-   * extra llegue al servicio.
-   */
   async reemplazar(req, res, next) {
     try {
       const data = await institucionUsuarioService.reemplazar(

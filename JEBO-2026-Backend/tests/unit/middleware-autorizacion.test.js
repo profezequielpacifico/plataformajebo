@@ -8,9 +8,6 @@ const autorizacionService = require('../../src/services/autorizacion.service');
 const { ForbiddenError } = require('../../src/utils/errors');
 const { ROLES } = require('../../src/constants');
 
-// Estos middleware son adaptadores: extraen el recurso del request y delegan la
-// decision en `autorizacion.service`. El test fija ese contrato (que id y que
-// metodo se le pasan) y el corte de nivel cuando no hay fila (`/mios`, listado).
 jest.mock('../../src/services/autorizacion.service', () => ({
   esAdministrador: jest.fn((rol) => rol === 'SuperAdmin' || rol === 'Administrador'),
   assertOperarPartido: jest.fn(),

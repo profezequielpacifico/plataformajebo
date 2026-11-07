@@ -205,8 +205,8 @@ export function CompetenciaFormPage({ onNavigate, pageParams, readOnly }) {
                         color: isComplete || isActive ? '#fff' : '#6b7280'
                     }
                 }, isComplete ? h(IconCheck) : stepNum),
-                h('span', { style: { fontSize: '14px', color: isActive ? '#1f2937' : '#6b7280' } }, label),
-                stepNum < STEP_LABELS.length && h('div', { style: { width: '40px', height: '2px', backgroundColor: step > stepNum ? '#10b981' : '#e5e7eb' } })
+                (!isMd || isActive) && h('span', { style: { fontSize: '14px', color: isActive ? '#1f2937' : '#6b7280' } }, label),
+                stepNum < STEP_LABELS.length && h('div', { style: { width: isMd ? '16px' : '40px', height: '2px', backgroundColor: step > stepNum ? '#10b981' : '#e5e7eb' } })
             );
         })
     );
@@ -273,7 +273,7 @@ export function CompetenciaFormPage({ onNavigate, pageParams, readOnly }) {
                     onClick: () => removeEtapa(idx)
                 }, h(IconTrash))
             ),
-            h('div', { style: { display: 'grid', gridTemplateColumns: isMd ? '1fr 1fr 1fr' : '1fr', gap: '12px' } },
+            h('div', { style: { display: 'grid', gridTemplateColumns: isMd ? '1fr' : '1fr 1fr 1fr', gap: '12px' } },
                 h('div', null,
                     h('label', { style: styles.formLabel }, 'Nombre *'),
                     h('input', {
@@ -306,7 +306,6 @@ export function CompetenciaFormPage({ onNavigate, pageParams, readOnly }) {
                     })
                 )
             ),
-            // Reglas
             h('div', { style: { marginTop: '12px' } },
                 h('div', { style: { fontSize: '13px', fontWeight: 600, marginBottom: '8px' } }, 'Reglas'),
                 etapa.reglas.map((regla, rIdx) => h('div', {
@@ -397,7 +396,6 @@ export function CompetenciaFormPage({ onNavigate, pageParams, readOnly }) {
                 suggestion: errorAlert.suggestion
             }),
             stepContent,
-            // Acciones del wizard
             h('div', { style: { display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' } },
                 h('button', {
                     style: styles.buttonOutline,
@@ -415,7 +413,6 @@ export function CompetenciaFormPage({ onNavigate, pageParams, readOnly }) {
                 )
             )
         ),
-        // Modal de confirmación
         showConfirmModal && h(Modal, {
             isOpen: showConfirmModal,
             onClose: () => setShowConfirmModal(false),

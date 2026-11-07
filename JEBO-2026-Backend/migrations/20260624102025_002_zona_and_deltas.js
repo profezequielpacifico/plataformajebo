@@ -1,10 +1,3 @@
-/**
- * Deltas previously applied via scripts/migrate-equipos.js:
- * - table zona
- * - distrito.id_zona
- * - posicion.estado_torneo
- * - rol Profesor
- */
 exports.up = async function up(knex) {
   const zonaExists = await knex.schema.hasTable('zona');
   if (!zonaExists) {

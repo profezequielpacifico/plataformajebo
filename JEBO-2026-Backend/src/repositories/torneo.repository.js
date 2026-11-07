@@ -7,11 +7,6 @@ function baseQuery() {
     .select(
       't.*',
       'd.nombre as disciplina_nombre',
-      // Sin esto el cliente no puede distinguir un torneo de fútbol de uno de
-      // gimnasia: `disciplina_nombre` alcanza para el label del selector, pero
-      // para decidir si el torneo admite partidos hace falta el tipo. Con la
-      // columna ausente, los selectores de Partidos y Fixture ofrecían torneos
-      // de Gimnasia y el alta fallaba recién en el backend.
       'd.tipo_competencia',
       knex.raw('(SELECT COUNT(*) FROM partido WHERE id_torneo = t.id_torneo) as cantidad_partidos'),
       knex.raw('(SELECT COUNT(*) FROM posicion WHERE id_torneo = t.id_torneo) as cantidad_equipos')
@@ -22,9 +17,6 @@ function baseQuery() {
 module.exports = {
   findAll: ({ page = 1, limit = 10, id_disciplina, estado, scope, alcance: alc } = {}) => {
     const query = baseQuery();
-
-    // Aislamiento por institución (X-05), por PARTICIPACIÓN y no por columna:
-    // `torneo` no tiene `id_institucion` porque un torneo es interinstitucional
 
     alcance.filtrarPorTorneosConEquipo(query, alc, 't.id_torneo');
 
@@ -43,7 +35,6 @@ module.exports = {
       }
     }
     if (scope !== 'inscripciones_abiertas' && id_disciplina) {
-      // ya aplicado arriba
     }
     query.orderBy('t.creado_en', 'desc');
     return knex.paginate(query, { page, limit });
@@ -54,7 +45,6 @@ module.exports = {
       .where('t.id_torneo', id)
       .first(),
   ...crud('torneo', 'id_torneo', ['creado_en', 'actualizado_en']),
-  // `qualified` y `final` se leen sobre `posicion` y `partido`, no sobre
 
   findQualified: (id, limit = 4, { alcance: alc } = {}) => {
     const query = knex('posicion as p')

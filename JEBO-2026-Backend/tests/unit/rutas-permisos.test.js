@@ -22,6 +22,12 @@ const MAPA = [
   ['etapa.routes.js | PUT /torneo/:torneoId', 'requireAdminOrAbove'],
   ['etapa.routes.js | PUT /:id', 'requireAdminOrAbove'],
   ['etapa.routes.js | DELETE /:id', 'requireAdminOrAbove'],
+  ['etapa_instancia.routes.js | GET /torneo/:torneoId', 'requireAdminOrAbove'],
+  ['etapa_instancia.routes.js | GET /:id', 'requireAdminOrAbove'],
+  ['etapa_instancia.routes.js | POST /etapa/:etapaId/preparar', 'requireAdminOrAbove'],
+  ['etapa_instancia.routes.js | POST /:id/encuentros', 'requireAdminOrAbove'],
+  ['etapa_instancia.routes.js | POST /:id/participantes', 'requireAdminOrAbove'],
+  ['etapa_instancia.routes.js | POST /:id/finalizar', 'requireAdminOrAbove'],
   ['instancia.routes.js | POST /', 'requireAdminOrAbove'],
   ['instancia.routes.js | PUT /:id', 'requireAdminOrAbove'],
   ['instancia.routes.js | DELETE /:id', 'requireAdminOrAbove'],
@@ -115,14 +121,14 @@ describe('mapa de permisos por endpoint (F1.4)', () => {
       for (const g of guards.split(',')) conteo[g] = (conteo[g] || 0) + 1;
     }
     expect(conteo).toEqual({
-      requireAdminOrAbove: 39,
+      requireAdminOrAbove: 45,
       requireSuperAdmin: 14,
       gestionarPresentacion: 8,
       operarPartido: 6,
       evaluarPresentacion: 4,
       gestionarEquipoPropio: 5
     });
-    expect(actual.length).toBe(76);
+    expect(actual.length).toBe(82);
   });
 
   it('ningun endpoint del mapa perdio su permiso', () => {

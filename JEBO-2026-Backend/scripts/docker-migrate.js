@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * Applies Knex migrations safely for Docker boots.
- *
- * - Empty DB → runs 001 baseline + 002 deltas
- * - DB restored from dump (tables exist, no knex_migrations) → stamps 001, runs 002+
- */
 const knexLib = require('knex');
 const config = require('../knexfile');
 

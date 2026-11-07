@@ -49,7 +49,6 @@ export function AutoFixturePage({ onNavigate }) {
             .then(async (tourRes) => {
                 const data = tourRes.data || tourRes || [];
                 const raw = Array.isArray(data) ? data : (data.rows || []);
-                // Un fixture ES una lista de partidos local/visitante, así que
 
                 const list = soloTorneosConPartidos(raw);
                 setTournaments(list);
@@ -59,7 +58,7 @@ export function AutoFixturePage({ onNavigate }) {
                         const res = await fixtureService.getStatus(String(t.id_torneo || t.id));
                         const s = res.data || res;
                         if (s && typeof s.generado === 'boolean') checks[t.id_torneo || t.id] = s.generado;
-                    } catch { /* ignore */ }
+                    } catch { }
                 }));
                 setStatusMap(checks);
             })
@@ -104,7 +103,7 @@ h('select', {
                         id: 'auto-fixture-error'
                     }, error),
 
-                    h('div', { style: { display: 'flex', gap: '12px', marginTop: '8px' } },
+                    h('div', { style: { display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap' } },
                         h('button', {
                             style: { ...styles.buttonPrimary, disabled: generating || !selectedTournament || loadingStatus },
                             disabled: generating || !selectedTournament || loadingStatus,
@@ -152,7 +151,7 @@ h('select', {
                         borderRadius: '8px', padding: '10px 12px', margin: '12px 0'
                     }
                 }, 'ADVERTENCIA: Esta acción no se puede deshacer.'),
-                h('div', { style: { display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '18px' } },
+                h('div', { style: { display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '18px', flexWrap: 'wrap' } },
                     h('button', {
                         style: styles.buttonOutline,
                         disabled: generating,

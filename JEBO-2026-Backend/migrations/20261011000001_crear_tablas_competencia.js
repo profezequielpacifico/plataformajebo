@@ -1,18 +1,4 @@
-/**
- * F1.3 — Crear tablas de la nueva arquitectura de competencia.
- * 
- * Tablas nuevas:
- * - competencia
- * - competencia_etapa
- * - etapa_regla
- * - etapa_restriccion
- * - etapa_participante
- * 
- * NO modifica tablas legacy (torneo, etapa, partido, posicion, presentacion).
- */
-
 exports.up = async function (knex) {
-  // 1. Competencia
   await knex.schema.createTable('competencia', (table) => {
     table.increments('id_competencia').primary();
     table.text('nombre').notNullable();
@@ -25,7 +11,6 @@ exports.up = async function (knex) {
     table.check(`estado IN ('BORRADOR', 'CONFIGURADA', 'EN_CURSO', 'FINALIZADA', 'SUSPENDIDA')`);
   });
 
-  // 2. Competencia Etapa
   await knex.schema.createTable('competencia_etapa', (table) => {
     table.increments('id_competencia_etapa').primary();
     table.integer('id_competencia').unsigned().notNullable()
@@ -42,20 +27,17 @@ exports.up = async function (knex) {
     table.timestamp('creado_en', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.timestamp('actualizado_en', { useTz: true }).notNullable().defaultTo(knex.fn.now());
 
-    // Restricciones
     table.unique(['id_competencia', 'orden'], { indexName: 'uq_competencia_etapa_orden' });
     table.check(`orden > 0`);
     table.check(`estado IN ('BORRADOR', 'CONFIGURADA', 'LISTA', 'EN_CURSO', 'FINALIZADA', 'BLOQUEADA', 'CANCELADA')`);
   });
 
-  // Índice único parcial: una etapa legacy no puede vincularse a dos etapas nuevas
   await knex.raw(`
     CREATE UNIQUE INDEX uq_competencia_etapa_legacy
     ON competencia_etapa(id_etapa)
     WHERE id_etapa IS NOT NULL
   `);
 
-  // 3. Etapa Regla
   await knex.schema.createTable('etapa_regla', (table) => {
     table.increments('id_etapa_regla').primary();
     table.integer('id_competencia_etapa').unsigned().notNullable()
@@ -76,7 +58,6 @@ exports.up = async function (knex) {
     WHERE activa = TRUE
   `);
 
-  // 4. Etapa Restricción
   await knex.schema.createTable('etapa_restriccion', (table) => {
     table.increments('id_etapa_restriccion').primary();
     table.integer('id_competencia_etapa').unsigned().notNullable()
@@ -90,7 +71,6 @@ exports.up = async function (knex) {
     table.check(`operador IN ('IGUAL', 'IN', 'NOT_IN')`);
   });
 
-  // 5. Etapa Participante
   await knex.schema.createTable('etapa_participante', (table) => {
     table.increments('id_etapa_participante').primary();
     table.integer('id_competencia_etapa').unsigned().notNullable()
@@ -109,7 +89,6 @@ exports.up = async function (knex) {
     table.integer('orden_insercion').notNullable();
     table.timestamp('creado_en', { useTz: true }).notNullable().defaultTo(knex.fn.now());
 
-    // Restricciones únicas
     table.unique(['id_competencia_etapa', 'equipo_id'], { indexName: 'uq_etapa_participante_equipo' });
     table.unique(['id_competencia_etapa', 'orden_insercion'], { indexName: 'uq_etapa_participante_orden' });
 
@@ -129,7 +108,6 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
-  // Eliminar en orden inverso (respetando FKs)
   await knex.schema.dropTableIfExists('etapa_participante');
   await knex.schema.dropTableIfExists('etapa_restriccion');
   await knex.schema.dropTableIfExists('etapa_regla');

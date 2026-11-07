@@ -1,28 +1,6 @@
 const knex = require('../config/knex');
 const alcanceService = require('../services/alcance.service');
 
-/**
- * Estadísticas, acotadas al alcance del solicitante (X-05).
- *
- * El dashboard contaba sobre tablas enteras sin filtro: un token de `Profesor`
- * veía `total_equipos` y `total_usuarios_activos` del sistema completo, que son
- * los mismos números que ve el Administrador. No es el mismo problema que una
- * fila ajena, pero es el mismo agujero: un conteo global es una forma de
- * enumerar lo que existe sin devolver el contenido.
- *
- * `total_usuarios_activos` NO se acota a propósito, y vale la pena decir por
- * qué: `usuario` no tiene institución. La pertenencia vive en
- * `usuario_institucion`, que solo se puebla para Profesores, así que "usuarios
- * de mi institución" es una pregunta sin respuesta bien definida y cualquier
- * respuesta sería inventada. Es un número agregacional, sin identificadores, y
- * el nombre completo está en `/auth/me`. Se deja el conteo global.
- *
- * `torneoStats` sí se acota: las estadísticas de un torneo son de un torneo
- * concreto, y ese torneo tiene que ser visible para quien lo pide. Se valida
- * contra el mismo criterio que la lista de torneos —por inscripción— para que
- * un Profesor no pueda leer las estadísticas de un torneo al que su institución
- * no está anotada, aunque adivine el `id_torneo`.
- */
 module.exports = {
   dashboard: async (alc) => {
     if (!alc || typeof alc.global !== 'boolean') {
@@ -49,7 +27,6 @@ module.exports = {
         .filtrarPorEquipos(knex('partido'), alc, ['partido.id_equipo_local', 'partido.id_equipo_visitante'])
         .count('* as count')
         .first(),
-      // Ver la nota del encabezado: sin filtro y a propósito.
       knex('usuario').where('estado', 'Activo').count('* as count').first()
     ]);
 
@@ -61,14 +38,6 @@ module.exports = {
     };
   },
 
-  /**
-   * Estadísticas de un torneo, sólo si el torneo es visible para quien pide.
-   *
-   * Falla con el mismo `NotFoundError` que una búsqueda sin resultados, no con
-   * un 403: responder "existe pero no lo podés ver" convierte el endpoint en un
-   * oráculo de `id_torneo` válidos. Es el mismo criterio que `GET /teams/:id`
-   * para un equipo ajeno.
-   */
   torneoStats: async (id, alc) => {
     if (!alc || typeof alc.global !== 'boolean') {
       throw new Error(

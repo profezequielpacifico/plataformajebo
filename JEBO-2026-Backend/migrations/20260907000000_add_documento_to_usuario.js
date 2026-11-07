@@ -1,9 +1,3 @@
-/**
- * Agrega la columna `documento` a `usuario`.
- * nullable -> backfill con marcadores únicos -> NOT NULL + UNIQUE
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function (knex) {
   await knex.schema.table('usuario', (table) => {
     table.string('documento', 20).nullable();
@@ -26,10 +20,6 @@ exports.up = async function (knex) {
   });
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function (knex) {
   await knex.schema.table('usuario', (table) => {
     table.dropUnique(['documento']);

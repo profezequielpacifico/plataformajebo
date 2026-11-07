@@ -1,6 +1,10 @@
 import React from 'react';
-import { IconHome, IconTrophy, IconGamepad, IconShield, IconBarChart, IconStar, IconMap, IconMapPin, IconUsers, IconLogOut, IconActivity, IconSport, IconDistrict, IconSettings, IconPlus } from '../components/icons/index.js';
+import { IconHome, IconTrophy, IconGamepad, IconShield, IconBarChart, IconStar, IconMap, IconMapPin, IconUsers, IconLogOut, IconActivity, IconSport, IconDistrict, IconSettings, IconPlus, IconMenu, IconClose } from '../components/icons/index.js';
 import { COLORS } from '../styles/theme/index.js';
+import { calcUiScale } from '../hooks/useResponsive.js';
+
+const MOBILE_BELOW = 1024;
+const LOGOUT_ICON_BELOW = 360;
 
 const menuGroups = [
     {
@@ -13,7 +17,6 @@ const menuGroups = [
         label: 'Competencia',
         items: [
             { id: 'tournaments', label: 'Torneos', icon: IconTrophy },
-            // Consulta y alta van como dos entradas y no como una pantalla con
 
             { id: 'teams', label: 'Consulta de Equipos', icon: IconShield },
             { id: 'teams-new', label: 'Alta de Equipo', icon: IconPlus },
@@ -25,7 +28,6 @@ const menuGroups = [
         ]
     },
     {
-        // Seccion propia y no un item mas de Competencia: las presentaciones de
 
         label: 'Gimnasia Artística',
         items: [
@@ -65,7 +67,6 @@ const menuGroups = [
 
 const allItems = menuGroups.flatMap(g => g.items);
 
-// IDs reales de la BD
 const ROLE_IDS = {
     PROFESOR: 1,
     ARBITRO: 2,
@@ -76,7 +77,6 @@ const ROLE_IDS = {
 
 function getRoleId(user) {
     if (!user) return null;
-    // Prioridad: id_rol (numérico de la BD) > rol (string legacy)
     if (user.id_rol) return Number(user.id_rol);
     const roleMap = {
         'SuperAdmin': ROLE_IDS.SUPERADMIN,
@@ -91,7 +91,6 @@ function getRoleId(user) {
 function getMenuGroups(user) {
     const roleId = getRoleId(user);
 
-    // ÁRBITRO: solo ve sus partidos asignados
     if (roleId === ROLE_IDS.ARBITRO) {
         return [
             {
@@ -128,10 +127,6 @@ function getMenuGroups(user) {
                 label: 'Mis Equipos',
                 items: [
                     { id: 'teams', label: 'Consulta de Equipos', icon: IconShield },
-                    // El Profesor da de alta sus propios equipos (hasta 3, nombre
-                    // único entre los suyos): el backend lo resuelve en
-                    // gestionarEquipoPropio y este acceso ya estaba habilitado en
-                    // ROUTE_PERMISSIONS; faltaba el atajo en el menú del rol.
                     { id: 'teams-new', label: 'Alta de Equipo', icon: IconPlus },
                     { id: 'tournament-registration', label: 'Inscripción', icon: IconShield },
                     { id: 'enrolled-teams', label: 'Inscriptos', icon: IconShield }
@@ -166,7 +161,6 @@ function getMenuGroups(user) {
             }
             return { ...group, items };
         });
-        // Ocultar Administración (Usuarios, Auditoría) y Opciones Avanzadas
         return groups.filter(g => !['Administración', 'Opciones Avanzadas'].includes(g.label));
     }
 
@@ -192,44 +186,44 @@ function getMenuGroups(user) {
     ];
 }
 
-function createResizeHandler(setIsMobile, setSidebarOpen) {
+function createResizeHandler(setIsMobile, setSidebarOpen, setUiScale, setLogoutSoloIcono) {
     return () => {
-        const mobile = window.innerWidth < 768;
+        const mobile = window.innerWidth < MOBILE_BELOW;
         setIsMobile(mobile);
+        setUiScale(calcUiScale());
+        setLogoutSoloIcono(window.innerWidth < LOGOUT_ICON_BELOW);
         if (!mobile) setSidebarOpen(false);
     };
 }
 
-function getBaseStyles() {
+function getBaseStyles(alto, uiScale) {
     return {
         appContainer: {
-            minHeight: '100vh',
-            height: '100vh',
+            minHeight: alto,
+            height: alto,
             backgroundColor: '#f3f4f6',
             display: 'flex',
             overflow: 'hidden',
-            maxWidth: '100vw'
+            maxWidth: '100%',
+            ...(uiScale > 1 ? { zoom: uiScale } : {})
         },
         layout: {
             display: 'flex',
             width: '100%',
-            height: '100vh',
+            height: alto,
             backgroundColor: '#ffffff',
             overflow: 'hidden'
         },
         sidebarLogo: {
-            width: '48px',
-            height: '48px',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            borderRadius: '12px',
+            marginBottom: '8px',
+            flexShrink: 0
+        },
+        sidebarFooter: {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '8px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+            marginTop: '24px',
+            flexShrink: 0
         },
         sidebarAdmin: {
             fontSize: '11px',
@@ -249,7 +243,7 @@ function getBaseStyles() {
             opacity: 0.6
         },
         sidebarMenu: {
-            flex: 1,
+            flex: '1 0 auto',
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -274,24 +268,11 @@ function getBaseStyles() {
             backgroundColor: '#eff6ff',
             borderLeft: '3px solid ' + COLORS.primary
         },
-        sidebarPlaceholder: {
-            marginTop: 'auto',
-            width: '100%',
-            height: '120px',
-            backgroundColor: 'linear-gradient(135deg, #f3f4f6 0%, #ede9fe 100%)',
-            borderRadius: '12px',
-            border: '2px dashed #d1d5db',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: COLORS.textMedium,
-            fontSize: '12px',
-            fontWeight: '500'
-        },
         mainContent: {
             flex: 1,
             backgroundColor: COLORS.bgLight,
-            minHeight: '100vh',
+            minHeight: alto,
+            minWidth: 0,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
@@ -378,7 +359,7 @@ function getBaseStyles() {
     };
 }
 
-function getSidebarStyle(isMobile, sidebarOpen) {
+function getSidebarStyle(isMobile, sidebarOpen, alto) {
     const mobileWidth = sidebarOpen ? '260px' : '0px';
     const width = isMobile ? mobileWidth : '240px';
     const mobileLeft = sidebarOpen ? '0' : '-260px';
@@ -391,7 +372,7 @@ function getSidebarStyle(isMobile, sidebarOpen) {
         display: 'flex',
         flexDirection: 'column',
         padding: isMobile ? '20px' : '24px',
-        height: '100vh',
+        height: alto,
         overflowY: 'auto',
         flexShrink: 0,
         position: isMobile ? 'fixed' : 'relative',
@@ -407,21 +388,32 @@ function getSidebarStyle(isMobile, sidebarOpen) {
 function getMobileToggleStyles(isMobile, sidebarOpen) {
     return {
         mobileMenuButton: {
-            display: isMobile ? 'flex' : 'none',
+            display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
+            width: '44px',
+            height: '44px',
+            backgroundColor: '#eff6ff',
+            border: 'none',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            color: COLORS.primary
+        },
+        mobileCloseButton: {
+            display: isMobile && sidebarOpen ? 'flex' : 'none',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
             width: '40px',
             height: '40px',
-            backgroundColor: '#ffffff',
-            border: '1px solid ' + COLORS.borderGray,
-            borderRadius: '8px',
+            backgroundColor: '#eff6ff',
+            border: 'none',
+            borderRadius: '12px',
             cursor: 'pointer',
-            position: 'fixed',
-            top: '12px',
-            left: '12px',
-            zIndex: 1001,
-            color: COLORS.textDark,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            color: COLORS.primary
         },
         mobileOverlay: {
             display: isMobile && sidebarOpen ? 'block' : 'none',
@@ -440,7 +432,7 @@ function getContentStyles(isMobile) {
     return {
         header: {
             backgroundColor: '#ffffff',
-            padding: isMobile ? '0 16px' : '20px 32px',
+            padding: isMobile ? '0 12px' : '20px 32px',
             borderBottom: '1px solid ' + COLORS.borderGray,
             display: 'flex',
             justifyContent: 'space-between',
@@ -459,7 +451,7 @@ function getContentStyles(isMobile) {
             flex: 1,
             padding: isMobile ? '80px 16px 20px' : '32px',
             overflowY: 'auto',
-            overflowX: 'hidden',
+            overflowX: 'auto',
             maxWidth: '100%',
             boxSizing: 'border-box'
         },
@@ -479,11 +471,22 @@ function renderMobileOverlay(styles, setSidebarOpen) {
     });
 }
 
-function renderMobileMenuButton(styles, sidebarOpen, setSidebarOpen) {
+function renderMobileMenuButton(styles, setSidebarOpen) {
     return React.createElement('button', {
+        type: 'button',
+        'aria-label': 'Abrir menú',
         style: styles.mobileMenuButton,
-        onClick: () => setSidebarOpen(!sidebarOpen)
-    }, React.createElement('span', { style: { fontSize: '20px', lineHeight: 1 } }, '\u2630'));
+        onClick: () => setSidebarOpen(true)
+    }, React.createElement(IconMenu, { size: 24, strokeWidth: 2.5 }));
+}
+
+function renderMobileCloseButton(styles, setSidebarOpen) {
+    return React.createElement('button', {
+        type: 'button',
+        'aria-label': 'Cerrar menú',
+        style: styles.mobileCloseButton,
+        onClick: () => setSidebarOpen(false)
+    }, React.createElement(IconClose, { size: 22, strokeWidth: 2.5 }));
 }
 
 function renderSidebarItem(item, styles, isActive, onNavigate) {
@@ -495,18 +498,6 @@ function renderSidebarItem(item, styles, isActive, onNavigate) {
     }, React.createElement(item.icon, { size: 18 }), item.label);
 }
 
-/**
- * Devuelve el id de menu al que pertenece `currentPage`, o `null`.
- *
- * Sufijo con '-' para las subpaginas planas (tournaments-history) y con '/'
- * para las anidadas (gymnastics/presentaciones/5/resultado). Sin el caso de '/'
- * entrar a una presentacion dejaba el menu sin nada marcado.
- *
- * Gana el id MAS ESPECIFICO. Con 'teams' y 'teams-new' en el mismo grupo, la
- * comparacion suelta marcaba los dos en la pantalla de alta: basta con que
- * 'teams-new' empiece por 'teams-'. Por eso se elige el match mas largo en
- * lugar de preguntar item por item.
- */
 function menuIdPara(currentPage, ids) {
     if (!currentPage) return null;
     let mejor = null;
@@ -530,26 +521,43 @@ function renderMenuGroup(group, styles, currentPage, onNavigate, ids) {
     );
 }
 
-function renderSidebar(styles, currentPage, onNavigate, user) {
+function renderSidebar(styles, currentPage, onNavigate, user, setSidebarOpen) {
     const groups = getMenuGroups(user);
     const roleLabel = user && (user.rol === 'Arbitro' || user.id_rol === 10) ? 'ARBITRO' : 'ADMIN';
-    // La especificidad se resuelve contra TODOS los items, no solo los del
 
     const ids = groups.flatMap(g => g.items.map(i => i.id));
     return React.createElement('div', { style: styles.sidebar },
-        React.createElement('div', { style: styles.sidebarLogo }, 'JEBO'),
+        renderMobileCloseButton(styles, setSidebarOpen),
+        React.createElement('div', { style: styles.sidebarLogo },
+            React.createElement('img', {
+                src: '/login-assets/logo-jebo.webp',
+                alt: 'JEBO',
+                style: { display: 'block', width: '132px', height: 'auto' }
+            })
+        ),
         React.createElement('div', { style: styles.sidebarAdmin }, roleLabel),
         React.createElement('div', { style: styles.sidebarMenu },
             groups.map(group => renderMenuGroup(group, styles, currentPage, onNavigate, ids))
         ),
-        React.createElement('div', { style: styles.sidebarPlaceholder }, 'Espacio para imagen')
+        React.createElement('div', { style: styles.sidebarFooter },
+            React.createElement('img', {
+                src: '/branding/escudo-eest2.svg',
+                alt: 'E.E.S.T. N° 2 Manuel Mateo, San Vicente',
+                style: { display: 'block', width: '96px', height: 'auto' }
+            })
+        )
     );
 }
 
-function renderHeader(styles, isMobile, currentItem, onLogout, onNavigate) {
+function renderHeader(styles, isMobile, currentItem, onLogout, onNavigate, setSidebarOpen) {
     return React.createElement('div', { style: styles.header },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '24px' } },
-            React.createElement('span', { style: { fontSize: '18px', fontWeight: '700', color: COLORS.textDark } }, 'JEBO 2026'),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '24px', minWidth: 0 } },
+            isMobile && renderMobileMenuButton(styles, setSidebarOpen),
+            React.createElement('img', {
+                src: '/login-assets/logo-jebo.webp',
+                alt: 'JEBO 2026',
+                style: { display: 'block', height: isMobile ? '34px' : '40px', width: 'auto', flexShrink: 0 }
+            }),
             !isMobile && React.createElement('span', { style: { fontSize: '14px', color: COLORS.textMedium } }, currentItem.label)
         ),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
@@ -571,51 +579,60 @@ function renderHeader(styles, isMobile, currentItem, onLogout, onNavigate) {
                     gap: '6px',
                     transition: 'all 0.2s'
                 },
+                'aria-label': 'Cerrar Sesión',
                 onClick: () => { onLogout(); onNavigate('login'); }
-            }, React.createElement(IconLogOut, { size: 14 }), 'Cerrar Sesión')
+            }, React.createElement(IconLogOut, { size: 14 }), !styles.logoutSoloIcono && 'Cerrar Sesión')
         )
     );
 }
 
-function renderMainContent(styles, isMobile, currentItem, onLogout, onNavigate, children) {
+function renderMainContent(styles, isMobile, currentItem, onLogout, onNavigate, setSidebarOpen, children) {
     return React.createElement('div', { style: styles.mainContent },
-        renderHeader(styles, isMobile, currentItem, onLogout, onNavigate),
-        React.createElement('div', { style: styles.contentArea }, children)
+        renderHeader(styles, isMobile, currentItem, onLogout, onNavigate, setSidebarOpen),
+        React.createElement('div', { style: styles.contentArea },
+            React.createElement('div', { style: { width: '100%', maxWidth: '1760px', margin: '0 auto' } }, children)
+        )
     );
 }
 
 export function MainLayout({ user, onLogout, currentPage, onNavigate, children }) {
-    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < MOBILE_BELOW);
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
+    const [uiScale, setUiScale] = React.useState(() => calcUiScale());
+    const [logoutSoloIcono, setLogoutSoloIcono] = React.useState(window.innerWidth < LOGOUT_ICON_BELOW);
 
     React.useEffect(() => {
-        const handleResize = createResizeHandler(setIsMobile, setSidebarOpen);
+        const handleResize = createResizeHandler(setIsMobile, setSidebarOpen, setUiScale, setLogoutSoloIcono);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const visibleItems = getMenuGroups(user).flatMap(g => g.items);
-    // Mismo criterio que el menu: el item mas especifico gana. Con
 
     const activoId = menuIdPara(currentPage, visibleItems.map(i => i.id));
     const currentItem = visibleItems.find(i => i.id === activoId) || visibleItems[0] || allItems[0];
 
+    const navegarDesdeMenu = (id) => {
+        setSidebarOpen(false);
+        onNavigate(id);
+    };
+
+    const alto = uiScale > 1 ? `calc(100vh / ${uiScale})` : '100vh';
     const styles = {
-        ...getBaseStyles(),
-        sidebar: getSidebarStyle(isMobile, sidebarOpen),
+        ...getBaseStyles(alto, uiScale),
+        sidebar: getSidebarStyle(isMobile, sidebarOpen, alto),
         ...getMobileToggleStyles(isMobile, sidebarOpen),
-        ...getContentStyles(isMobile)
+        ...getContentStyles(isMobile),
+        logoutSoloIcono
     };
 
     return React.createElement('div', { style: styles.appContainer },
         isMobile && renderMobileOverlay(styles, setSidebarOpen),
 
-        isMobile && renderMobileMenuButton(styles, sidebarOpen, setSidebarOpen),
-
         React.createElement('div', { style: styles.layout },
-            renderSidebar(styles, currentPage, onNavigate, user),
+            renderSidebar(styles, currentPage, navegarDesdeMenu, user, setSidebarOpen),
 
-            renderMainContent(styles, isMobile, currentItem, onLogout, onNavigate, children)
+            renderMainContent(styles, isMobile, currentItem, onLogout, onNavigate, setSidebarOpen, children)
         )
     );
 }

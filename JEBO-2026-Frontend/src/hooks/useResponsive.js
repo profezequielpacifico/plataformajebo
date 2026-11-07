@@ -7,6 +7,23 @@ const breakpoints = {
     xl: 1280
 };
 
+export function calcUiScale(width = window.innerWidth, height = window.innerHeight) {
+    const escala = Math.min(width / 1600, height / 800);
+    return Math.round(Math.min(Math.max(escala, 1), 1.6) * 100) / 100;
+}
+
+export function useUiScale() {
+    const [escala, setEscala] = useState(() => calcUiScale());
+
+    useEffect(() => {
+        const handleResize = () => setEscala(calcUiScale());
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return escala;
+}
+
 export function useResponsive() {
     const [width, setWidth] = useState(window.innerWidth);
 

@@ -2,15 +2,6 @@ const { HTTP_STATUS } = require('../constants');
 const { eventoService, relojService } = require('../services/evento.service');
 const { formatResponse, formatPaginatedResponse, soloCampos, bindAll } = require('../utils');
 
-/**
- * El body del registro de un evento tiene exactamente tres campos.
- *
- * Lo que NO esta en esta lista es lo importante: `hora_real`, `segundos_partido`
- * y `estado` no los manda el cliente. Si los aceptara, un arbitro podria
- * retroadatar un gol o reversible al instante; y el tiempo de partido tiene que
- * salir de la misma lectura de reloj que escribe `hora_real`, o cada evento
- * tendria dos marcas de tiempo de relojes distintos.
- */
 const CAMPOS_EVENTO = [
   'id_equipo',
   'id_usuario_arbitro',

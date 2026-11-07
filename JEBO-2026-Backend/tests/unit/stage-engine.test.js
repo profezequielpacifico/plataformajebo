@@ -92,7 +92,6 @@ describe('StageEngine', () => {
         config: {}
       });
       expect(result.clasificados).toHaveLength(2);
-      // Verificar que son los de mayor puntaje
       const maxPuntos = Math.max(...regiones.map(r => r.puntos));
       expect(result.clasificados[0].puntos).toBe(maxPuntos);
     });
@@ -124,7 +123,6 @@ describe('StageEngine', () => {
         config: {}
       });
       expect(result.grupos).toHaveLength(4);
-      // Último grupo tiene 3
       expect(result.grupos[3]).toHaveLength(3);
     });
   });

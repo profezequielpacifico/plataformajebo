@@ -1,30 +1,8 @@
 const knex = require('../config/knex');
 
-/**
- * Denylist de refresh tokens revocados.
- *
- * Por qué denylist y no allowlist: una allowlist obligaría a registrar cada
- * sesión emitida y a consultar la base en cada refresh y en cada request
- * autenticado. La denylist deja el camino caliente (verificar la firma) sin
- * tocar la base, y solo se agrega una fila cuando alguien cierra sesión —que es
- * mucho más raro que iniciar sesión—.
- *
- * La fila se poda sola por `expira_en`: un refresh token venera 7 días, y
- * pasado ese punto nadie puede presentarlo, así que guardarlo no aporta nada.
- */
-const TTL_PODA_MS = 5 * 60 * 1000;
-const cache = new Map();
+const revocadosConocidos = new Set();
+const versionesConocidas = new Map();
 
-/**
- * Revoca un refresh token concreto.
- *
- * Guarda el `jti` junto con el `exp` del propio token, no los 7 días completos
- * desde el logout: si el token venciera en dos horas, la fila sobra en dos
- * horas y no en siete.
- *
- * `onConflict ... ignore` hace la operación idempotente: revocar dos veces el
- * mismo token (doble clic, reintento del cliente) no rompe.
- */
 const revocar = async (token, idUsuario) => {
   const jti = leerJti(token);
   const exp = leerExp(token);
@@ -40,35 +18,50 @@ const revocar = async (token, idUsuario) => {
     .onConflict('jti')
     .ignore();
 
-  cache.delete(jti);
+  revocadosConocidos.add(jti);
   return true;
 };
 
-/**
- * ¿Está este `jti` revocado?
- *
- * El resultado se cachea 30 s. La fila no se borra al vencer su `expira_en`
- * (eso lo hace la poda periódica), así que sin cache cada request autenticado
- * preguntaría por tokens que ya son inútiles.
- */const estaRevocado = async (jti) => {
+const estaRevocado = async (jti) => {
   if (!jti) return false;
+  if (revocadosConocidos.has(jti)) return true;
 
-  const cached = cache.get(jti);
-  if (cached && Date.now() - cached.tiempo < TTL_PODA_MS) return cached.revocado;
-
-  const fila = await knex('refresh_token_revocado').where({ jti }).first();
-  const revocado = !!fila;
-  cache.set(jti, { revocado, tiempo: Date.now() });
-  return revocado;
+  const fila = await knex('refresh_token_revocado').where({ jti }).first('jti');
+  if (fila) revocadosConocidos.add(jti);
+  return !!fila;
 };
 
-/**
- * Hace cuanto se revoco este `jti`, en ms, o `null` si no esta revocado.
- *
- * Existe para la ventana de gracia de la rotacion de refresh tokens: con
- * rotacion estricta, dos pestanas del mismo usuario se pisan entre si. Ver
- * `auth.service.refresh`.
- */
+const recordarVersion = (idUsuario, version) => {
+  if (typeof version !== 'number') return;
+  const previa = versionesConocidas.get(idUsuario);
+  if (previa === undefined || version > previa) versionesConocidas.set(idUsuario, version);
+};
+
+const sesionVigente = async ({ id, jti, ver } = {}) => {
+  if (id === undefined || id === null) return false;
+  if (jti && revocadosConocidos.has(jti)) return false;
+
+  const conocida = versionesConocidas.get(id);
+  if (typeof ver === 'number' && conocida !== undefined && ver < conocida) return false;
+
+  const fila = await knex('usuario')
+    .where('id_usuario', id)
+    .first(
+      'token_version',
+      knex.raw('EXISTS (SELECT 1 FROM refresh_token_revocado WHERE jti = ?) AS revocado', [jti || null])
+    );
+
+  if (!fila) return false;
+  recordarVersion(id, fila.token_version);
+
+  if (fila.revocado) {
+    if (jti) revocadosConocidos.add(jti);
+    return false;
+  }
+
+  return ver === undefined || ver === fila.token_version;
+};
+
 const antiguedadDeRevocacion = async (jti) => {
   if (!jti) return null;
 
@@ -80,19 +73,11 @@ const antiguedadDeRevocacion = async (jti) => {
   return Date.now() - new Date(fila.revocado_en).getTime();
 };
 
-/**
- * Invalida todos los tokens de un usuario subiendo `token_version`.
- *
- * Es el interruptor de emergencia para cuando un token se filtra y el cliente
- * nunca llama a `logout`: una escritura y quedan muertos todos sus tokens, sin
- * tener que conocer cada `jti`.
- */
 const invalidarTodo = (idUsuario) =>
   knex('usuario')
     .where('id_usuario', idUsuario)
     .update({ token_version: knex.raw('COALESCE(token_version, 1) + 1') });
 
-/** Lectura sin verificar firma: el token está firmado por el propio servidor. */
 const leerClaims = (token) => {
   const jwt = require('jsonwebtoken');
   return jwt.decode(token) || null;
@@ -108,11 +93,11 @@ const leerExp = (token) => {
   return claims && typeof claims.exp === 'number' ? claims.exp : null;
 };
 
-/** Poda. Se corre al arrancar y cada 6 h; los índices cubren ambos filtros. */
 setInterval(async () => {
   try {
     await knex('refresh_token_revocado').where('expira_en', '<', knex.fn.now()).del();
-  } catch (_) { /* best effort: la poda no debe tumbar el proceso */ }
+    revocadosConocidos.clear();
+  } catch (_) { }
 }, 6 * 60 * 60 * 1000).unref();
 
-module.exports = { revocar, estaRevocado, invalidarTodo, antiguedadDeRevocacion, leerJti, leerExp };
+module.exports = { revocar, estaRevocado, sesionVigente, invalidarTodo, antiguedadDeRevocacion, leerJti, leerExp };

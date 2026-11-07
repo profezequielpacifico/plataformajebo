@@ -1,7 +1,3 @@
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function(knex) {
   await knex.schema.createTable('localidad', (table) => {
     table.increments('id_localidad').primary();
@@ -15,10 +11,6 @@ exports.up = async function(knex) {
   });
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function(knex) {
   await knex.schema.table('institucion', (table) => {
     table.dropColumn('id_localidad');

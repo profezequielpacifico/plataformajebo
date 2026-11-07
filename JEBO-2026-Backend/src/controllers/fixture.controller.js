@@ -16,7 +16,6 @@ class FixtureController {
   async getStatus(req, res, next) {
     try {
       const { id_torneo } = req.params;
-      // `req.alcance` lo deja `authenticate`; sin él el servicio lanza (X-05).
       const data = await fixtureService.getByIdTorneo(id_torneo, req.alcance);
       res.status(HTTP_STATUS.OK).json(formatResponse(data));
     } catch (err) {

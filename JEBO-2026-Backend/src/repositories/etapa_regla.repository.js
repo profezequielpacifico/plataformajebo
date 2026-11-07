@@ -11,7 +11,6 @@ module.exports = {
   update: (id, data) => knex('etapa_regla').where({ id_etapa_regla: id }).update(data).returning('*'),
   delete: (id) => knex('etapa_regla').where({ id_etapa_regla: id }).del().returning('*'),
 
-  // Métodos con transacción
   createConTrx: (data, trx = knex) => trx('etapa_regla').insert(data).returning('*'),
   updateConTrx: (id, data, trx = knex) => trx('etapa_regla').where({ id_etapa_regla: id }).update(data).returning('*')
 };

@@ -14,10 +14,10 @@ router.post('/', authenticate, requireAdminOrAbove, [
   body('nombre').notEmpty().withMessage('Nombre es requerido'),
   body('jugadores_por_equipo').optional().isInt({ min: 1 }),
   body('tipo_competencia').optional().isIn(['MARCADOR', 'EVALUACION'])
-    .withMessage('Tipo de competencia inválido')
+    .withMessage('Tipo de competencia inválido'),
+  body(['puntos_victoria', 'puntos_empate', 'puntos_derrota']).optional().isInt({ min: 0, max: 100 })
+    .withMessage('Los puntos deben ser un entero entre 0 y 100')
 ], validate, disciplinaController.create);
-
-// `verificarContenido` va DESPUÉS de multer porque los magic bytes necesitan el
 
 router.post('/:id/reglamento', authenticate, requireAdminOrAbove, limitarCuerpo, uploadReglamento.single('reglamento'), verificarContenido, disciplinaController.uploadReglamento);
 
@@ -25,7 +25,9 @@ router.put('/:id', authenticate, requireAdminOrAbove, [
   body('nombre').optional().notEmpty(),
   body('jugadores_por_equipo').optional().isInt({ min: 1 }),
   body('tipo_competencia').optional().isIn(['MARCADOR', 'EVALUACION'])
-    .withMessage('Tipo de competencia inválido')
+    .withMessage('Tipo de competencia inválido'),
+  body(['puntos_victoria', 'puntos_empate', 'puntos_derrota']).optional().isInt({ min: 0, max: 100 })
+    .withMessage('Los puntos deben ser un entero entre 0 y 100')
 ], validate, disciplinaController.update);
 
 router.delete('/:id', authenticate, requireAdminOrAbove, disciplinaController.delete);

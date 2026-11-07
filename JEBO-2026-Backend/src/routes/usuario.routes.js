@@ -5,11 +5,7 @@ const { authenticate, requireSuperAdmin, requireAdminOrAbove, validate } = requi
 const { passwordValidator, documentoValidator, rolExisteValidator } = require('../utils');
 const { ESTADOS_USUARIO, ROLES } = require('../constants');
 
-// Lista cerrada, leída de la constante y no escrita a mano: los dos estados
-
 const ESTADO_VALIDO = Object.values(ESTADOS_USUARIO);
-
-// Roles que un Admin puede listar para armar un jurado. `SuperAdmin` y
 
 const ROLES_OPCIONES = Object.values(ROLES).filter(
   (rol) => rol !== ROLES.SUPERADMIN && rol !== ROLES.ADMIN
@@ -17,24 +13,16 @@ const ROLES_OPCIONES = Object.values(ROLES).filter(
 
 const router = Router();
 
-// `GET /users/opciones` — declararla ANTES de `/:id`, no despues.
-
 router.get('/opciones', authenticate, requireAdminOrAbove, [
   query('rol').optional().isIn(ROLES_OPCIONES)
 ], validate, usuarioController.opciones);
-
-// El padron completo es de SuperAdmin (F1.6).
 
 router.get('/', authenticate, requireSuperAdmin, [
   query('rol').optional().isString(),
   query('search').optional().isString()
 ], validate, usuarioController.findAll);
 
-// `GET /users/:id` es la pantalla de edicion de SuperAdmin, no un selector.
-
 router.get('/:id', authenticate, requireSuperAdmin, usuarioController.findById);
-
-// Alta, edicion y baja siguen en `requireAdminOrAbove`, no en `requireSuperAdmin`
 
 router.post('/', authenticate, requireAdminOrAbove, [
   body('nombre').notEmpty().withMessage('Nombre es requerido'),

@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const { UsuarioRepository, RolRepository } = require('../repositories');
 const { NotFoundError, BusinessError, ValidationError } = require('../utils/errors');
 const { normalizarEmail } = require('../utils/validators');
@@ -6,20 +6,6 @@ const env = require('../config/env');
 const bitacoraService = require('./bitacora.service');
 const { ESTADOS_USUARIO } = require('../constants');
 
-/**
- * Lo que se devuelve al cliente cuando se crea o actualiza un usuario.
- *
- * El problema: `crud.create` / `crud.update` terminan en `.returning('*')`, así
- * que la fila completa —con `password_hash` adentro—viaja en el body de
- * `POST /users` y `PUT /users/:id`. Las lecturas ya usaban la proyección de
- * `COLUMNAS_PUBLICAS`; las escrituras no, y esa asimetría es exactamente lo que
- * dejó el hash viajando.
- *
- * No alcanza con borrar la clave del objeto: se filtra por construcción, así
- * que se relee la fila con la proyección pública. El doble acceso es barato
- * (una lectura por escritura de usuario) y evita que el hash vuelva a colarse si
- * mañana alguien agrega una columna sensible.
- */
 const sinHash = (row) => {
   if (!row || typeof row !== 'object') return row;
   const { password_hash, ...resto } = row;
@@ -27,21 +13,11 @@ const sinHash = (row) => {
 };
 
 class UsuarioService {
-  // `findAll` y `findById` reciben el alcance y el id del solicitante: son los
 
   async findAll(filters = {}, { alcance, solicitanteId } = {}) {
     return UsuarioRepository.findAll({ ...filters, alcance, solicitanteId });
   }
 
-  /**
-   * Nombres para los selectores de personal (F1.6).
-   *
-   * No recibe `alcance` ni `solicitanteId` a proposito, y esa es la diferencia
-   * con `findAll`: lo que devuelve son tres campos que no son datos personales,
-   * y a quien se lo pido ya lo filtro el guard de la ruta. Meterle alcance
-   * obligaria a decidir que proyeccion corresponde a cada rol para terminar
-   * ser Projectando_ la misma en todos los casos.
-   */
   async findOpciones({ rol } = {}) {
     return UsuarioRepository.findOpciones({ rol });
   }
@@ -52,14 +28,6 @@ class UsuarioService {
     return user;
   }
 
-  /**
-   * Lectura completa, sin proyección.
-   *
-   * Para uso INTERNO únicamente: `update` y `delete` necesitan la fila entera
-   * para validar duplicados de email y documento, y el servicio de auth
-   * necesita `token_version`. No la	use un controlador para responder a un
-   * cliente: esa es la vía por la que X-16 estaba abierto.
-   */
   async findByIdCompleto(id) {
     const user = await UsuarioRepository.findById(id, {
       alcance: { global: true },
@@ -70,7 +38,6 @@ class UsuarioService {
   }
 
   async create(data, context = {}) {
-    // La ruta ya normaliza, pero el servicio es la puerta real: lo que entra acá
 
     if (data.email) data.email = normalizarEmail(data.email);
 
@@ -100,18 +67,12 @@ class UsuarioService {
   }
 
   async update(id, data, context = {}) {
-    // Qué cambios cortan las sesiones abiertas del usuario afectado, y por qué:
-    //
 
     const revocarSesion = { pedido: false, motivo: [] };
-    // Lectura completa: acá la fila se usa para validar duplicados, comparar el
 
     const actual = await this.findByIdCompleto(id);
 
-    // Las dos validaciones de duplicado comparan por `String`: `id` viene de
-
     if (data.email) {
-      // Mismo motivo que en `create`: el chequeo de duplicado y lo que se
 
       data.email = normalizarEmail(data.email);
       const existing = await UsuarioRepository.findByEmail(data.email);
@@ -132,7 +93,6 @@ class UsuarioService {
       const rol = await RolRepository.findByDescripcion(nombrePedido);
       data.id_rol = rol.id_rol;
       delete data.rol;
-      // Se compara por NOMBRE contra la fila actual y no contra `id_rol`: la
 
       if (actual.rol_descripcion !== nombrePedido) {
         revocarSesion.pedido = true;
@@ -141,7 +101,6 @@ class UsuarioService {
     }
 
     if (data.estado !== undefined) {
-      // La ruta ya valida el enum y devuelve 400. Acá se repite porque el servicio
 
       if (!Object.values(ESTADOS_USUARIO).includes(data.estado)) {
         throw new ValidationError(
@@ -174,14 +133,11 @@ class UsuarioService {
       revocarSesion: revocarSesion.pedido
     });
 
-    // Entrada propia en la bitácora para lo que no es un `ACTUALIZAR_USUARIO` de
-
     const ACCIONES = {
       password: 'CAMBIAR_PASSWORD_USUARIO',
       estado: 'CAMBIAR_ESTADO_USUARIO',
       rol: 'CAMBIAR_ROL_USUARIO'
     };
-    // La precedencia es fija y en el orden de sensibilidad: si un mismo `PUT`
 
     const accion =
       ACCIONES[['password', 'estado', 'rol'].find((c) => revocarSesion.motivo.includes(c))]
@@ -195,7 +151,6 @@ class UsuarioService {
     await bitacoraService.log({
       userId: context.userId, action: accion,
       entity: 'Usuario', entityId: id, ip: context.ip, userAgent: context.userAgent,
-      // `null` y no `{}` para una edicion de perfil: una fila con `detalle` vacío
 
       detail: Object.keys(detalle).length ? detalle : null
     });

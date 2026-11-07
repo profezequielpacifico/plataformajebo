@@ -1,10 +1,6 @@
 import api from '../api/index.js';
 import { buildQuery } from './buildQuery.js';
 
-/**
- * Servicio para el módulo de Competencias.
- * Consume los endpoints /api/competencias del backend.
- */
 export const competenciaService = {
     async getAll(page = 1, limit = 10, params = {}) {
         const queryParams = buildQuery({ page, limit, ...params });

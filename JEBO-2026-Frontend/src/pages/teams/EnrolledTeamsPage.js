@@ -74,7 +74,7 @@ export function EnrolledTeamsPage({ onNavigate }) {
                 }, h(IconArrowLeft), 'Volver')
             ),
 
-            h('div', { style: { display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' } },
+            h('div', { style: { display: 'flex', gap: '12px', padding: '16px', flexWrap: 'wrap' } },
                 h('div', { style: { ...styles.formGroup, marginBottom: 0, minWidth: '180px' } },
                     h('label', { style: styles.formLabel }, 'Deporte'),
                     h('select', {

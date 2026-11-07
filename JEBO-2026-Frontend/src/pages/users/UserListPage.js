@@ -117,7 +117,7 @@ export function UserListPage({ onNavigate }) {
                         onChange: (e) => setSearchTerm(e.target.value),
                         onKeyDown: handleKeyDown,
                         placeholder: 'Buscar por nombre o documento...',
-                        style: { ...formInput, width: '220px', marginBottom: 0 }
+                        style: { ...formInput, width: '220px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
                     }),
                     h('button', { style: buttonPrimarySmall, onClick: handleSearch }, 'Buscar'),
                     h('button', { style: buttonOutlineSmall, onClick: clearFilters }, 'Limpiar'),

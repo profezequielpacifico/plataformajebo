@@ -31,14 +31,10 @@ const LOGIN_BACKGROUND_COLOR = '#074155';
 const LOGIN_CORNER_SIZE = 'min(50vw, 88.889vh) auto';
 
 const styles = {
-    // Login styles
     loginContainer: {
         height: '100vh',
         overflowY: 'auto',
         backgroundColor: LOGIN_BACKGROUND_COLOR,
-        // Una esquina en SVG por cuadrante, ancladas a los bordes: se ven nítidas
-        // en cualquier pantalla y no se recortan como una imagen con `cover`.
-        // El `min()` evita que se pisen en pantallas muy anchas.
         backgroundImage: [
             "url('/login-assets/bg-tl.svg')",
             "url('/login-assets/bg-tr.svg')",
@@ -77,7 +73,7 @@ const styles = {
         width: 'auto'
     },
     loginInfo: {
-        width: 'calc(100% - 96px)',
+        width: 'calc(100% - clamp(32px, 7vw, 96px))',
         maxWidth: '1200px',
         margin: '80px auto 48px auto',
         backgroundColor: 'rgba(255, 255, 255, 0.92)',
@@ -199,13 +195,16 @@ const styles = {
         cursor: 'pointer',
         transition: TRANSITIONS.default
     },
+    loginLinks: {
+        marginTop: SPACING.md,
+        textAlign: 'center'
+    },
     loginLink: {
         color: COLORS.primary,
         textDecoration: 'none',
         fontSize: TYPOGRAPHY.sizes.sm
     },
 
-    // Loading styles
     loadingContainer: {
         display: 'flex',
         flexDirection: 'column',
@@ -219,7 +218,6 @@ const styles = {
         fontSize: TYPOGRAPHY.sizes.base
     },
 
-    // Success styles
     successContainer: {
         display: 'flex',
         flexDirection: 'column',
@@ -252,7 +250,6 @@ const styles = {
         cursor: 'pointer'
     },
 
-    // Button styles
     buttonPrimary: {
         padding: '12px 20px',
         backgroundColor: COLORS.primary,
@@ -319,7 +316,6 @@ const styles = {
         transition: TRANSITIONS.default
     },
 
-    // Layout styles
     appContainer: {
         minHeight: '100vh',
         backgroundColor: COLORS.background
@@ -346,7 +342,6 @@ const styles = {
         marginBottom: SPACING.xl
     },
 
-    // Table styles
     table: {
         width: '100%',
         borderCollapse: 'collapse',
@@ -379,7 +374,6 @@ const styles = {
         gap: SPACING.xs
     },
 
-    // Card styles
     card: {
         backgroundColor: COLORS.surface,
         borderRadius: RADIUS.lg,
@@ -393,6 +387,13 @@ const styles = {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: SPACING.md,
+    },
+    cardHeaderActions: {
+        flex: '0 1 auto',
+        minWidth: 0,
+        maxWidth: '100%',
     },
     cardTitle: {
         fontSize: TYPOGRAPHY.sizes.lg,
@@ -401,7 +402,6 @@ const styles = {
         margin: 0
     },
 
-    // Modal styles
     modalOverlay: {
         position: 'fixed',
         top: 0,
@@ -438,7 +438,6 @@ const styles = {
         justifyContent: 'flex-end'
     },
 
-    // Dashboard styles
     statsGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -462,7 +461,6 @@ const styles = {
         color: COLORS.primary
     },
 
-    // Badge styles
     badge: {
         display: 'inline-flex',
         alignItems: 'center',

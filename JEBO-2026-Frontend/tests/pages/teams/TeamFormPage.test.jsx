@@ -54,7 +54,6 @@ describe('TeamFormPage', () => {
   it('es la pantalla de alta, no un listado', async () => {
     renderPage();
     expect(await screen.findByRole('heading', { name: 'Alta de Equipo' })).toBeInTheDocument();
-    // La consulta vive en su propia pagina: aca no hay tabla ni acciones.
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -67,9 +66,6 @@ describe('TeamFormPage', () => {
   });
 
   it('pide la disciplina al servidor con ?rol=Profesor y no trae todos los usuarios', async () => {
-    // Antes traia todos los usuarios y filtraba en el navegador por
-    // `rol_descripcion`, un campo que `/users` no expone igual segun el alcance
-    // del solicitante: el selector llegaba vacio.
     renderPage();
     await screen.findByLabelText('Disciplina *');
 

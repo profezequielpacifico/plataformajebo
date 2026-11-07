@@ -77,8 +77,7 @@ export function LockedIpsPage({ user, onNavigate }) {
 
     useEffect(() => {
         if (isSuperAdminUser) loadLockouts();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [isSuperAdminUser]);
 
     const handleUnlock = (item) => {
         setIpToUnlock(item);

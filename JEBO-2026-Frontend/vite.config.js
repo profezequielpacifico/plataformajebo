@@ -7,7 +7,6 @@ export default defineConfig({
     port: 4000,
     proxy: {
       '/api': {
-        // Local API, or Docker-mapped host port
         target: process.env.VITE_PROXY_TARGET || 'http://localhost:15252',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
@@ -19,8 +18,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.js'],
     include: ['tests/**/*.test.{js,jsx}'],
-    // `src/app.js` solo monta React en el DOM; los tests renderizan los
-    // componentes por separado, asi que contarlo inflaria la cobertura.
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

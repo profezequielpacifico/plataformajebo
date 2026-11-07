@@ -1,31 +1,10 @@
-/**
- * StageEngine - Motor puro de evaluación de etapas.
- * 
- * Este módulo NO accede a la base de datos. Recibe un contexto con
- * participantes, reglas y resultados, y devuelve un resultado determinista.
- * 
- * Principios:
- * - El nombre de la etapa nunca determina su comportamiento
- * - No mezclar clasificación (quién pasa) con competición (cómo compiten)
- * - Ser determinista: mismo input = mismo output
- */
-
 class StageEngine {
-  /**
-   * Evalúa una etapa y devuelve quién clasifica.
-   * @param {Object} context - Contexto de evaluación
-   * @param {Array} context.participants - Lista de participantes con { id, posicion, puntos, ... }
-   * @param {Array} context.rules - Reglas activas de la etapa
-   * @param {Object} context.config - Configuración de la etapa
-   * @returns {Object} Resultado con clasificados, grupos y advertencias
-   */
   evaluate(context) {
     this._validateContext(context);
     
     const { participants, rules, config } = context;
     const warnings = [];
 
-    // 1. Validar participantes mínimos
     const participantesRule = rules.find(r => r.tipo === 'PARTICIPANTES');
     if (participantesRule) {
       const min = participantesRule.configuracion?.minimo || 0;
@@ -46,16 +25,13 @@ class StageEngine {
       }
     }
 
-    // 2. Evaluar regla de competición (cómo se organizan)
     const competicionRule = rules.find(r => r.tipo === 'COMPETICION');
     const formato = competicionRule?.configuracion?.formato || 'ELIMINACION';
 
-    // 3. Evaluar regla de clasificación (quién pasa)
     const clasificacionRule = rules.find(r => r.tipo === 'CLASIFICACION');
     const metodo = clasificacionRule?.configuracion?.metodo || 'POSICION';
     const cantidad = clasificacionRule?.configuracion?.cantidad || 1;
 
-    // 4. Calcular clasificados según método
     let clasificados = [];
     
     switch (metodo) {
@@ -69,13 +45,11 @@ class StageEngine {
         warnings.push(`Método de clasificación desconocido: ${metodo}`);
     }
 
-    // 5. Formar grupos con TODOS los participantes (no solo clasificados)
     let grupos = [];
     if (formato === 'GRUPOS') {
       grupos = this._formarGrupos(participants, competicionRule?.configuracion);
     }
 
-    // 6. Orden para eliminación con TODOS los participantes
     const ordenEliminacion = this._calcularOrdenEliminacion(participants, formato);
 
     return {
@@ -99,10 +73,6 @@ class StageEngine {
     }
   }
 
-  /**
-   * Clasifica por posición (orden de llegada).
-   * Los primeros N participantes clasifican.
-   */
   _clasificarPorPosicion(participants, cantidad) {
     return participants
       .slice()
@@ -114,19 +84,13 @@ class StageEngine {
       }));
   }
 
-  /**
-   * Clasifica por ganador (mejor puntaje).
-   * Los N mejores por puntos clasifican.
-   */
   _clasificarPorGanador(participants, cantidad) {
     return participants
       .slice()
       .sort((a, b) => {
-        // Primero por puntos
         if ((b.puntos || 0) !== (a.puntos || 0)) {
           return (b.puntos || 0) - (a.puntos || 0);
         }
-        // Luego por diferencia de goles
         const diffA = (a.gf || 0) - (a.gc || 0);
         const diffB = (b.gf || 0) - (b.gc || 0);
         return diffB - diffA;
@@ -138,10 +102,6 @@ class StageEngine {
       }));
   }
 
-  /**
-   * Forma grupos de participantes.
-   * Distribuye de forma determinista.
-   */
   _formarGrupos(participants, config) {
     const tamaño = config?.tamano_grupo || 4;
     const grupos = [];
@@ -153,10 +113,6 @@ class StageEngine {
     return grupos;
   }
 
-  /**
-   * Calcula el orden de cruces para eliminación.
-   * 1 vs N, 2 vs N-1, 3 vs N-2, etc.
-   */
   _calcularOrdenEliminacion(participants, formato) {
     if (formato !== 'ELIMINACION') {
       return [];

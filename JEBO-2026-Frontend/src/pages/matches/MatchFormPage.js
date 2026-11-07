@@ -25,7 +25,6 @@ function loadInitialData(setAllCanchas, setUsuarios, setTournaments) {
 
     tournamentService.getAll(1, 100).then(res => {
         const data = res.data || res || [];
-        // Un torneo de Gimnasia no admite partidos: se presenta un equipo solo y
 
         setTournaments(soloTorneosConPartidos(Array.isArray(data) ? data : []));
     }).catch(err => console.error(err));
@@ -39,9 +38,6 @@ function loadEnrolledTeams(idTorneo, idDisciplina, setTeams, setLoadingTeams) {
     }
     setLoadingTeams(true);
     const params = { id_torneo: idTorneo, limit: 100, include_cerradas: 'true' };
-    // El backend devuelve todos los equipos inscriptos al torneo sin importar su
-    // disciplina (inscribir no valida el deporte). Filtramos por la disciplina
-    // del torneo para que solo aparezcan equipos de ese deporte.
     if (idDisciplina) params.id_disciplina = idDisciplina;
     teamService.getEnrolled(params)
         .then(res => {
@@ -205,10 +201,6 @@ function renderTorneoField(formData, setFormData, tournaments, readOnly) {
     );
 }
 
-/**
- * Disciplina del torneo elegido: se autorellena y no se edita, porque el
- * partido hereda el deporte del torneo (no se elige por separado).
- */
 function renderDisciplinaField(selectedTorneo, readOnly) {
     const disciplina = selectedTorneo && selectedTorneo.disciplina_nombre
         ? selectedTorneo.disciplina_nombre
@@ -412,7 +404,7 @@ function renderMatchForm({ readOnly, isEditing, onNavigate, handleSubmit, formDa
         ),
 
         h('form', { onSubmit: handleSubmit, style: { padding: '24px' } },
-            h('div', { style: { display: 'grid', gap: '20px', gridTemplateColumns: readOnly ? '1fr' : '1fr 1fr' } },
+            h('div', { style: { display: 'grid', gap: '20px', gridTemplateColumns: readOnly ? '1fr' : 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))' } },
                 renderTorneoField(formData, setFormData, tournaments, readOnly),
                 renderDisciplinaField(selectedTorneo, readOnly),
                 renderCanchaField(formData, setFormData, filteredCanchas, selectedCancha, readOnly),
@@ -456,9 +448,6 @@ export function MatchFormPage({ onNavigate, matchId, readOnly }) {
         loadInitialData(setAllCanchas, setUsuarios, setTournaments);
     }, []);
 
-    // Disciplina del torneo elegido: gobierna el filtro de equipos inscriptos
-    // (el backend no valida el deporte al inscribir, asi que un torneo puede
-    // tener equipos de otras disciplinas) y el textbox de disciplina.
     const torneoSeleccionado = tournaments.find(t => String(t.id_torneo || t.id) === formData.id_torneo);
     const idDisciplinaTorneo = torneoSeleccionado && torneoSeleccionado.id_disciplina
         ? String(torneoSeleccionado.id_disciplina)

@@ -2,10 +2,6 @@ const { eventoService, relojService } = require('../../src/services/evento.servi
 const { NotFoundError, BusinessError, ForbiddenError, ValidationError } = require('../../src/utils/errors');
 const { ESTADOS_PARTIDO, ESTADOS_RELOJ, ROLES } = require('../../src/constants');
 
-// El nucleo del modulo son dos reglas que no se pueden probar end-to-end sin
-// montar un partido entero: que un arbitro no pueda registrar fuera de su
-// partido, y que un evento anulado no se pueda reabrir. Estas aisan los
-// repositorios y dejan la logica de negocio a la vista.
 jest.mock('../../src/repositories', () => ({
   PartidoRepository: { findById: jest.fn() },
   EventoRepository: {
@@ -82,9 +78,6 @@ describe('evento.service', () => {
 
       const r = await eventoService.registrar(1, { id_equipo: 100 }, { ...CTX_ARBITRO, alcance: ALCANCE });
 
-      // El numero de evento y los segundos los calcula la misma sentencia SQL
-      // que escribe `hora_real`. Si el servicio los armara, cada evento
-      // tendria dos relojes distintos.
       expect(ER.registrar).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ id_partido: 1, id_equipo: 100, id_usuario_arbitro: 7, registrado_por: 7 })
@@ -100,9 +93,12 @@ describe('evento.service', () => {
       expect(ER.registrar).not.toHaveBeenCalled();
     });
 
+    it('un SuperAdmin registra sin estar asignado y sin figurar como arbitro', async () => {
+      await eventoService.registrar(1, { id_equipo: 100 }, { userId: 9, rol: ROLES.SUPERADMIN, alcance: ALCANCE });
+      expect(ER.registrar.mock.calls[0][1]).toMatchObject({ id_usuario_arbitro: null, registrado_por: 9 });
+    });
+
     it('un rol que no es arbitro ni admin no registra', async () => {
-      // PROFESOR no esta en el staff nunca, asi que la regla de arbitro lo
-      // rechazaria igual; el Rol insuficiente es lo que evita depender de eso.
       await expect(
         eventoService.registrar(1, { id_equipo: 100 }, { userId: 9, rol: ROLES.PROFESOR, alcance: ALCANCE })
       ).rejects.toBeInstanceOf(ForbiddenError);
@@ -114,16 +110,6 @@ describe('evento.service', () => {
 
       await eventoService.registrar(1, { id_equipo: 100 }, { ...CTX_ADMIN, alcance: ALCANCE });
 
-      // `id_usuario_arbitro` va en NULL, NO con el id del admin. En la base hay
-      // una FK compuesta `(id_partido, id_usuario_arbitro) -> staff_partido`, y
-      // el admin no esta en el staff de ese partido: mandarlo ahi hace fallar el
-      // INSERT con una violaciones de FK, que el usuario recibia como 500.
-      //
-      // Ojo con este test: con `ER.registrar` mockeado la FK no se ejecuta, asi
-      // que un `id_usuario_arbitro` equivocado aqui PASA. El bug solo aparece
-      // contra la base real, y por eso hay `scripts/verificar-carga-partido.js`.
-      // Lo que este test si protege es que no volvamos a mandar al admin como
-      // arbitro de un partido que no arbitra.
       expect(ER.registrar).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ id_usuario_arbitro: null, registrado_por: 1 })
@@ -136,8 +122,6 @@ describe('evento.service', () => {
 
       await eventoService.registrar(1, { id_equipo: 100 }, { ...CTX_ARBITRO, alcance: ALCANCE });
 
-      // El caso normal: arbitra y aprieta el boton, asi que ambas columnas
-      // coinciden. Si esto se rompe, se pierde la atribucion real del gol.
       expect(ER.registrar).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ id_usuario_arbitro: 7, registrado_por: 7 })
@@ -145,9 +129,6 @@ describe('evento.service', () => {
     });
 
     it('rechaza un equipo que no juega ese partido', async () => {
-      // La FK solo puede decir que el equipo existe. Que PARTICIPE lo tiene que
-      // verificar el servicio: si no, un arbitro podria cargar un gol al
-      // equipo del otro torneo.
       await expect(eventoService.registrar(1, { id_equipo: 999 }, { ...CTX_ARBITRO, alcance: ALCANCE }))
         .rejects.toBeInstanceOf(BusinessError);
       expect(ER.registrar).not.toHaveBeenCalled();
@@ -167,9 +148,6 @@ describe('evento.service', () => {
     });
 
     it('con idempotency_key repetida devuelve el evento previo y no inserta', async () => {
-      // El doble tap y el retry de red se resuelven con la clave unica de la
-      // base, no con un debounce de cliente: un debounce no protege de un
-      // reintento, y el arbitro que toca dos veces rapido ya habria duplicado.
       ER.findByIdempotencyKey.mockResolvedValue(EVENTO);
 
       const r = await eventoService.registrar(
@@ -197,7 +175,6 @@ describe('evento.service', () => {
 
       await eventoService.registrar(1, { id_equipo: 100 }, { ...CTX_ARBITRO, alcance: ALCANCE });
 
-      // Serializa los registros del mismo partido sin bloquear los de otros.
       expect(knexMock.__trx.raw).toHaveBeenCalledWith(
         expect.stringContaining('pg_advisory_xact_lock'),
         [1]
@@ -220,9 +197,6 @@ describe('evento.service', () => {
 
   describe('anular', () => {
     it('anula con motivo y deja rastro de quien y cuando', async () => {
-      // El servicio lee el evento DOS veces: la primera para decidir si ya
-      // estaba anulado, la segunda despues de anular. Por eso el mock en
-      // secuencia y no uno fijo.
       ER.findById
         .mockResolvedValueOnce(EVENTO)
         .mockResolvedValueOnce({ ...EVENTO, estado: 'ANULADO' });
@@ -232,8 +206,6 @@ describe('evento.service', () => {
         1, 500, { motivo_anulacion: 'Gol en propia' }, { ...CTX_ARBITRO, alcance: ALCANCE }
       );
 
-      // Nunca se borra: el marcador se recalcula solo porque es un COUNT sobre
-      // los CONFIRMADOS, y el evento anulado queda disponible para la auditoria.
       expect(ER.anular).toHaveBeenCalledWith(500, { anulado_por: 7, motivo_anulacion: 'Gol en propia' });
       expect(r.estado).toBe('ANULADO');
     });
@@ -250,9 +222,6 @@ describe('evento.service', () => {
     });
 
     it('no se puede anular dos veces', async () => {
-      // El estado es terminal: reabrir un evento dejaria el ledger con dos
-      // verdades sobre el mismo gol. La correccion es anular el viejo y
-      // registrar el nuevo.
       ER.findById.mockResolvedValue({ ...EVENTO, estado: 'ANULADO' });
 
       await expect(eventoService.anular(1, 500, { motivo_anulacion: 'x' }, { ...CTX_ARBITRO, alcance: ALCANCE }))
@@ -261,8 +230,6 @@ describe('evento.service', () => {
     });
 
     it('un evento de otro partido responde 404, no 403', async () => {
-      // 403 confirmaria que ese evento existe. Con un id inventado de otro
-      // partido tiene que ser indistinguible de uno inexistente.
       ER.findById.mockResolvedValue({ ...EVENTO, id_partido: 999 });
 
       await expect(eventoService.anular(1, 500, { motivo_anulacion: 'x' }, { ...CTX_ARBITRO, alcance: ALCANCE }))
@@ -285,9 +252,6 @@ describe('evento.service', () => {
 
       await eventoService.anular(1, 500, { motivo_anulacion: 'x' }, { ...CTX_ARBITRO, alcance: ALCANCE });
 
-      // Una sola lectura del partido: la de existencia y alcance. Si anular
-      // recalculara posiciones, haria falta una segunda, y ademas el recalculo
-      // manual es justamente lo que el marcador derivado evita.
       expect(PR.findById).toHaveBeenCalledTimes(1);
       expect(bitacoraService.log).toHaveBeenCalledWith(expect.objectContaining({
         action: 'ANULAR_EVENTO_PARTIDO', entityId: 500
@@ -316,10 +280,6 @@ describe('evento.service', () => {
 
 describe('relojService', () => {
   beforeEach(() => {
-    // `resetAllMocks` y no `clearAllMocks`: el segundo borra las llamadas pero
-    // conserva las implementaciones, asi que un `mockResolvedValue` de un test
-    // anterior seguiria contaminando el siguiente y los guards de estado, que
-    // dependen de que el repositorio NO encuentre la fila, no se ejercitarian.
     jest.resetAllMocks();
     PR.findById.mockResolvedValue(partido());
     SR.findByPartido.mockResolvedValue([ARBITRO]);
@@ -369,10 +329,6 @@ describe('relojService', () => {
     });
 
     it('no reinicia un reloj que ya corria', async () => {
-      // El `WHERE reloj_estado = 'PENDIENTE'` del repositorio devuelve
-      // `undefined` cuando no encuentra la fila, y el servicio convierte ese
-      // undefined en un error legible. El test reproduce exactamente ese
-      // `undefined`: un mock que devuelve la fila no ejercitaria el guard.
       PR.findById.mockResolvedValue(partido({ reloj_estado: ESTADOS_RELOJ.EN_CURSO }));
       RR.iniciar.mockResolvedValue(undefined);
 
@@ -425,9 +381,6 @@ describe('relojService', () => {
     });
 
     it('devuelve el estado del reloj con el alcance resuelto', async () => {
-      // Sin esto, `estado` relee el partido con `filtrarPorEquipos`, que LANZA
-      // si no recibe un alcance (X-05): la operacion del reloj ya habria
-      // ocurrido y el error caeria igual, despues del efecto.
       RR.pausar.mockResolvedValue({ reloj_estado: ESTADOS_RELOJ.PAUSADO });
 
       const r = await relojService.accion(1, 'PAUSAR', { ...CTX_ARBITRO, alcance: ALCANCE });
@@ -449,9 +402,6 @@ describe('relojService', () => {
 
   describe('estado', () => {
     it('devuelve los segundos como numero, no como string', async () => {
-      // `count`/`extract` en Postgres llegan como texto al driver. Si esto
-      // quedara como "421", el cliente haria aritmetica con strings y el reloj
-      // mostraria NaN.
       RR.segundosActuales.mockResolvedValue({
         reloj_estado: ESTADOS_RELOJ.EN_CURSO,
         reloj_iniciado_en: null,
@@ -468,8 +418,6 @@ describe('relojService', () => {
     it('usa la misma forma que devuelve findLive', async () => {
       const r = await relojService.estado(1, { ...CTX_ARBITRO, alcance: ALCANCE });
 
-      // Los dos endpoints los consume la misma pantalla: que no compartan
-      // nombres obliga al cliente a elegir segun de donde salio el dato.
       expect(Object.keys(r).sort()).toEqual(
         ['acumulado_seg', 'estado', 'iniciado_en', 'segundos'].sort()
       );

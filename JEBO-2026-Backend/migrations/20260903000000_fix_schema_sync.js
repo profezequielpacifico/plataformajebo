@@ -1,17 +1,4 @@
-/**
- * Corrective migration: applies DDL changes that were marked as applied
- * in knex_migrations but did not actually execute on the restored DB.
- *
- * Affected tables:
- *  - institucion: add id_localidad (from 003)
- *  - distrito: drop id_zona + zona FK (from 009)
- *  - zona: drop table (from 009)
- *  - distrito: drop id_region (from 010)
- *  - localidad: update unique constraint (from 010)
- *  - equipo: add id_distrito (from 011)
- */
 exports.up = async function (knex) {
-  // 1. institucion: add id_localidad if missing
   const instHasLocalidad = await knex.schema.hasColumn('institucion', 'id_localidad');
   if (!instHasLocalidad) {
     await knex.schema.alterTable('institucion', (table) => {
@@ -21,7 +8,6 @@ exports.up = async function (knex) {
     });
   }
 
-  // 2. distrito: drop id_zona FK + column if present
   const distHasZona = await knex.schema.hasColumn('distrito', 'id_zona');
   if (distHasZona) {
     await knex.raw('ALTER TABLE distrito DROP CONSTRAINT IF EXISTS distrito_id_zona_foreign');
@@ -30,10 +16,8 @@ exports.up = async function (knex) {
     });
   }
 
-  // 3. zona: drop table if it still exists
   await knex.schema.dropTableIfExists('zona');
 
-  // 4. distrito: drop id_region FK + column if present
   const distHasRegion = await knex.schema.hasColumn('distrito', 'id_region');
   if (distHasRegion) {
     await knex.raw('ALTER TABLE distrito DROP CONSTRAINT IF EXISTS distrito_id_region_fkey');
@@ -43,7 +27,6 @@ exports.up = async function (knex) {
     });
   }
 
-  // 5. localidad: replace unique constraint (id_distrito,nombre) -> (id_region,id_distrito,nombre)
   const hasOldUnique = await knex.raw(
     "SELECT 1 FROM pg_constraint WHERE conname = 'localidad_id_distrito_nombre_unique' AND conrelid = 'localidad'::regclass"
   );
@@ -61,7 +44,6 @@ exports.up = async function (knex) {
     });
   }
 
-  // 6. equipo: add id_distrito if missing
   const equipoHasDistrito = await knex.schema.hasColumn('equipo', 'id_distrito');
   if (!equipoHasDistrito) {
     await knex.schema.alterTable('equipo', (table) => {
@@ -70,7 +52,6 @@ exports.up = async function (knex) {
         .onUpdate('CASCADE').onDelete('RESTRICT');
     });
 
-    // backfill from institucion
     await knex.raw(`
       UPDATE equipo e
          SET id_distrito = i.id_distrito
@@ -82,7 +63,6 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
-  // reverse in inverse order
   await knex.schema.alterTable('equipo', (table) => {
     table.dropColumn('id_distrito');
   });

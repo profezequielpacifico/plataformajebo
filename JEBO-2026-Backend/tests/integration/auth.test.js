@@ -5,14 +5,6 @@ const { query: dbQuery } = require('../../src/config/database.js');
 const { contrasenaDePrueba } = require('../helpers/credentials');
 const { accessTokenDe, valorDeCookie, cookiesDe } = require('../helpers/cookies');
 
-/**
- * Borrado del usuario de la suite.
- *
- * El orden importa: `bitacora` y `refresh_token_revocado` tienen FK a `usuario`,
- * asi que si se borra el usuario primero el DELETE revienta. Por eso van
- * explicitamente, y no en cascada — que la base no los tiene en cascada es
- * justamente lo que se quiere: en produccion nadie borra usuarios.
- */
 const borrarUsuarioDePrueba = async (email) => {
   const res = await dbQuery('SELECT id_usuario FROM usuario WHERE email = $1', [email]);
   for (const { id_usuario } of res.rows) {
@@ -68,10 +60,6 @@ describe('Auth Endpoints', () => {
   });
 
   describe('POST /auth/logout', () => {
-    // Sin `authenticate` adelante, a proposito. El caso para el que existe el
-    // endpoint es "tengo una cookie que ya no sirve": con `authenticate` ese
-    // logout daria 401 y el navegador quedaria con la cookie puesta, con el
-    // usuario trabado en la pantalla de inicio sin poder limpiar su sesion.
     it('responde 200 sin token, para no dejar la sesion trabada', async () => {
       const res = await request(app).post('/auth/logout');
       expect(res.status).toBe(200);
@@ -79,10 +67,6 @@ describe('Auth Endpoints', () => {
     });
   });
 
-  /**
-   * Los tokens en cookies `httpOnly` (hallazgo de seguridad: el token en
-   * `localStorage` queda a un XSS de ser exfiltrado).
-   */
   describe('Cookies de sesion', () => {
     const EMAIL = 'test_cookies@jebo.test';
     const PASS = contrasenaDePrueba();
@@ -90,8 +74,6 @@ describe('Auth Endpoints', () => {
     let idUsuario;
 
     beforeAll(async () => {
-      // Limpieza previa: si una corrida anterior fallo a mitad de camino, el
-      // usuario quedo y el INSERT de abajo choca contra el unique de email.
       await borrarUsuarioDePrueba(EMAIL);
 
       const rol = await dbQuery("SELECT id_rol FROM rol WHERE descripcion = 'Administrador'");
@@ -124,14 +106,10 @@ describe('Auth Endpoints', () => {
 
       expect(cookies).toMatch(/accessToken=[^;]+/);
       expect(cookies).toMatch(/refreshToken=[^;]+/);
-      // `httpOnly` es lo que saca la credencial del alcance de JavaScript.
       expect(cookies).toMatch(/HttpOnly/i);
     });
 
     it('marca SameSite=Strict y path=/', async () => {
-      // `path=/` no es cosmetico: por defecto Express usa el path de la URL que
-      // responde (`/auth`), y el navegador mandaria la cookie solo a `/auth/*`.
-      // Los endpoints de datos nunca la verian y todo daria 401.
       const res = await login();
       const cookies = res.headers['set-cookie'].join(';');
       expect(cookies).toMatch(/SameSite=Strict/i);
@@ -149,8 +127,6 @@ describe('Auth Endpoints', () => {
     });
 
     it('la cookie expira antes que el token que contiene', async () => {
-      // Si la cookie viviera mas que el token, el navegador la seguiria mandando
-      // con el token ya vencido y el sintoma seria un 401 sin explicacion.
       const res = await login();
       const access = res.headers['set-cookie'].find((c) => c.startsWith('accessToken='));
       const refresh = res.headers['set-cookie'].find((c) => c.startsWith('refreshToken='));
@@ -158,10 +134,8 @@ describe('Auth Endpoints', () => {
       const aAccess = Number(/Max-Age=(\d+)/.exec(access)[1]);
       const aRefresh = Number(/Max-Age=(\d+)/.exec(refresh)[1]);
 
-      // Access: 1h de token, la cookie dura un poco menos.
       expect(aAccess).toBeGreaterThan(0);
       expect(aAccess).toBeLessThan(3600);
-      // Refresh: 7 dias de token, misma idea.
       expect(aRefresh).toBeGreaterThan(aAccess);
       expect(aRefresh).toBeLessThan(7 * 24 * 3600);
     });
@@ -180,8 +154,6 @@ describe('Auth Endpoints', () => {
     });
 
     it('rotar invalida el refresh token anterior', async () => {
-      // Rotacion: si el token viejo sirviera para algo mas, un token robado
-      // sirve para siempre. Este test falla si `refresh` deja de revocar.
       const loginRes = await login();
       const refreshViejo = valorDeCookie(loginRes, 'refreshToken');
 
@@ -189,8 +161,6 @@ describe('Auth Endpoints', () => {
         .set({ Cookie: `refreshToken=${refreshViejo}` })
         .send();
 
-      // Se re-presenta el viejo. Dentro de la ventana de gracia (30 s) la
-      // segunda pestana del mismo usuario todavia renueva; ver el otro test.
       const segundo = await request(app)
         .post('/auth/refresh')
         .set({ Cookie: `refreshToken=${refreshViejo}` })
@@ -206,9 +176,6 @@ describe('Auth Endpoints', () => {
         Buffer.from(refreshViejo.split('.')[1], 'base64url').toString('utf8')
       ).jti;
 
-      // Se presenta una vez (queda revocado) y despues se envejece la
-      // revocacion mas alla de la ventana. A partir de ahi tiene que cortar en
-      // seco, que es lo que impide que un token robado sirva indefinidamente.
       await request(app).post('/auth/refresh')
         .set({ Cookie: `refreshToken=${refreshViejo}` })
         .send();
@@ -229,9 +196,6 @@ describe('Auth Endpoints', () => {
     });
 
     it('un access token no puede renewarse a si mismo', async () => {
-      // Un refresh token dura 7 dias y un access 1 hora. Sin la comprobacion
-      // de tipo, pegar un access token en /auth/refresh convierte una sesion de
-      // 1 hora en una de 7 dias.
       const loginRes = await login();
       const access = valorDeCookie(loginRes, 'accessToken');
 
@@ -241,6 +205,25 @@ describe('Auth Endpoints', () => {
         .send();
 
       expect(res.status).toBe(401);
+    });
+
+    it('el access token anterior deja de autenticar apenas se cierra la sesion', async () => {
+      const loginRes = await login();
+      const cookiesViejas = cookiesDe(loginRes);
+
+      const antes = await request(app).get('/auth/me').set(cookiesViejas);
+      expect(antes.status).toBe(200);
+
+      const logout = await request(app).post('/auth/logout').set(cookiesViejas).send();
+      expect(logout.status).toBe(200);
+
+      const despues = await request(app).get('/auth/me').set(cookiesViejas);
+      expect(despues.status).toBe(401);
+
+      const conHeader = await request(app)
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${accessTokenDe(loginRes)}`);
+      expect(conHeader.status).toBe(401);
     });
 
     it('el logout borra las dos cookies', async () => {
@@ -253,8 +236,6 @@ describe('Auth Endpoints', () => {
       expect(res.status).toBe(200);
 
       const cookies = res.headers['set-cookie'].join(';');
-      // Para borrar una cookie el navegador exige que coincidan `path` y
-      // `domain` con los del Set-Cookie original: mismo path, Max-Age=0.
       expect(cookies).toMatch(/accessToken=;/);
       expect(cookies).toMatch(/refreshToken=;/);
       expect(cookies).toMatch(/Max-Age=0/i);

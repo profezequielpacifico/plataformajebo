@@ -1,8 +1,3 @@
-/**
- * Elimina la tabla zona y la columna id_zona de distrito.
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.up = async function (knex) {
   const hasFk = await knex.schema.hasColumn('distrito', 'id_zona');
   if (hasFk) {
@@ -15,10 +10,6 @@ exports.up = async function (knex) {
   await knex.schema.dropTableIfExists('zona');
 };
 
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
 exports.down = async function (knex) {
   await knex.schema.createTable('zona', (table) => {
     table.increments('id_zona').primary();

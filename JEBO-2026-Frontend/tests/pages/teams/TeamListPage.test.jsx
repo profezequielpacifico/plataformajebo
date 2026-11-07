@@ -7,8 +7,6 @@ import { teamService } from '../../../src/services/teamService.js';
 import disciplineService from '../../../src/services/disciplineService.js';
 import { ROLE_IDS } from '../../../src/config/constants.js';
 
-// La pagina habla con la API solo a traves de los servicios, asi que el mock
-// queda en esa capa: los tests ejercitan el render real sin tocar fetch.
 vi.mock('../../../src/services/teamService.js', () => ({
   teamService: { getAll: vi.fn() },
   default: { getAll: vi.fn() }
@@ -34,7 +32,6 @@ const equipo = (over) => ({
   ...over
 });
 
-/** Respuesta paginada de `GET /teams`. */
 const pagina = (data, total, page = 1, limit = 10) => ({
   success: true,
   data,
@@ -60,8 +57,6 @@ describe('TeamListPage', () => {
     renderPage();
     expect(await screen.findByText('Trío A')).toBeInTheDocument();
 
-    // Acotado a la tabla: 'Gimnasia Artística' tambien esta en el desplegable
-    // de disciplinas y `getByText` tiraria por los dos.
     const tabla = within(screen.getByRole('table'));
     expect(tabla.getByText('Gimnasia Artística')).toBeInTheDocument();
     expect(tabla.getByText('Club Norte')).toBeInTheDocument();
@@ -69,9 +64,6 @@ describe('TeamListPage', () => {
     expect(tabla.getByText('Torneo 32')).toBeInTheDocument();
   });
 
-  // El bug que motivo el desdoblamiento: sin `page`/`limit` el backend usa
-  // limit=10 y de 18 equipos solo se veian los de Futbol. Los de Gimnasia
-  // quedaban en la pagina 2, que la pantalla anterior no tenia forma de pedir.
   it('pide la primera pagina con limite explicito', async () => {
     renderPage();
     await screen.findByText('Trío A');
@@ -89,9 +81,6 @@ describe('TeamListPage', () => {
   });
 
   it('muestra el rango real y no se queda corto en la ultima pagina', async () => {
-    // 23 equipos con limit=10: la pagina 3 trae 3 filas. El pie tiene que
-    // decir 21-23, no "mostrando 21-30 de 23" — sale de `total` recortado por
-    // la pagina, no de `page * limit` a pelo ni del largo del arreglo.
     const user = userEvent.setup();
     teamService.getAll.mockResolvedValue(pagina([equipo()], 23, 1, 10));
     renderPage();
@@ -102,7 +91,6 @@ describe('TeamListPage', () => {
   });
 
   it('recorta el rango por el total cuando la pagina trae menos que el limite', async () => {
-    // Sin este recorte el pie decia "1-10 de 2".
     teamService.getAll.mockResolvedValue(pagina([equipo(), equipo({ id_equipo: 40, nombre: 'Trío B' })], 2, 1, 10));
     renderPage();
 
@@ -143,7 +131,6 @@ describe('TeamListPage', () => {
     renderPage();
     await screen.findByText('Trío A');
 
-    // Escribir NO dispara consulta: el termino se aplica al enviar el form.
     await user.type(screen.getByLabelText('Buscar equipo'), 'Trío');
     expect(teamService.getAll).toHaveBeenCalledTimes(1);
 
@@ -170,9 +157,6 @@ describe('TeamListPage', () => {
   });
 
   it('tolera que la API responda un array plano sin envelope de paginacion', async () => {
-    // `/teams` responde {data, pagination}, pero un mock o una version vieja
-    // pueden devolver el array. Sin fallback la tabla queda vacia con la
-    // respuesta correcta en la mano.
     teamService.getAll.mockResolvedValue([equipo(), equipo({ id_equipo: 40, nombre: 'Trío B' })]);
     renderPage();
 
@@ -189,10 +173,6 @@ describe('TeamListPage', () => {
     expect(screen.getByText('No se encontraron equipos')).toBeInTheDocument();
   });
 
-  // Contrato de la pagina: la consulta NO crea ni borra. La columna Acciones
-  // existe (alta y edicion viven en TeamFormPage), pero el boton de editar
-  // solo aparece para quien tiene permiso: Admin/SuperAdmin siempre,
-  // Profesor solo si es entrenador del equipo. Sin permisos no hay acciones.
   it('no ofrece crear ni eliminar, y sin permisos no muestra acciones', async () => {
     renderPage();
     await screen.findByText('Trío A');
@@ -232,8 +212,6 @@ describe('TeamListPage', () => {
   it('no llama a teamService.create/update/delete en toda la sesion', async () => {
     renderPage();
     await screen.findByText('Trío A');
-    // Si el service no tiene esos metodos, un click que los use reventaria el
-    // test antes de poder hacer nada sospechoso.
     expect(teamService.create).toBeUndefined();
     expect(teamService.update).toBeUndefined();
     expect(teamService.delete).toBeUndefined();

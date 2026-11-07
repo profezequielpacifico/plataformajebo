@@ -24,7 +24,7 @@ export function TableHeaderCell({ children, align = 'left', style = {}, classNam
             ...styles.tableHeaderCell,
             textAlign: align,
             ...style,
-            ...(isMd ? { padding: '8px 10px', fontSize: '10px' } : {})
+            ...(isMd ? { padding: '8px 10px', fontSize: '11px', whiteSpace: 'nowrap' } : {})
         },
         className
     }, children);
@@ -34,14 +34,17 @@ export function TableRow({ children, style = {}, className = '' }) {
     return h('tr', { style: { ...styles.tableRow, ...style }, className }, children);
 }
 
-export function TableCell({ children, align = 'left', style = {}, className = '' }) {
-    const { isMd } = useResponsive();
+export function TableCell({ children, align = 'left', style = {}, className = '', colSpan }) {
+    const { isMd, lessThan } = useResponsive();
+    const textoLargo = lessThan(1400) && !colSpan && typeof children === 'string' && children.length > 24;
     return h('td', {
+        colSpan,
         style: {
             ...styles.tableCell,
             textAlign: align,
+            ...(textoLargo ? { minWidth: '200px' } : {}),
             ...style,
-            ...(isMd ? { padding: '8px 10px', fontSize: '12px' } : {})
+            ...(isMd ? { padding: '8px 10px', fontSize: '13px' } : {})
         },
         className
     }, children);

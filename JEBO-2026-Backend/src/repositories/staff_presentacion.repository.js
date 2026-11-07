@@ -36,7 +36,6 @@ module.exports = {
   deleteByPresentacion: (id_presentacion) =>
     knex(TABLE).where('id_presentacion', id_presentacion).del(),
 
-  // Validar que hay exactamente 3 jueces
   validarJueces: async (id_presentacion) => {
     const jueces = await knex(TABLE)
       .where('id_presentacion', id_presentacion)

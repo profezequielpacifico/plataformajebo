@@ -15,8 +15,6 @@ const setWidth = (w) => {
   act(() => { window.dispatchEvent(new Event('resize')); });
 };
 
-// render() no devuelve el estado interno, asi que el probe lo publica en una
-// variable externa que cada test puede leer.
 let probe;
 const leerProbe = () => {
   render(<Probe />);
@@ -27,8 +25,6 @@ describe('useResponsive', () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it('expone los cuatro flags a partir del ancho', () => {
-    // Los componentes de tabla cambian padding y tipografia con estos flags, asi
-    // que el calculo tiene que ser coherente entre si.
     setWidth(500);
     const r = leerProbe();
     expect(r.isSm).toBe(true);
@@ -66,7 +62,6 @@ describe('useResponsive', () => {
   });
 
   it('ignora los resize hasta que pasan 100ms', () => {
-    // Sin el debounce, arrastrar la ventana re-renderiza en cada pixel.
     vi.useFakeTimers();
     setWidth(1000);
     render(<Probe />);
@@ -121,12 +116,14 @@ describe('Table', () => {
     expect(screen.getByText('Izquierda')).toHaveStyle({ textAlign: 'left' });
   });
 
-  it('ignora colSpan en TableCell', () => {
-    // TableCell solo acepta children/align/style/className: el colSpan que le
-    // pasan las paginas de listado se descarta y la celda queda en una sola
-    // columna. Se documenta el comportamiento real, no el deseado.
+  it('aplica colSpan en TableCell', () => {
     render(<Table><tbody><TableRow><TableCell colSpan={4}>Sin datos</TableCell></TableRow></tbody></Table>);
-    expect(screen.getByText('Sin datos')).not.toHaveAttribute('colspan');
+    expect(screen.getByText('Sin datos')).toHaveAttribute('colspan', '4');
+  });
+
+  it('no agrega colspan a TableCell si no se indica', () => {
+    render(<Table><tbody><TableRow><TableCell>Cancha 1</TableCell></TableRow></tbody></Table>);
+    expect(screen.getByText('Cancha 1')).not.toHaveAttribute('colspan');
   });
 
   it('TableActions agrupa los botones de la fila', () => {
@@ -151,8 +148,6 @@ describe('Badge', () => {
   });
 
   it('mapea los estados conocidos a su variante', () => {
-    // La tabla de estados es la que decide el color de cada fila sin que
-    // cada pagina tenga que repetir el mapeo.
     expect(getBadgeStyleByEstado('Activo')).toBe('green');
     expect(getBadgeStyleByEstado('En curso')).toBe('green');
     expect(getBadgeStyleByEstado('Programado')).toBe('green');
@@ -164,8 +159,6 @@ describe('Badge', () => {
   });
 
   it('un estado desconocido cae en verde en vez de romper', () => {
-    // Si el backend agrega un estado nuevo, la fila tiene que verse igual de
-    // legible, no desaparecer ni lanzar.
     expect(getBadgeStyleByEstado('Desconocido')).toBe('green');
     expect(getBadgeStyleByEstado(undefined)).toBe('green');
   });
@@ -184,7 +177,6 @@ describe('Modal', () => {
   });
 
   it('acepta un mensaje como nodo de React', () => {
-    // Los mensajes con lista de filas se pasan como JSX, no como texto.
     render(
       <Modal isOpen title="Aviso" message={<ul><li>Fila 1</li></ul>} onClose={vi.fn()} onConfirm={vi.fn()} />
     );
@@ -213,7 +205,6 @@ describe('Modal', () => {
   });
 
   it('un clic en el fondo cierra el modal', async () => {
-    // El overlay es clicable para poder descartar sin buscar la X.
     const onClose = vi.fn();
     const { container } = render(
       <Modal isOpen title="Aviso" message="M" onClose={onClose} onConfirm={vi.fn()} />
@@ -224,7 +215,6 @@ describe('Modal', () => {
   });
 
   it('un clic dentro del modal no lo cierra', async () => {
-    // Si no, ningun clic util dentro del dialogo serviria de nada.
     const onClose = vi.fn();
     render(<Modal isOpen title="Aviso" message="M" onClose={onClose} onConfirm={vi.fn()} />);
     await userEvent.click(screen.getByText('Aviso'));
@@ -232,12 +222,9 @@ describe('Modal', () => {
   });
 
   it('el modo warning marca el borde del dialogo y enrojece el titulo', () => {
-    // El borde va en el contenedor del modal y el color en el h3, para que se
-    // note sin tener que leer el texto.
     const { container } = render(
       <Modal isOpen warning title="Aviso" message="M" onClose={vi.fn()} onConfirm={vi.fn()} />
     );
-    // El overlay es el primer div; el dialogo es su unico hijo.
     const dialogo = container.firstChild.firstChild;
     expect(dialogo).toHaveStyle({ border: '2px solid #ef4444' });
     expect(screen.getByRole('heading', { name: 'Aviso' })).toHaveStyle({ color: '#b91c1c' });

@@ -1,10 +1,3 @@
-/**
- * Elimina los roles Editor, Alumno y Visualizador.
- *
- * Quedan solo los roles Administrador y Profesor (y Arbitro, agregado aparte).
- * Si hubiera usuarios con esos roles (por ej. datos restaurados de un dump),
- * se reasignan a Profesor antes de eliminar, así la operación es data-safe.
- */
 exports.up = async function (knex) {
   await knex.transaction(async (trx) => {
     const aEliminar = ['Editor', 'Alumno', 'Visualizador'];

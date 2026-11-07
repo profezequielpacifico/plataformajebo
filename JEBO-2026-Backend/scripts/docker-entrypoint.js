@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * Docker container entry: wait for DB → migrate → start API.
- * Pure Node to avoid CRLF issues with shell scripts on Windows checkouts.
- */
 const net = require('net');
 const { spawn } = require('child_process');
 
@@ -47,7 +43,7 @@ function run(command, args) {
   console.log('Running migrations...');
   await run('node', ['scripts/docker-migrate.js']);
   console.log('Starting API...');
-  const child = spawn('node', ['src/app.js'], { stdio: 'inherit' });
+  const child = spawn('node', ['src/cluster.js'], { stdio: 'inherit' });
   child.on('exit', (code) => process.exit(code || 0));
 })().catch((err) => {
   console.error(err);
