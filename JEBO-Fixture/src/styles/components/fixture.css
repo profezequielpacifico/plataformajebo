@@ -1,0 +1,213 @@
+.color--violeta { --disciplina: var(--violeta); background: var(--violeta); }
+.color--amarillo { --disciplina: var(--amarillo); background: var(--amarillo); }
+.color--magenta { --disciplina: var(--magenta); background: var(--magenta); }
+.color--verde { --disciplina: var(--verde); background: var(--verde); }
+.color--cian { --disciplina: var(--cian); background: var(--cian); }
+.color--petroleo { --disciplina: var(--petroleo); background: var(--petroleo); }
+
+.ficha--violeta, .disciplina--violeta { --disciplina: var(--violeta); }
+.ficha--amarillo, .disciplina--amarillo { --disciplina: var(--amarillo); }
+.ficha--magenta, .disciplina--magenta { --disciplina: var(--magenta); }
+.ficha--verde, .disciplina--verde { --disciplina: var(--verde); }
+.ficha--cian, .disciplina--cian { --disciplina: var(--cian); }
+.ficha--petroleo, .disciplina--petroleo { --disciplina: var(--petroleo); }
+
+.programa { display: grid; gap: 1.75rem; }
+.programa__dia { display: grid; gap: 0.75rem; }
+.programa__titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: var(--texto-m);
+  font-weight: 600;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--linea);
+}
+.programa__fecha { color: var(--tinta-tenue); font-weight: 400; font-size: var(--texto-s); font-variant-numeric: tabular-nums; }
+
+.lista-fichas { display: grid; gap: 0.6rem; }
+
+.ficha {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-m);
+  overflow: hidden;
+}
+
+.ficha__tiempo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0.9rem 0.75rem 0.9rem 1.1rem;
+  border-right: 1px solid var(--linea);
+}
+.ficha__tiempo::before {
+  content: '';
+  position: absolute;
+  left: 0.45rem;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--disciplina, var(--petroleo));
+}
+.ficha__hora {
+  font-family: var(--fuente-tablero);
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--petroleo);
+  font-variant-numeric: tabular-nums;
+}
+.ficha__dia { font-size: var(--texto-xs); color: var(--tinta-suave); font-weight: 600; line-height: 1.2; }
+
+.ficha__cuerpo { display: grid; gap: 0.6rem; padding: 0.85rem 1.1rem; min-width: 0; }
+
+.ficha__encabezado { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+.ficha__torneo { font-size: var(--texto-s); font-weight: 600; color: var(--tinta-suave); }
+.ficha__etapa { font-size: var(--texto-xs); color: var(--tinta-tenue); }
+
+.ficha__pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
+
+.enfrentamiento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.enfrentamiento__equipo { display: grid; min-width: 0; }
+.enfrentamiento__equipo--local { text-align: right; }
+.enfrentamiento__nombre {
+  font-family: var(--fuente-tablero);
+  font-weight: 600;
+  font-size: var(--texto-l);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.enfrentamiento__institucion { font-size: var(--texto-xs); color: var(--tinta-tenue); line-height: 1.3; overflow-wrap: anywhere; }
+.enfrentamiento__centro {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--fuente-tablero);
+  font-weight: 700;
+}
+.enfrentamiento__vs { color: var(--tinta-tenue); font-size: var(--texto-s); font-weight: 600; padding: 0 0.25rem; }
+.enfrentamiento__centro--marcador {
+  font-size: var(--texto-xl);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radio-s);
+  background: var(--tinta);
+  color: #fff;
+}
+.enfrentamiento__guion { opacity: 0.6; }
+
+.participacion { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.participacion__item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.75rem; }
+.participacion__nombre { font-family: var(--fuente-tablero); font-weight: 600; font-size: var(--texto-l); line-height: 1.15; }
+.participacion__detalle { font-size: var(--texto-xs); color: var(--tinta-tenue); }
+.participacion--vacia { color: var(--tinta-tenue); }
+
+.lugar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.15rem 0.4rem; font-size: var(--texto-s); color: var(--tinta-suave); }
+.lugar svg { width: 0.95rem; height: 0.95rem; flex: none; color: var(--tinta-tenue); }
+.lugar__detalle { color: var(--tinta-tenue); font-size: var(--texto-xs); }
+.lugar--vacio { color: var(--tinta-tenue); font-style: italic; }
+
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.estado::before { content: ''; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; }
+.estado--programado { background: var(--programado-fondo); color: var(--petroleo); }
+.estado--pendiente { background: transparent; color: var(--tinta-suave); box-shadow: inset 0 0 0 1px var(--linea-fuerte); }
+.estado--en-juego { background: #fbe3ef; color: var(--en-juego); }
+.estado--en-juego::before { animation: latido 1.6s ease-in-out infinite; }
+.estado--finalizado { background: var(--finalizado-fondo); color: var(--tinta-suave); }
+.estado--suspendido { background: var(--suspendido-fondo); color: var(--suspendido); }
+.estado--cancelado { background: var(--cancelado-fondo); color: var(--cancelado); }
+@keyframes latido { 50% { opacity: 0.25; } }
+
+.ficha--destacada { grid-template-columns: 1fr; border-color: var(--linea-fuerte); }
+.ficha--destacada .ficha__tiempo {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0.75rem 1.6rem;
+  border-right: 0;
+  border-bottom: 1px solid var(--linea);
+}
+.ficha--destacada .ficha__tiempo::before { left: 0.75rem; top: 1rem; bottom: 0.85rem; }
+.ficha--destacada .ficha__dia { font-size: var(--texto-m); color: var(--tinta); }
+.ficha--destacada .ficha__hora { font-size: var(--texto-xl); }
+.ficha--destacada .ficha__cuerpo { padding: 1.1rem 1.25rem 1.25rem; gap: 1rem; }
+.ficha--destacada .enfrentamiento__nombre,
+.ficha--destacada .participacion__nombre { font-size: clamp(1.6rem, 3.2vw, 2.25rem); }
+.ficha--destacada .enfrentamiento__centro--marcador { font-size: clamp(2rem, 4vw, 2.75rem); }
+.ficha--destacada .enfrentamiento__vs { font-size: var(--texto-l); }
+
+.disciplina { display: grid; gap: 1rem; }
+.disciplina__titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-family: var(--fuente-tablero);
+  font-weight: 600;
+  font-size: var(--texto-l);
+  padding-left: 0.85rem;
+  border-left: 4px solid var(--disciplina);
+}
+.disciplina__cantidad { font-family: var(--fuente-texto); font-weight: 400; font-size: var(--texto-s); color: var(--tinta-tenue); }
+
+.mensaje {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  padding: 2rem;
+  border: 1px dashed var(--linea-fuerte);
+  border-radius: var(--radio-m);
+  color: var(--tinta-suave);
+}
+.mensaje__titulo { font-weight: 600; color: var(--tinta); font-size: var(--texto-l); }
+.mensaje--error { border-style: solid; border-color: #f0c4c0; background: var(--cancelado-fondo); }
+.mensaje--cargando { grid-auto-flow: column; justify-content: start; align-items: center; gap: 0.85rem; border-style: solid; border-color: var(--linea); }
+
+.barras-carga { display: inline-flex; align-items: flex-end; gap: 3px; height: 1.25rem; }
+.barras-carga i { width: 4px; border-radius: 2px; animation: barra 1s ease-in-out infinite; }
+.barras-carga i:nth-child(1) { background: var(--violeta); }
+.barras-carga i:nth-child(2) { background: var(--amarillo); animation-delay: 0.12s; }
+.barras-carga i:nth-child(3) { background: var(--magenta); animation-delay: 0.24s; }
+.barras-carga i:nth-child(4) { background: var(--verde); animation-delay: 0.36s; }
+@keyframes barra { 0%, 100% { height: 35%; } 50% { height: 100%; } }
+
+@media (max-width: 36rem) {
+  .ficha { grid-template-columns: 1fr; }
+  .ficha__tiempo {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 1rem 0.55rem 1.4rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--linea);
+  }
+  .ficha__tiempo::before { left: 0.6rem; top: 0.65rem; bottom: 0.55rem; }
+  .ficha__hora { font-size: var(--texto-l); }
+  .ficha__cuerpo { padding: 0.8rem 1rem; }
+  .enfrentamiento { grid-template-columns: 1fr; gap: 0.35rem; }
+  .enfrentamiento__equipo--local { text-align: left; }
+  .enfrentamiento__centro { justify-self: start; }
+  .mensaje { padding: 1.25rem; }
+}

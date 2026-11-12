@@ -31,7 +31,7 @@ class EtapaInstanciaController {
 
   async preparar(req, res, next) {
     try {
-      const data = await etapaInstanciaService.preparar(req.params.etapaId, this._context(req));
+      const data = await etapaInstanciaService.preparar(req.params.etapaId, this._context(req), req.body?.zonas || null);
       res.status(HTTP_STATUS.OK).json(formatResponse(data, 'Etapa preparada'));
     } catch (err) {
       next(err);

@@ -56,6 +56,15 @@ class CanchaController {
     }
   }
 
+  async createHorarios(req, res, next) {
+    try {
+      const data = await canchaService.createHorarios(req.body.horarios, this._context(req));
+      res.status(HTTP_STATUS.CREATED).json(formatResponse(data, 'Horarios creados'));
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getSchedule(req, res, next) {
     try {
       const data = await canchaService.getSchedule(req.params.id);

@@ -6,16 +6,11 @@ import { Badge } from '../../components/ui/Badge.js';
 import { IconPlus } from '../../components/icons/index.js';
 import api from '../../api/index.js';
 import { translateAction, formatDetail } from '../audit/actionLabels.js';
-import { ROLE_IDS, ROUTES } from '../../config/constants.js';
+import { ROUTES } from '../../config/constants.js';
+import { esAdministrador } from '../../services/roles.js';
+import { canAccess } from '../../permissions.js';
 
 const { createElement: h } = React;
-
-const ROUTE_PERMISSIONS = {
-    [ROUTES.TOURNAMENTS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TEAMS_NEW]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TOURNAMENT_REGISTRATION]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.MATCHES_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-};
 
 function getResultBadge(resultado) {
     if (resultado === 'exitoso') return h(Badge, { variant: 'green' }, 'Éxito');
@@ -23,29 +18,8 @@ function getResultBadge(resultado) {
     return h(Badge, { variant: 'blue' }, resultado || '—');
 }
 
-function getRoleId(user) {
-    if (!user) return null;
-    if (user.id_rol) return Number(user.id_rol);
-    const roleMap = {
-        'SuperAdmin': ROLE_IDS.SUPERADMIN,
-        'Administrador': ROLE_IDS.ADMINISTRADOR,
-        'Profesor': ROLE_IDS.PROFESOR,
-        'Arbitro': ROLE_IDS.ARBITRO,
-        'Juez': ROLE_IDS.JUEZ
-    };
-    return roleMap[user.rol] ?? null;
-}
-
-function hasRoutePermission(user, route) {
-    const allowed = ROUTE_PERMISSIONS[route];
-    if (!allowed) return true;
-    const roleId = getRoleId(user);
-    return roleId && allowed.includes(roleId);
-}
-
 function canViewAudit(user) {
-    const roleId = getRoleId(user);
-    return roleId === ROLE_IDS.SUPERADMIN || roleId === ROLE_IDS.ADMINISTRADOR;
+    return esAdministrador(user);
 }
 
 function getQuickAccessButtons(user) {
@@ -55,7 +29,7 @@ function getQuickAccessButtons(user) {
         { route: ROUTES.TOURNAMENT_REGISTRATION, label: 'Inscripción a Torneo' },
         { route: ROUTES.MATCHES_NEW, label: 'Nuevo Partido' }
     ];
-    return buttons.filter(btn => hasRoutePermission(user, btn.route));
+    return buttons.filter(btn => canAccess(user, btn.route));
 }
 
 export function DashboardPage({ user, onNavigate }) {

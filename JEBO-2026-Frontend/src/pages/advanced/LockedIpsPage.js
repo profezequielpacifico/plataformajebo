@@ -7,26 +7,9 @@ import { Modal } from '../../components/ui/Modal.js';
 import { Loading } from '../../components/ui/Loading.js';
 import { IconShield, IconTrash } from '../../components/icons/index.js';
 import { lockoutService } from '../../services/lockoutService.js';
-import { ROLE_IDS } from '../../config/constants.js';
+import { esSuperAdmin as isSuperAdmin } from '../../services/roles.js';
 
 const { createElement: h } = React;
-
-function getRoleId(user) {
-    if (!user) return null;
-    if (user.id_rol) return Number(user.id_rol);
-    const roleMap = {
-        'SuperAdmin': ROLE_IDS.SUPERADMIN,
-        'Administrador': ROLE_IDS.ADMINISTRADOR,
-        'Profesor': ROLE_IDS.PROFESOR,
-        'Arbitro': ROLE_IDS.ARBITRO,
-        'Juez': ROLE_IDS.JUEZ
-    };
-    return roleMap[user.rol] ?? null;
-}
-
-function isSuperAdmin(user) {
-    return getRoleId(user) === ROLE_IDS.SUPERADMIN;
-}
 
 function formatRetry(seconds) {
     if (seconds == null) return '-';

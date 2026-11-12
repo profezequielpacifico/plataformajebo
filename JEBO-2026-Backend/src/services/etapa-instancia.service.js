@@ -157,7 +157,34 @@ class EtapaInstanciaService {
     return etapa.avanza_si_unico && cantidad === 1;
   }
 
-  async preparar(idEtapa, context = {}) {
+  _zonasManuales(zonas, candidatos) {
+    const porEquipo = new Map(candidatos.map((c) => [Number(c.id_equipo), c]));
+    const asignados = new Set();
+    const nombres = new Set();
+    const grupos = zonas.map((zona) => {
+      const nombre = String(zona.nombre || '').trim();
+      if (!nombre) throw new BusinessError('Cada zona necesita un nombre');
+      if (nombres.has(nombre)) throw new BusinessError(`La zona "${nombre}" aparece más de una vez`);
+      nombres.add(nombre);
+      const equipos = (zona.equipos || []).map((id) => {
+        const candidato = porEquipo.get(Number(id));
+        if (!candidato) throw new BusinessError(`El equipo ${id} no está habilitado para esta etapa`);
+        if (asignados.has(Number(id))) throw new BusinessError(`El equipo "${candidato.equipo_nombre}" está en más de una zona`);
+        asignados.add(Number(id));
+        return candidato;
+      });
+      if (equipos.length === 0) throw new BusinessError(`La zona "${nombre}" no tiene equipos`);
+      const regiones = [...new Set(equipos.map((e) => e.id_region).filter(Boolean))];
+      return { nombre, territorios: regiones.map((id_region) => ({ id_region })), equipos };
+    });
+    const sinZona = candidatos.filter((c) => !asignados.has(Number(c.id_equipo)));
+    if (sinZona.length > 0) {
+      throw new BusinessError(`Equipos sin zona: ${sinZona.map((c) => c.equipo_nombre).join(', ')}`);
+    }
+    return grupos;
+  }
+
+  async preparar(idEtapa, context = {}, zonas = null) {
     const resultado = await knex.transaction(async (trx) => {
       const etapa = await this._etapaConTorneo(idEtapa, trx);
       await trx('etapa').where('id_etapa', idEtapa).forUpdate().first();
@@ -170,7 +197,9 @@ class EtapaInstanciaService {
       await this._quitarInstanciasPrevias(etapa, trx);
 
       const conTerritorio = await this._conTerritorio(candidatos, trx);
-      const grupos = await this._agrupar(etapa, conTerritorio, trx);
+      const grupos = zonas
+        ? this._zonasManuales(zonas, conTerritorio)
+        : await this._agrupar(etapa, conTerritorio, trx);
 
       for (const grupo of grupos) {
         const directa = this._avanzaDirecto(etapa, grupo.equipos.length);

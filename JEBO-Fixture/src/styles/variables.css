@@ -1,0 +1,42 @@
+:root {
+  --petroleo: #165e7c;
+  --petroleo-oscuro: #0f4a62;
+  --cian: #13aec2;
+  --cian-texto: #0a7686;
+  --tinta: #0f2a3b;
+  --tinta-suave: #4a6272;
+  --tinta-tenue: #6f8594;
+  --fondo: #f3f7f9;
+  --superficie: #ffffff;
+  --linea: #d8e3ea;
+  --linea-fuerte: #b9cbd6;
+
+  --violeta: #6e3f97;
+  --amarillo: #e6cb1d;
+  --magenta: #e1187c;
+  --verde: #58aa33;
+
+  --en-juego: #c2156b;
+  --suspendido: #9a6a00;
+  --suspendido-fondo: #fdf3d6;
+  --cancelado: #a3322b;
+  --cancelado-fondo: #fbe7e5;
+  --finalizado-fondo: #e8eef2;
+  --programado-fondo: #e3f3f6;
+
+  --fuente-texto: 'Barlow', system-ui, sans-serif;
+  --fuente-tablero: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+
+  --texto-xs: 0.8125rem;
+  --texto-s: 0.9375rem;
+  --texto-m: 1.0625rem;
+  --texto-l: 1.375rem;
+  --texto-xl: 2rem;
+  --texto-xxl: 3.25rem;
+
+  --radio-s: 6px;
+  --radio-m: 10px;
+  --ancho: 72rem;
+  --margen: clamp(1rem, 4vw, 2rem);
+  --foco: 0 0 0 3px var(--superficie), 0 0 0 5px var(--cian-texto);
+}

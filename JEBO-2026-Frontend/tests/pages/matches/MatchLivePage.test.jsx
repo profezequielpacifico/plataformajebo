@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { MatchLivePage } from '../../../src/pages/matches/MatchLivePage.js';
 import matchService from '../../../src/services/matchService.js';
-import { ROLE_IDS } from '../../../src/config/constants.js';
 
 vi.mock('../../../src/services/matchService.js', () => ({
   default: {
@@ -339,9 +338,9 @@ describe('MatchLivePage', () => {
     await waitFor(() => expect(matchService.createEvent).toHaveBeenCalledTimes(1));
   });
 
-  it('tambien acepta el rol numerico del admin', async () => {
+  it('reconoce al admin por el nombre del rol aunque el id_rol de la base sea otro', async () => {
     matchService.getLive.mockResolvedValue(LIVE({ arbitros: [] }));
-    renderPage(7, { id_usuario: 12, id_rol: ROLE_IDS.ADMINISTRADOR });
+    renderPage(7, { id_usuario: 12, rol: 'Administrador', id_rol: 2 });
     await esperarCarga();
 
     expect(screen.queryByText(/no tiene arbitros asignados/i)).not.toBeInTheDocument();

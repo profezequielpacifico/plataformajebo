@@ -1,12 +1,15 @@
 import './react-shim.js';
 import './styles/components.css';
-import React, { Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ROUTES, ROLE_IDS } from './config/constants.js';
+import { ROUTES } from './config/constants.js';
 import { authService } from './services/authService.js';
 import { LoginPage } from './pages/auth/LoginPage.js';
 import { MainLayout } from './layouts/MainLayout.js';
 import { resolverRuta } from './routing.js';
+import { PUBLIC_ROUTES, canAccess } from './permissions.js';
+import { getRoleId } from './services/roles.js';
+import { paginaDesdeUrl, urlDePagina } from './navigation.js';
 import { lazyPage } from './lazyPage.js';
 
 const { createElement: h } = React;
@@ -57,91 +60,6 @@ const GymScoringPage = lazyPage(() => import('./pages/gymnastics/GymScoringPage.
 
 const pageFallback = h('div', { role: 'status', 'aria-live': 'polite', style: { padding: '32px', textAlign: 'center' } }, 'Cargando…');
 
-const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.RECOVER_PASSWORD, ROUTES.REGISTER];
-
-const ROUTE_PERMISSIONS = {
-    [ROUTES.USERS]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.USERS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.USERS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.AUDIT]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.REGIONS]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.REGIONS_NEW]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.DISTRICTS]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.DISTRICTS_NEW]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.DISTRICTS_EDIT]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.LOCALITIES]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.LOCALITIES_NEW]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.LOCALITIES_EDIT]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.ADVANCED_OPTIONS]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.AUTO_FIXTURE]: [ROLE_IDS.SUPERADMIN],
-    [ROUTES.LOCKOUTS]: [ROLE_IDS.SUPERADMIN],
-
-    [ROUTES.TOURNAMENTS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TOURNAMENTS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TOURNAMENTS_VIEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.STAGES]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TOURNAMENT_STAGES]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-
-    [ROUTES.COMPETENCIAS]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.COMPETENCIAS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.COMPETENCIAS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.COMPETENCIAS_VIEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TEAMS_NEW]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TEAMS_EDIT]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.MATCHES_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.MATCHES_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.COURTS]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.COURTS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.COURTS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.DISCIPLINES]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.SPORTS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.SPORTS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.SPORTS_VIEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.INSTITUTIONS_NEW]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.INSTITUTIONS_EDIT]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.INSTANCIAS]: [ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-
-    [ROUTES.TOURNAMENTS]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TOURNAMENTS_HISTORY]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TOURNAMENT_REGISTRATION]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.ENROLLED_TEAMS]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.TEAMS]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.MATCHES]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.STANDINGS]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.QUALIFIED]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.FINAL]: [ROLE_IDS.PROFESOR, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-
-    [ROUTES.MIS_PARTIDOS]: [ROLE_IDS.ARBITRO, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.MATCH_LIVE]: [ROLE_IDS.ARBITRO, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.MATCHES_DETAIL]: [ROLE_IDS.ARBITRO, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-
-    [ROUTES.GYM_PRESENTACIONES]: [ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.GYM_PRESENTACIONES_NUEVA]: [ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-    [ROUTES.GYM_PRESENTACIONES_DETALLE]: [ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-
-    [ROUTES.DASHBOARD]: [ROLE_IDS.PROFESOR, ROLE_IDS.ARBITRO, ROLE_IDS.JUEZ, ROLE_IDS.ADMINISTRADOR, ROLE_IDS.SUPERADMIN],
-};
-
-function getRoleId(user) {
-    if (!user) return null;
-    if (user.id_rol) return Number(user.id_rol);
-    const roleMap = {
-        'SuperAdmin': ROLE_IDS.SUPERADMIN,
-        'Administrador': ROLE_IDS.ADMINISTRADOR,
-        'Profesor': ROLE_IDS.PROFESOR,
-        'Arbitro': ROLE_IDS.ARBITRO,
-        'Juez': ROLE_IDS.JUEZ
-    };
-    return roleMap[user.rol] ?? null;
-}
-
-function hasRoutePermission(user, route) {
-    const allowed = ROUTE_PERMISSIONS[route];
-    if (!allowed) return true;
-    const roleId = getRoleId(user);
-    return roleId && allowed.includes(roleId);
-}
-
 function withLayout(Component, props = {}) {
     return function LayoutWrapper({ user, onLogout, currentPage, onNavigate, ...rest }) {
         return h(MainLayout, { user, onLogout, currentPage, onNavigate },
@@ -152,13 +70,33 @@ function withLayout(Component, props = {}) {
     };
 }
 
+function Redirect({ to, onRedirect }) {
+    useEffect(() => {
+        onRedirect(to);
+    }, [to]);
+    return null;
+}
+
+function renderRedirect(ctx, to) {
+    return h(Redirect, { to, onRedirect: ctx.redirect });
+}
+
+function renderSinRol(ctx) {
+    return h('div', { role: 'alert', style: { padding: '48px 24px', textAlign: 'center', fontFamily: 'inherit' } },
+        h('p', { style: { fontSize: '16px', marginBottom: '16px' } }, 'Tu usuario no tiene un rol válido asignado. Pedile a un administrador que lo revise.'),
+        h('button', { type: 'button', className: 'btn btn-primary', onClick: ctx.handleLogout }, 'Cerrar sesión')
+    );
+}
+
 function renderProtectedPage(ctx, Page, extraProps) {
     if (!ctx.user) {
-        return ctx.navigate(ROUTES.LOGIN);
+        return renderRedirect(ctx, ROUTES.LOGIN);
     }
-
-    if (!hasRoutePermission(ctx.user, ctx.currentPage)) {
-        return ctx.navigate(ROUTES.DASHBOARD);
+    if (getRoleId(ctx.user) === null) {
+        return renderSinRol(ctx);
+    }
+    if (!canAccess(ctx.user, ctx.currentPage)) {
+        return renderRedirect(ctx, ROUTES.DASHBOARD);
     }
     return h(withLayout(Page), {
         user: ctx.user,
@@ -174,14 +112,7 @@ function renderLoginPage(ctx) {
 }
 
 const PAGE_RENDERERS = {
-    [ROUTES.LOGIN]: (ctx) => ctx.user
-        ? h(withLayout(DashboardPage), {
-            user: ctx.user,
-            onLogout: ctx.handleLogout,
-            currentPage: ctx.currentPage,
-            onNavigate: ctx.navigate
-        })
-        : renderLoginPage(ctx),
+    [ROUTES.LOGIN]: (ctx) => ctx.user ? renderRedirect(ctx, ROUTES.DASHBOARD) : renderLoginPage(ctx),
     [ROUTES.REGISTER]: (ctx) => h(Suspense, { fallback: pageFallback }, h(RegisterPage, { onNavigate: ctx.navigate })),
     [ROUTES.RECOVER_PASSWORD]: (ctx) => h(Suspense, { fallback: pageFallback }, h(RecoverPasswordPage, { onNavigate: ctx.navigate })),
     [ROUTES.DASHBOARD]: (ctx) => renderProtectedPage(ctx, DashboardPage),
@@ -245,42 +176,78 @@ const PAGE_RENDERERS = {
     [ROUTES.GYM_PRESENTACIONES_DETALLE]: (ctx) => renderProtectedPage(ctx, GymScoringPage, { match: ctx.matchId })
 };
 
+function usuarioGuardado() {
+    if (!authService.isAuthenticated()) return null;
+    return authService.getUser();
+}
+
+function paginaInicial(user) {
+    const pagina = paginaDesdeUrl(window.location.pathname);
+    if (!pagina) return user ? ROUTES.DASHBOARD : ROUTES.LOGIN;
+    if (user && PUBLIC_ROUTES.includes(pagina)) return ROUTES.DASHBOARD;
+    return pagina;
+}
+
+function actualizarUrl(page, replace) {
+    const url = urlDePagina(page);
+    if (window.location.pathname === url) return;
+    if (replace) {
+        window.history.replaceState(null, '', url);
+    } else {
+        window.history.pushState(null, '', url);
+    }
+}
+
 function App() {
-    const [user, setUser] = useState(null);
-    const [currentPage, setCurrentPage] = useState(ROUTES.LOGIN);
+    const [user, setUser] = useState(usuarioGuardado);
+    const [currentPage, setCurrentPage] = useState(() => {
+        const pagina = paginaInicial(user);
+        actualizarUrl(pagina, true);
+        return pagina;
+    });
+    const destinoTrasLogin = useRef(null);
+
+    const irA = (page, replace = false) => {
+        actualizarUrl(page, replace);
+        setCurrentPage(page);
+    };
 
     useEffect(() => {
-        if (authService.isAuthenticated()) {
-            const savedUser = authService.getUser();
-            if (savedUser) {
-                setUser(savedUser);
-                setCurrentPage(ROUTES.DASHBOARD);
-            }
-        }
+        const alVolver = () => setCurrentPage(paginaDesdeUrl(window.location.pathname) || ROUTES.LOGIN);
+        window.addEventListener('popstate', alVolver);
+        return () => window.removeEventListener('popstate', alVolver);
     }, []);
 
     const handleLogin = (userData) => {
+        const destino = destinoTrasLogin.current;
+        destinoTrasLogin.current = null;
         setUser(userData);
-        setCurrentPage(ROUTES.DASHBOARD);
+        irA(destino && canAccess(userData, destino) ? destino : ROUTES.DASHBOARD, true);
     };
 
     const handleLogout = async () => {
-        await authService.logout();
-        setUser(null);
-        setCurrentPage(ROUTES.LOGIN);
+        try {
+            await authService.logout();
+        } finally {
+            destinoTrasLogin.current = null;
+            setUser(null);
+            irA(ROUTES.LOGIN, true);
+        }
     };
 
     const navigate = (page) => {
-
         if (!user && !PUBLIC_ROUTES.includes(page)) {
-            setCurrentPage(ROUTES.LOGIN);
+            irA(ROUTES.LOGIN);
             return;
         }
+        irA(page);
+    };
 
-        if (user && !hasRoutePermission(user, page)) {
-            return;
+    const redirect = (page) => {
+        if (page === ROUTES.LOGIN && !user && !PUBLIC_ROUTES.includes(currentPage)) {
+            destinoTrasLogin.current = currentPage;
         }
-        setCurrentPage(page);
+        irA(page, true);
     };
 
     const renderPage = () => {
@@ -291,10 +258,11 @@ function App() {
             handleLogout,
             currentPage,
             navigate,
+            redirect,
             matchId
         };
         if (ruta) return PAGE_RENDERERS[ruta](ctx);
-        return renderLoginPage(ctx);
+        return renderRedirect(ctx, user ? ROUTES.DASHBOARD : ROUTES.LOGIN);
     };
 
     return renderPage();

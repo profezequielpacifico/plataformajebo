@@ -35,7 +35,7 @@ describe('MainLayout', () => {
 
     expect(screen.getByAltText('JEBO')).toBeInTheDocument();
     expect(screen.queryByText('Espacio para imagen')).not.toBeInTheDocument();
-    expect(screen.getByText('ADMIN')).toBeInTheDocument();
+    expect(screen.getByText('Administrador')).toBeInTheDocument();
     expect(screen.getByAltText('JEBO 2026')).toBeInTheDocument();
     expect(screen.getByText('Contenido de la pagina')).toBeInTheDocument();
   });
@@ -174,7 +174,7 @@ describe('MainLayout', () => {
   it('el arbitro solo ve Inicio y Mis Partidos', () => {
     renderLayout({ user: { rol: 'Arbitro' } });
 
-    expect(screen.getByText('ARBITRO')).toBeInTheDocument();
+    expect(screen.getByText('Árbitro')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Mis Partidos' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Canchas' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument();
@@ -186,20 +186,47 @@ describe('MainLayout', () => {
     expect(screen.getByRole('link', { name: 'Consulta de Equipos' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Canchas' })).not.toBeInTheDocument();
     expect(screen.queryByText('Administración')).not.toBeInTheDocument();
-    expect(screen.getByText('ADMIN')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Presentaciones' })).not.toBeInTheDocument();
+    expect(screen.getByText('Profesor')).toBeInTheDocument();
   });
 
-  it('usa el id_rol para detectar al arbitro', () => {
-    renderLayout({ user: { id_rol: 10 } });
+  it('detecta el rol por nombre e ignora el id_rol numerico de la base', () => {
+    renderLayout({ user: { rol: 'Arbitro', id_rol: 13 } });
 
-    expect(screen.getByText('ARBITRO')).toBeInTheDocument();
+    expect(screen.getByText('Árbitro')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Mis Partidos' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Canchas' })).not.toBeInTheDocument();
+  });
+
+  it('el SuperAdmin con id_rol 1 de la base ve todo su menu', () => {
+    renderLayout({ user: { rol: 'SuperAdmin', id_rol: 1 } });
+
+    expect(screen.getByText('SuperAdmin')).toBeInTheDocument();
+    for (const nombre of ['Regiones', 'Distritos', 'Localidades', 'Usuarios', 'Opciones Avanzadas', 'Canchas']) {
+      expect(screen.getByRole('link', { name: nombre })).toBeInTheDocument();
+    }
+  });
+
+  it('el administrador no ve las paginas exclusivas del SuperAdmin', () => {
+    renderLayout({ user: { rol: 'Administrador', id_rol: 2 } });
+
+    for (const nombre of ['Regiones', 'Distritos', 'Localidades', 'Usuarios', 'Actividad', 'Opciones Avanzadas']) {
+      expect(screen.queryByRole('link', { name: nombre })).not.toBeInTheDocument();
+    }
+    expect(screen.getByRole('link', { name: 'Instituciones' })).toBeInTheDocument();
+  });
+
+  it('cada link apunta a la URL de su seccion', () => {
+    renderLayout();
+
+    expect(screen.getByRole('link', { name: 'Canchas' })).toHaveAttribute('href', '/courts');
+    expect(screen.getByRole('link', { name: 'Presentaciones' })).toHaveAttribute('href', '/gymnastics/presentaciones');
   });
 
   it('sin usuario sigue funcionando', () => {
     renderLayout({ user: null });
 
-    expect(screen.getByText('ADMIN')).toBeInTheDocument();
+    expect(screen.getByText('Sin rol')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Inicio' })).toBeInTheDocument();
   });
 
@@ -212,7 +239,7 @@ describe('MainLayout', () => {
     await user.click(screen.getByRole('button', { name: /cerrar sesión/i }));
 
     expect(onLogout).toHaveBeenCalled();
-    expect(onNavigate).toHaveBeenCalledWith('login');
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 
   it('muestra la fecha de hoy en el encabezado', () => {

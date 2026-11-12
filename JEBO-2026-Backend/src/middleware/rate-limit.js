@@ -116,4 +116,13 @@ const sessionLimiter = limitador('sesion:', {
   message: { error: 'Demasiadas operaciones de sesión. Intente nuevamente más tarde.' }
 });
 
-module.exports = { generalLimiter, registerLimiter, recoverPasswordLimiter, authLimiter, sessionLimiter };
+const publicLimiter = limitador('publico:', {
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${req.ip}`,
+  message: { error: 'Demasiadas solicitudes. Intente nuevamente más tarde.' }
+});
+
+module.exports = { generalLimiter, registerLimiter, recoverPasswordLimiter, authLimiter, sessionLimiter, publicLimiter };

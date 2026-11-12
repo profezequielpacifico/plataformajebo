@@ -6,6 +6,7 @@ const { leerRutas, sinComentariosYStrings, GUARDS_PERMISO, GUARDS_RETIRADOS } = 
 const DIR_RUTAS = path.join(__dirname, '..', '..', 'src', 'routes');
 
 const MAPA = [
+  ['cancha.routes.js | POST /horarios', 'requireAdminOrAbove'],
   ['cancha.routes.js | POST /', 'requireAdminOrAbove'],
   ['cancha.routes.js | PUT /:id', 'requireAdminOrAbove'],
   ['cancha.routes.js | PUT /:id/schedule', 'requireAdminOrAbove'],
@@ -121,14 +122,14 @@ describe('mapa de permisos por endpoint (F1.4)', () => {
       for (const g of guards.split(',')) conteo[g] = (conteo[g] || 0) + 1;
     }
     expect(conteo).toEqual({
-      requireAdminOrAbove: 45,
+      requireAdminOrAbove: 46,
       requireSuperAdmin: 14,
       gestionarPresentacion: 8,
       operarPartido: 6,
       evaluarPresentacion: 4,
       gestionarEquipoPropio: 5
     });
-    expect(actual.length).toBe(82);
+    expect(actual.length).toBe(83);
   });
 
   it('ningun endpoint del mapa perdio su permiso', () => {

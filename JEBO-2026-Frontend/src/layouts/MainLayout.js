@@ -2,6 +2,10 @@ import React from 'react';
 import { IconHome, IconTrophy, IconGamepad, IconShield, IconBarChart, IconStar, IconMap, IconMapPin, IconUsers, IconLogOut, IconActivity, IconSport, IconDistrict, IconSettings, IconPlus, IconMenu, IconClose } from '../components/icons/index.js';
 import { COLORS } from '../styles/theme/index.js';
 import { calcUiScale } from '../hooks/useResponsive.js';
+import { ROLE_IDS } from '../config/constants.js';
+import { getRoleId, etiquetaDeRol } from '../services/roles.js';
+import { canAccess } from '../permissions.js';
+import { urlDePagina } from '../navigation.js';
 
 const MOBILE_BELOW = 1024;
 const LOGOUT_ICON_BELOW = 360;
@@ -67,28 +71,7 @@ const menuGroups = [
 
 const allItems = menuGroups.flatMap(g => g.items);
 
-const ROLE_IDS = {
-    PROFESOR: 1,
-    ARBITRO: 2,
-    ADMINISTRADOR: 3,
-    JUEZ: 4,
-    SUPERADMIN: 20
-};
-
-function getRoleId(user) {
-    if (!user) return null;
-    if (user.id_rol) return Number(user.id_rol);
-    const roleMap = {
-        'SuperAdmin': ROLE_IDS.SUPERADMIN,
-        'Administrador': ROLE_IDS.ADMINISTRADOR,
-        'Profesor': ROLE_IDS.PROFESOR,
-        'Arbitro': ROLE_IDS.ARBITRO,
-        'Juez': ROLE_IDS.JUEZ
-    };
-    return roleMap[user.rol] ?? null;
-}
-
-function getMenuGroups(user) {
+function gruposDelRol(user) {
     const roleId = getRoleId(user);
 
     if (roleId === ROLE_IDS.ARBITRO) {
@@ -149,23 +132,11 @@ function getMenuGroups(user) {
         ];
     }
 
-    if (roleId === ROLE_IDS.ADMINISTRADOR) {
-        const groups = menuGroups.map(group => {
-            if (group.label !== 'Competencia') return group;
-            const items = [];
-            for (const item of group.items) {
-                items.push(item);
-                if (item.id === 'matches') {
-                    items.push({ id: 'mis-partidos', label: 'Mis Partidos', icon: IconGamepad });
-                }
-            }
-            return { ...group, items };
-        });
-        return groups.filter(g => !['Administración', 'Opciones Avanzadas'].includes(g.label));
-    }
-
-    if (roleId === ROLE_IDS.SUPERADMIN) {
-        return menuGroups.map(group => {
+    if (roleId === ROLE_IDS.ADMINISTRADOR || roleId === ROLE_IDS.SUPERADMIN) {
+        const grupos = roleId === ROLE_IDS.SUPERADMIN
+            ? menuGroups
+            : menuGroups.filter(g => !['Administración', 'Opciones Avanzadas'].includes(g.label));
+        return grupos.map(group => {
             if (group.label !== 'Competencia') return group;
             const items = [];
             for (const item of group.items) {
@@ -184,6 +155,14 @@ function getMenuGroups(user) {
             items: [{ id: 'dashboard', label: 'Inicio', icon: IconHome }]
         }
     ];
+}
+
+function getMenuGroups(user) {
+    const grupos = gruposDelRol(user);
+    if (getRoleId(user) === null) return grupos;
+    return grupos
+        .map(group => ({ ...group, items: group.items.filter(item => canAccess(user, item.id)) }))
+        .filter(group => group.items.length > 0);
 }
 
 function createResizeHandler(setIsMobile, setSidebarOpen, setUiScale, setLogoutSoloIcono) {
@@ -492,8 +471,12 @@ function renderMobileCloseButton(styles, setSidebarOpen) {
 function renderSidebarItem(item, styles, isActive, onNavigate) {
     return React.createElement('a', {
         key: item.id,
-        href: '#',
-        onClick: (e) => { e.preventDefault(); onNavigate(item.id); },
+        href: urlDePagina(item.id),
+        onClick: (e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            onNavigate(item.id);
+        },
         style: { ...styles.sidebarItem, ...(isActive ? styles.sidebarItemActive : {}) }
     }, React.createElement(item.icon, { size: 18 }), item.label);
 }
@@ -523,7 +506,7 @@ function renderMenuGroup(group, styles, currentPage, onNavigate, ids) {
 
 function renderSidebar(styles, currentPage, onNavigate, user, setSidebarOpen) {
     const groups = getMenuGroups(user);
-    const roleLabel = user && (user.rol === 'Arbitro' || user.id_rol === 10) ? 'ARBITRO' : 'ADMIN';
+    const roleLabel = etiquetaDeRol(user);
 
     const ids = groups.flatMap(g => g.items.map(i => i.id));
     return React.createElement('div', { style: styles.sidebar },
@@ -580,7 +563,7 @@ function renderHeader(styles, isMobile, currentItem, onLogout, onNavigate, setSi
                     transition: 'all 0.2s'
                 },
                 'aria-label': 'Cerrar Sesión',
-                onClick: () => { onLogout(); onNavigate('login'); }
+                onClick: () => onLogout()
             }, React.createElement(IconLogOut, { size: 14 }), !styles.logoutSoloIcono && 'Cerrar Sesión')
         )
     );

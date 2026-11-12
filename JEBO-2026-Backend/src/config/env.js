@@ -86,6 +86,12 @@ const env = {
     origin: process.env.CORS_ORIGIN || '*'
   },
 
+  publicCors: {
+    origin: process.env.PUBLIC_CORS_ORIGIN
+      ? process.env.PUBLIC_CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+      : '*'
+  },
+
   trustProxy: resolverTrustProxy(process.env.TRUST_PROXY),
 
   bcrypt: {
