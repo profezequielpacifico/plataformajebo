@@ -5,7 +5,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TeamListPage } from '../../../src/pages/teams/TeamListPage.js';
 import { teamService } from '../../../src/services/teamService.js';
 import disciplineService from '../../../src/services/disciplineService.js';
-import { ROLE_IDS } from '../../../src/config/constants.js';
 
 vi.mock('../../../src/services/teamService.js', () => ({
   teamService: { getAll: vi.fn() },
@@ -188,7 +187,7 @@ describe('TeamListPage', () => {
 
   it('un admin puede editar cualquier equipo y navega al form de edicion', async () => {
     const onNavigate = vi.fn();
-    renderPage({ user: { id_rol: ROLE_IDS.ADMINISTRADOR, id_usuario: 7 }, onNavigate });
+    renderPage({ user: { rol: 'Administrador', id_rol: 2, id_usuario: 7 }, onNavigate });
     await screen.findByText('Trío A');
 
     const editar = screen.getByRole('button', { name: 'Editar Trío A' });
@@ -202,7 +201,7 @@ describe('TeamListPage', () => {
       equipo({ id_usuario: 55 }),
       equipo({ id_equipo: 40, nombre: 'Trío B', id_usuario: 99 })
     ], 2));
-    renderPage({ user: { id_rol: ROLE_IDS.PROFESOR, id_usuario: 55 } });
+    renderPage({ user: { rol: 'Profesor', id_rol: 3, id_usuario: 55 } });
     await screen.findByText('Trío A');
 
     expect(screen.getByRole('button', { name: 'Editar Trío A' })).toBeInTheDocument();

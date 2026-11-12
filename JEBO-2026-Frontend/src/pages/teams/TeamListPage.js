@@ -7,6 +7,7 @@ import { Loading } from '../../components/ui/Loading.js';
 import { teamService } from '../../services/teamService.js';
 import disciplineService from '../../services/disciplineService.js';
 import { TEAM_SEARCH_FILTERS, PAGINATION, ROLE_IDS } from '../../config/constants.js';
+import { getRoleId } from '../../services/roles.js';
 import { IconEdit } from '../../components/icons/index.js';
 
 const { createElement: h } = React;
@@ -29,7 +30,7 @@ export function TeamListPage({ user, onNavigate }) {
 
     const puedeEditar = (team) => {
         if (!user) return false;
-        const roleId = user.id_rol ? Number(user.id_rol) : null;
+        const roleId = getRoleId(user);
         if (roleId === ROLE_IDS.ADMINISTRADOR || roleId === ROLE_IDS.SUPERADMIN) {
             return true;
         }
