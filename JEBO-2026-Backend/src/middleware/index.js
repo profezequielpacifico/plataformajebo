@@ -13,7 +13,7 @@ const {
   evaluarPresentacion,
   gestionarEquipoPropio
 } = require('./autorizacion');
-const { generalLimiter, registerLimiter, recoverPasswordLimiter, authLimiter, sessionLimiter } = require('./rate-limit');
+const { generalLimiter, registerLimiter, recoverPasswordLimiter, authLimiter, sessionLimiter, publicLimiter } = require('./rate-limit');
 const loginLockout = require('./login-lockout');
 const { verificarContenido } = require('./verificar-contenido');
 
@@ -33,6 +33,7 @@ module.exports = {
   recoverPasswordLimiter,
   authLimiter,
   sessionLimiter,
+  publicLimiter,
   loginLockout,
   verificarContenido
 };

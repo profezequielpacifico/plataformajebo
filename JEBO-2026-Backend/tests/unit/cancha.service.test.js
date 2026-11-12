@@ -17,7 +17,8 @@ jest.mock('../../src/repositories', () => ({
   CanchaHorarioRepository: {
     findAllHorarios: jest.fn(),
     findSchedule: jest.fn(),
-    replaceSchedule: jest.fn()
+    replaceSchedule: jest.fn(),
+    createHorarios: jest.fn()
   }
 }));
 jest.mock('../../src/repositories/disponibilidad.repository', () => ({
@@ -102,6 +103,39 @@ describe('cancha.service', () => {
     CanchaRepository.findById.mockResolvedValue(null);
     await expect(canchaService.getSchedule(999)).rejects.toBeInstanceOf(NotFoundError);
     expect(CanchaHorarioRepository.findSchedule).not.toHaveBeenCalled();
+  });
+
+  it('createHorarios normaliza las horas, crea los nuevos y registra la bitacora', async () => {
+    CanchaHorarioRepository.createHorarios.mockResolvedValue({ creados: [{ hora_inicio: '10:00:00' }], existentes: ['10:25'] });
+
+    const r = await canchaService.createHorarios([
+      { hora_inicio: '10:00:00', hora_fin: '10:25' },
+      { hora_inicio: '10:25', hora_fin: '10:50' }
+    ], CTX);
+
+    expect(CanchaHorarioRepository.createHorarios).toHaveBeenCalledWith([
+      { hora_inicio: '10:00', hora_fin: '10:25' },
+      { hora_inicio: '10:25', hora_fin: '10:50' }
+    ]);
+    expect(r.existentes).toEqual(['10:25']);
+    expect(bitacoraService.log).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'CREAR_HORARIOS_CANCHA',
+      detail: { creados: ['10:00'], existentes: ['10:25'] }
+    }));
+  });
+
+  it('createHorarios rechaza un horario que termina antes de empezar', async () => {
+    await expect(canchaService.createHorarios([{ hora_inicio: '11:00', hora_fin: '10:30' }], CTX))
+      .rejects.toThrow('debe terminar después de empezar');
+    expect(CanchaHorarioRepository.createHorarios).not.toHaveBeenCalled();
+  });
+
+  it('createHorarios rechaza horas de inicio repetidas en la misma lista', async () => {
+    await expect(canchaService.createHorarios([
+      { hora_inicio: '09:00', hora_fin: '09:25' },
+      { hora_inicio: '09:00:00', hora_fin: '09:30' }
+    ], CTX)).rejects.toThrow('aparece más de una vez');
+    expect(CanchaHorarioRepository.createHorarios).not.toHaveBeenCalled();
   });
 
   it('updateSchedule reemplaza toda la grilla de la cancha', async () => {

@@ -40,6 +40,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:15173}
+      PUBLIC_CORS_ORIGIN: ${PUBLIC_CORS_ORIGIN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
@@ -84,6 +85,41 @@ services:
       - NET_BIND_SERVICE
       - SETGID
       - SETUID
+    security_opt:
+      - no-new-privileges:true
+
+  fixture:
+    build:
+      context: ../JEBO-Fixture
+      dockerfile: Dockerfile
+    container_name: jebo-fixture
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${FIXTURE_PORT:-15174}:80"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+
+  fixture-tunel:
+    image: cloudflare/cloudflared:2025.10.0
+    container_name: jebo-fixture-tunel
+    restart: unless-stopped
+    depends_on:
+      - fixture
+    command: tunnel --no-autoupdate --url http://fixture:80
+    read_only: true
+    cap_drop:
+      - ALL
     security_opt:
       - no-new-privileges:true
 

@@ -40,4 +40,20 @@ async function replaceSchedule(canchaId, items) {
   return findSchedule(canchaId);
 }
 
-module.exports = { findAllHorarios, findSchedule, replaceSchedule };
+async function createHorarios(horarios) {
+  return knex.transaction(async (trx) => {
+    await trx.raw('LOCK TABLE horarios_cancha IN SHARE ROW EXCLUSIVE MODE');
+    const actuales = await trx('horarios_cancha').select('hora_inicio');
+    const ocupadas = new Set(actuales.map((h) => String(h.hora_inicio).slice(0, 5)));
+    const nuevos = horarios.filter((h) => !ocupadas.has(h.hora_inicio));
+    const creados = nuevos.length
+      ? await trx('horarios_cancha')
+        .insert(nuevos.map((h) => ({ hora_inicio: `${h.hora_inicio}:00`, hora_fin: `${h.hora_fin}:00` })))
+        .returning('*')
+      : [];
+    const existentes = horarios.filter((h) => ocupadas.has(h.hora_inicio)).map((h) => h.hora_inicio);
+    return { creados, existentes };
+  });
+}
+
+module.exports = { findAllHorarios, findSchedule, replaceSchedule, createHorarios };

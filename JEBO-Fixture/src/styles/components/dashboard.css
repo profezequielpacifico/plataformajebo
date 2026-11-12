@@ -1,0 +1,91 @@
+.portada {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.portada__texto { display: grid; gap: 1rem; }
+.portada__titulo {
+  font-family: var(--fuente-tablero);
+  font-weight: 700;
+  font-size: var(--texto-xxl);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--petroleo);
+}
+.portada__vacio { color: var(--tinta-suave); max-width: 40ch; }
+
+.portada__datos {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.25rem 1.25rem 1.1rem;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-m);
+}
+
+.tira { margin: 0; display: grid; gap: 0.85rem; }
+.tira__dias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+.tira__dia { display: grid; grid-template-rows: 1rem 7.5rem auto; justify-items: center; gap: 0.3rem; }
+.tira__total { font-family: var(--fuente-tablero); font-weight: 600; font-size: var(--texto-xs); color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.tira__barra {
+  align-self: end;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  width: min(100%, 0.8rem);
+  height: max(var(--alto), 0.4rem);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--linea);
+}
+.tira__segmento { flex-basis: 0; min-height: 3px; }
+.tira__etiqueta { display: grid; justify-items: center; font-size: 0.6875rem; color: var(--tinta-tenue); line-height: 1.15; }
+.tira__numero { font-family: var(--fuente-tablero); font-weight: 600; font-size: var(--texto-s); font-variant-numeric: tabular-nums; }
+.tira__dia--hoy .tira__numero { padding: 0 0.3rem; border-radius: 4px; background: var(--petroleo); color: #fff; }
+.tira__dia--pasado .tira__barra { opacity: 0.4; }
+.tira__dia--hoy .tira__etiqueta { color: var(--tinta); font-weight: 700; }
+.tira__dia--hoy .tira__total { color: var(--tinta); }
+
+.tira__leyenda { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; font-size: var(--texto-xs); color: var(--tinta-suave); }
+.tira__leyenda span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.tira__leyenda i { width: 0.6rem; height: 0.6rem; border-radius: 2px; }
+
+.resumen {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--linea);
+}
+.resumen__dato { display: flex; flex-direction: column-reverse; gap: 0.05rem; }
+.resumen__dato dd {
+  margin: 0;
+  font-family: var(--fuente-tablero);
+  font-weight: 700;
+  font-size: var(--texto-xl);
+  line-height: 1;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+}
+.resumen__dato dt { font-size: var(--texto-xs); color: var(--tinta-suave); }
+
+@media (max-width: 56rem) {
+  .portada { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 36rem) {
+  .portada__titulo { font-size: 2.5rem; }
+  .tira__dia { grid-template-rows: 1rem 5.5rem auto; }
+  .tira__numero { font-size: var(--texto-xs); }
+  .resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
