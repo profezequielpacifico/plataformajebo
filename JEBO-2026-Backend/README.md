@@ -84,6 +84,7 @@ JWT_EXPIRES_IN=1h
 JWT_REFRESH_EXPIRES_IN=7d
 
 CORS_ORIGIN=*
+PUBLIC_CORS_ORIGIN=*
 BCRYPT_ROUNDS=12
 TRUST_PROXY=0
 ```
@@ -99,6 +100,10 @@ TRUST_PROXY=0
 `TRUST_PROXY` indica cuántos proxies hay delante de la app. El default es `0` a
 propósito: con la API expuesta directamente, un `X-Forwarded-For` forjado evadiría
 el lockout por IP. Subilo a `1` solo si hay nginx delante.
+
+`PUBLIC_CORS_ORIGIN` limita qué dominios pueden leer la API pública `/public`
+(lista separada por comas, por ejemplo `https://fixture.jebo.gob.ar`). Sin valor
+acepta cualquier origen, siempre sin credenciales.
 
 ### Base de datos
 
@@ -262,6 +267,29 @@ instalación con una sola cuenta administrativa sería el fin del sistema.
 | `POST` | `/inscripcion/cerrar-vencidas` | Admin |
 | `GET` | `/admin/login-lockouts` | Admin |
 | `DELETE` | `/admin/login-lockouts/:ip` | Admin |
+
+### /public — 6 (solo lectura, sin autenticación)
+
+Consulta pública para JEBO Fixture. Solo admite `GET`, `HEAD` y `OPTIONS`: los
+demás métodos responden `405`. Tiene rate limit propio (600 solicitudes cada 15
+minutos por IP), CORS sin credenciales y `Cache-Control: public, max-age=30`. No
+devuelve datos de alumnos, profesores, árbitros ni jueces.
+
+| Método | Ruta | Parámetros |
+|--------|------|------------|
+| `GET` | `/public/regions` | — |
+| `GET` | `/public/disciplines` | — |
+| `GET` | `/public/tournaments` | `id_region`, `id_disciplina` |
+| `GET` | `/public/tournaments/:id/stages` | — |
+| `GET` | `/public/fixture` | `id_region`, `id_disciplina`, `id_torneo`, `id_etapa`, `desde`, `hasta` (`AAAA-MM-DD`), `estado` (lista separada por comas), `limite` (máx. 500) |
+| `GET` | `/public/summary` | los mismos filtros que `/public/fixture` |
+
+`/public/fixture` une partidos (`tipo: PARTIDO`) y presentaciones
+(`tipo: PRESENTACION`) en una sola lista ordenada por fecha y hora de juego. Los
+estados se normalizan a `PROGRAMADO`, `PENDIENTE`, `EN_JUEGO`, `FINALIZADO`,
+`SUSPENDIDO` y `CANCELADO`. Un encuentro pertenece a una región si alguno de sus
+equipos es de una localidad de esa región (la del equipo o, si no tiene, la de su
+institución) o si su instancia de etapa tiene esa región como territorio.
 
 ### /auth — 7
 

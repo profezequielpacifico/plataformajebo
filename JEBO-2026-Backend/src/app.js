@@ -6,11 +6,14 @@ const cookieParser = require('cookie-parser');
 const { env } = require('./config');
 const { errorHandler, generalLimiter } = require('./middleware');
 const routes = require('./routes');
+const publicRoutes = require('./routes/public.routes');
 
 const app = express();
 
 app.set('trust proxy', env.trustProxy);
 app.use(helmet());
+
+app.use('/public', publicRoutes);
 
 const corsConCredenciales = {
   credentials: true,
