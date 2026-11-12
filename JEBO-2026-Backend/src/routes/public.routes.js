@@ -42,6 +42,7 @@ router.use(publicLimiter);
 
 router.use((_req, res, next) => {
   res.set('Cache-Control', 'public, max-age=30');
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 });
 

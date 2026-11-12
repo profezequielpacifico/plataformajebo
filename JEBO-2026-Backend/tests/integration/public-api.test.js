@@ -263,6 +263,7 @@ describe('API publica de solo lectura', () => {
     expect(res.headers['access-control-allow-origin']).toBe('*');
     expect(res.headers['access-control-allow-credentials']).toBeUndefined();
     expect(res.headers['cache-control']).toBe('public, max-age=30');
+    expect(res.headers['cross-origin-resource-policy']).toBe('cross-origin');
   });
 
   it('no abre las rutas privadas existentes', async () => {
