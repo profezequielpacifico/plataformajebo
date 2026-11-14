@@ -110,19 +110,6 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  fixture-tunel:
-    image: cloudflare/cloudflared:2025.10.0
-    container_name: jebo-fixture-tunel
-    restart: unless-stopped
-    depends_on:
-      - fixture
-    command: tunnel --no-autoupdate --url http://fixture:80
-    read_only: true
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-
 volumes:
   jebo_pgdata:
   jebo_uploads:
