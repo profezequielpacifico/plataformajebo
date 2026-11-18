@@ -1,5 +1,6 @@
 const knex = require('../config/knex');
 const alcanceService = require('../services/alcance.service');
+const { ESTADOS_PARTIDO } = require('../constants');
 
 module.exports = {
   dashboard: async (alc) => {
@@ -24,7 +25,11 @@ module.exports = {
         .count('* as count')
         .first(),
       alcanceService
-        .filtrarPorEquipos(knex('partido'), alc, ['partido.id_equipo_local', 'partido.id_equipo_visitante'])
+        .filtrarPorEquipos(
+          knex('partido').where('partido.estado', ESTADOS_PARTIDO.FINALIZADO),
+          alc,
+          ['partido.id_equipo_local', 'partido.id_equipo_visitante']
+        )
         .count('* as count')
         .first(),
       knex('usuario').where('estado', 'Activo').count('* as count').first()

@@ -62,13 +62,19 @@ export function StandingsPage() {
     const fetchStandings = async () => {
         try {
             setLoading(true);
-            const params = { limit: 100 };
+            const params = { limit: 100, include_cerradas: 'true' };
             if (selectedTournament) params.id_torneo = selectedTournament;
             if (selectedDiscipline) params.id_disciplina = selectedDiscipline;
             if (selectedRegion) params.id_region = selectedRegion;
 
-            const res = await teamService.getEnrolled(params);
-            const list = Array.isArray(res) ? res : (res?.data || res?.rows || []);
+            const list = [];
+            for (let page = 1; ; page++) {
+                const res = await teamService.getEnrolled({ ...params, page });
+                const lote = Array.isArray(res) ? res : (res?.data || res?.rows || []);
+                list.push(...lote);
+                const totalPages = res?.pagination?.totalPages || 1;
+                if (Array.isArray(res) || page >= totalPages || lote.length === 0) break;
+            }
             setStandingsData(list);
         } catch (error) {
             console.error("Error fetching standings", error);
