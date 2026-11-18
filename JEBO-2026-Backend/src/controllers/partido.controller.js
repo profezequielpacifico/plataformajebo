@@ -31,9 +31,9 @@ class PartidoController {
 
   async findAll(req, res, next) {
     try {
-      const { page, limit, id_torneo, id_equipo, fecha_desde, fecha_hasta, estado } = req.query;
+      const { page, limit, id_torneo, id_equipo, id_equipo_rival, id_region, fecha_desde, fecha_hasta, estado } = req.query;
       const result = await partidoService.findAll({
-        page, limit, id_torneo, id_equipo, fecha_desde, fecha_hasta, estado,
+        page, limit, id_torneo, id_equipo, id_equipo_rival, id_region, fecha_desde, fecha_hasta, estado,
 
         alcance: req.alcance
       });

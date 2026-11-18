@@ -16,6 +16,9 @@ router.get('/', authenticate, [
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('id_torneo').optional().isInt(),
+  query('id_equipo').optional().isInt({ min: 1 }).withMessage('Equipo inválido'),
+  query('id_equipo_rival').optional().isInt({ min: 1 }).withMessage('Equipo inválido'),
+  query('id_region').optional().isInt({ min: 1 }).withMessage('Región inválida'),
   query('estado').optional().isString().withMessage('Estado inválido')
 ], validate, partidoController.findAll);
 

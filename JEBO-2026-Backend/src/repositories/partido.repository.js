@@ -51,16 +51,31 @@ function baseQuery() {
     .leftJoin('horarios_cancha as hc', 'fh.id_horario_cancha', 'hc.id_horario_cancha');
 }
 
-const aplicarFiltros = (query, { id_torneo, id_equipo, fecha_desde, fecha_hasta, estado, id_disciplina, id_usuario_arbitro, alcance }) => {
+const aplicarFiltros = (query, { id_torneo, id_equipo, id_equipo_rival, id_region, fecha_desde, fecha_hasta, estado, id_disciplina, id_usuario_arbitro, alcance }) => {
 
   alcanceService.filtrarPorEquipos(query, alcance, ['p.id_equipo_local', 'p.id_equipo_visitante']);
 
   if (id_torneo) query.where('p.id_torneo', id_torneo);
   if (id_disciplina) query.where('t.id_disciplina', id_disciplina);
-  if (id_equipo) {
+  if (id_region) {
+    query.whereExists(function () {
+      this.select(1)
+        .from('equipo as er')
+        .join('localidad as lr', 'er.id_localidad', 'lr.id_localidad')
+        .whereRaw('er.id_equipo IN (p.id_equipo_local, p.id_equipo_visitante)')
+        .where('lr.id_region', id_region);
+    });
+  }
+  if (id_equipo && id_equipo_rival) {
     query.where(function () {
-      this.where('p.id_equipo_local', id_equipo)
-        .orWhere('p.id_equipo_visitante', id_equipo);
+      this.where({ 'p.id_equipo_local': id_equipo, 'p.id_equipo_visitante': id_equipo_rival })
+        .orWhere({ 'p.id_equipo_local': id_equipo_rival, 'p.id_equipo_visitante': id_equipo });
+    });
+  } else if (id_equipo || id_equipo_rival) {
+    const equipo = id_equipo || id_equipo_rival;
+    query.where(function () {
+      this.where('p.id_equipo_local', equipo)
+        .orWhere('p.id_equipo_visitante', equipo);
     });
   }
   if (id_usuario_arbitro) {
