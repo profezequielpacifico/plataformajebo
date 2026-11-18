@@ -47,9 +47,9 @@ class PartidoController {
 
   async findMios(req, res, next) {
     try {
-      const { page, limit, id_torneo, id_disciplina, estado } = req.query;
+      const { page, limit, id_torneo, id_disciplina, id_equipo, id_equipo_rival, id_region, estado } = req.query;
       const result = await partidoService.findMios(
-        { page, limit, id_torneo, id_disciplina, estado, alcance: req.alcance },
+        { page, limit, id_torneo, id_disciplina, id_equipo, id_equipo_rival, id_region, estado, alcance: req.alcance },
         this._context(req)
       );
       res.status(HTTP_STATUS.OK).json(

@@ -1,10 +1,12 @@
 const { validationResult } = require('express-validator');
 const router = require('../../src/routes/partido.routes');
 
-const capaListado = router.stack.find((l) => l.route && l.route.path === '/' && l.route.methods.get);
-const cadenas = capaListado.route.stack.map((s) => s.handle).filter((fn) => typeof fn.run === 'function');
+const cadenasDe = (path) => router.stack
+  .find((l) => l.route && l.route.path === path && l.route.methods.get)
+  .route.stack.map((s) => s.handle)
+  .filter((fn) => typeof fn.run === 'function');
 
-async function errores(query) {
+async function erroresEn(cadenas, query) {
   const req = { query };
   for (const chain of cadenas) {
     await chain.run(req);
@@ -12,7 +14,12 @@ async function errores(query) {
   return validationResult(req).array().map((e) => e.msg);
 }
 
-describe('GET /matches — filtros de region y equipos', () => {
+describe.each([
+  ['GET /matches', '/'],
+  ['GET /matches/mios', '/mios']
+])('%s — filtros de region y equipos', (_nombre, path) => {
+  const errores = (query) => erroresEn(cadenasDe(path), query);
+
   it('acepta region, equipo A y equipo B numericos', async () => {
     expect(await errores({ id_region: '3', id_equipo: '10', id_equipo_rival: '11' })).toEqual([]);
   });

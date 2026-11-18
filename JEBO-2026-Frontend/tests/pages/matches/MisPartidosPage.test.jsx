@@ -5,7 +5,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MisPartidosPage } from '../../../src/pages/matches/MisPartidosPage.js';
 import matchService from '../../../src/services/matchService.js';
 import tournamentService from '../../../src/services/tournamentService.js';
-import disciplineService from '../../../src/services/disciplineService.js';
+import regionService from '../../../src/services/regionService.js';
+import teamService from '../../../src/services/teamService.js';
 
 vi.mock('../../../src/services/matchService.js', () => ({
   default: { getMine: vi.fn(), updateStatus: vi.fn(), updateResult: vi.fn() }
@@ -13,8 +14,11 @@ vi.mock('../../../src/services/matchService.js', () => ({
 vi.mock('../../../src/services/tournamentService.js', () => ({
   default: { getAll: vi.fn() }
 }));
-vi.mock('../../../src/services/disciplineService.js', () => ({
+vi.mock('../../../src/services/regionService.js', () => ({
   default: { getAll: vi.fn() }
+}));
+vi.mock('../../../src/services/teamService.js', () => ({
+  default: { getEnrolled: vi.fn() }
 }));
 
 const HOY = (() => {
@@ -78,11 +82,18 @@ const PARTIDOS = [
   }
 ];
 
-const DISCIPLINAS = { data: [{ id_disciplina: 1, nombre: 'Fútbol 5' }, { id_disciplina: 2, nombre: 'Vóley' }] };
 const TORNEOS = {
   data: [
-    { id_torneo: 1, nombre: 'Torneo Otoño', id_disciplina: 1, disciplina_nombre: 'Fútbol 5' },
-    { id_torneo: 2, nombre: 'Copa Primavera', idDisciplina: 2, disciplina_nombre: 'Vóley' }
+    { id_torneo: 1, nombre: 'Torneo Otoño', id_disciplina: 1, disciplina_nombre: 'Fútbol 5', estado: 'En Progreso' },
+    { id_torneo: 2, nombre: 'Copa Primavera', idDisciplina: 2, disciplina_nombre: 'Vóley' },
+    { id_torneo: 3, nombre: 'Copa Cerrada', id_disciplina: 3, disciplina_nombre: 'Básquet', estado: 'Finalizado' }
+  ]
+};
+const REGIONES = { data: [{ id_region: 1, nombre: 'Región I' }, { id_region: 2, nombre: 'Región II' }] };
+const INSCRIPTOS = {
+  data: [
+    { id_equipo: 10, equipo_nombre: 'Leones', id_region: 1 },
+    { id_equipo: 11, equipo_nombre: 'Tigres', id_region: 1 }
   ]
 };
 
@@ -93,7 +104,8 @@ describe('MisPartidosPage', () => {
     matchService.updateStatus.mockResolvedValue({});
     matchService.updateResult.mockResolvedValue({});
     tournamentService.getAll.mockResolvedValue(TORNEOS);
-    disciplineService.getAll.mockResolvedValue(DISCIPLINAS);
+    regionService.getAll.mockResolvedValue(REGIONES);
+    teamService.getEnrolled.mockResolvedValue(INSCRIPTOS);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
@@ -142,7 +154,7 @@ describe('MisPartidosPage', () => {
     renderPage({ user: { rol: 'Administrador' } });
     await esperarCarga();
 
-    expect(screen.getByText('Todos los partidos con filtros por deporte, torneo y estado')).toBeInTheDocument();
+    expect(screen.getByText('Todos los partidos con filtros por región, torneo, equipos y estado')).toBeInTheDocument();
   });
 
   it('muestra los datos de cada partido y deja los vacíos como guion', async () => {
@@ -187,59 +199,75 @@ describe('MisPartidosPage', () => {
     expect(await screen.findByText('No hay partidos para los filtros seleccionados')).toBeInTheDocument();
   });
 
-  it('filtra por disciplina, torneo y estado', async () => {
-    const user = userEvent.setup();
+  it('muestra los mismos filtros que la lista de partidos y ninguno mas', async () => {
     renderPage();
     await esperarCarga();
-    matchService.getMine.mockClear();
-    const [deportes, torneos] = screen.getAllByRole('combobox');
 
-    await user.selectOptions(deportes, '1');
+    const nombres = screen.getAllByRole('combobox').map(c => c.getAttribute('aria-label'));
+    expect(nombres).toEqual(['Región', 'Torneo', 'Equipo A', 'Equipo B', 'Estado']);
+    expect(screen.queryByDisplayValue('Todos los deportes')).not.toBeInTheDocument();
+  });
+
+  it('filtra por region, torneo, equipos y estado', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('option', { name: 'Región II' });
+    await screen.findByRole('option', { name: /Torneo Otoño/ });
+
+    await user.selectOptions(screen.getByLabelText('Región'), '1');
+    await user.selectOptions(screen.getByLabelText('Torneo'), '1');
     await waitFor(() =>
-      expect(matchService.getMine).toHaveBeenLastCalledWith({ limit: 100, id_disciplina: '1' })
+      expect(teamService.getEnrolled).toHaveBeenCalledWith({
+        id_torneo: '1', limit: 100, include_cerradas: 'true', id_region: '1'
+      })
     );
+    await within(screen.getByLabelText('Equipo A')).findByRole('option', { name: 'Leones' });
+    await user.selectOptions(screen.getByLabelText('Equipo A'), '10');
+    await user.selectOptions(screen.getByLabelText('Equipo B'), '11');
+    await user.selectOptions(screen.getByLabelText('Estado'), 'Pendiente');
 
-    await user.selectOptions(torneos, '1');
-    await waitFor(() =>
-      expect(matchService.getMine).toHaveBeenLastCalledWith({ limit: 100, id_disciplina: '1', id_torneo: '1' })
-    );
-
-    await user.selectOptions(screen.getAllByRole('combobox')[2], 'Pendiente');
     await waitFor(() =>
       expect(matchService.getMine).toHaveBeenLastCalledWith({
         limit: 100,
-        id_disciplina: '1',
+        id_region: '1',
         id_torneo: '1',
+        id_equipo: '10',
+        id_equipo_rival: '11',
         estado: 'Pendiente'
       })
     );
   });
 
-  it('filtra los torneos por la disciplina elegida', async () => {
-    const user = userEvent.setup();
+  it('solo ofrece los torneos activos', async () => {
     renderPage();
-    await esperarCarga();
+    await screen.findByRole('option', { name: /Torneo Otoño/ });
+    const labels = within(screen.getByLabelText('Torneo')).getAllByRole('option').map(o => o.textContent);
 
-    const [, select] = screen.getAllByRole('combobox');
-    await user.selectOptions(screen.getAllByRole('combobox')[0], '1');
-
-    expect(within(select).getByRole('option', { name: /Torneo Otoño/ })).toBeInTheDocument();
-    expect(within(select).queryByRole('option', { name: /Copa Primavera/ })).not.toBeInTheDocument();
+    expect(labels.some(l => l.includes('Copa Primavera'))).toBe(true);
+    expect(labels.some(l => l.includes('Copa Cerrada'))).toBe(false);
   });
 
-  it('limpia el torneo al cambiar de disciplina', async () => {
-    const user = userEvent.setup();
+  it('deshabilita los equipos hasta elegir un torneo', async () => {
     renderPage();
     await esperarCarga();
-    const [deportes, torneos] = screen.getAllByRole('combobox');
 
-    await user.selectOptions(deportes, '1');
-    await user.selectOptions(torneos, '1');
-    await user.selectOptions(deportes, '2');
+    expect(screen.getByLabelText('Equipo A')).toBeDisabled();
+    expect(screen.getByLabelText('Equipo B')).toBeDisabled();
+    expect(teamService.getEnrolled).not.toHaveBeenCalled();
+  });
 
-    expect(torneos).toHaveValue('');
+  it('limpia los equipos al cambiar de torneo', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('option', { name: /Torneo Otoño/ });
+    await user.selectOptions(screen.getByLabelText('Torneo'), '1');
+    await within(screen.getByLabelText('Equipo A')).findByRole('option', { name: 'Leones' });
+    await user.selectOptions(screen.getByLabelText('Equipo A'), '10');
+    await user.selectOptions(screen.getByLabelText('Torneo'), '2');
+
+    expect(screen.getByLabelText('Equipo A')).toHaveValue('');
     await waitFor(() =>
-      expect(matchService.getMine).toHaveBeenLastCalledWith({ limit: 100, id_disciplina: '2' })
+      expect(matchService.getMine).toHaveBeenLastCalledWith({ limit: 100, id_torneo: '2' })
     );
   });
 
@@ -379,14 +407,15 @@ describe('MisPartidosPage', () => {
   });
 
   it('no rompe cuando las listas de filtros vienen vacias o con otra forma', async () => {
-    disciplineService.getAll.mockResolvedValue({});
+    regionService.getAll.mockResolvedValue({});
     tournamentService.getAll.mockResolvedValue(null);
     matchService.getMine.mockResolvedValue(null);
 
     renderPage();
 
     expect(await screen.findByText('No hay partidos para los filtros seleccionados')).toBeInTheDocument();
-    expect(within(screen.getByDisplayValue('Todos los deportes')).getAllByRole('option')).toHaveLength(1);
+    expect(within(screen.getByLabelText('Región')).getAllByRole('option')).toHaveLength(1);
+    expect(within(screen.getByLabelText('Torneo')).getAllByRole('option')).toHaveLength(1);
   });
 
   it('registra el error si no se pueden cargar los partidos', async () => {
@@ -398,13 +427,13 @@ describe('MisPartidosPage', () => {
   });
 
   it('registra el error si no se pueden cargar los filtros', async () => {
-    disciplineService.getAll.mockRejectedValue(new Error('Fallo'));
-    tournamentService.getAll.mockRejectedValue(new Error('Fallo'));
+    regionService.getAll.mockRejectedValue(new Error('Fallo regiones'));
+    tournamentService.getAll.mockRejectedValue(new Error('Fallo torneos'));
 
     renderPage();
     await esperarCarga();
 
-    expect(console.error).toHaveBeenCalledWith('Error loading disciplines:', expect.any(Error));
-    expect(console.error).toHaveBeenCalledWith('Error loading tournaments:', expect.any(Error));
+    await waitFor(() => expect(console.error).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('table')).toBeInTheDocument();
   });
 });

@@ -6,22 +6,10 @@ import { Table, TableHeader, TableHeaderCell, TableRow, TableCell, TableActions 
 import { IconPlus, IconEdit, IconTrash, IconEye } from '../../components/icons/index.js';
 import matchService from '../../services/matchService.js';
 import { formatearFecha } from '../../services/dateService.js';
-import tournamentService from '../../services/tournamentService.js';
-import regionService from '../../services/regionService.js';
-import teamService from '../../services/teamService.js';
-import { soloTorneosConPartidos } from '../../services/tiposCompetencia.js';
+import { useFiltrosPartidos, paramsDeFiltros, renderFiltrosPartidos } from '../../components/matches/FiltrosPartidos.js';
 import '../../styles/components.css';
 
 const { createElement: h } = React;
-
-const ESTADOS_TORNEO_CERRADO = ['finalizado', 'cancelado'];
-
-const lista = (res) => {
-    const data = res?.data ?? res;
-    return Array.isArray(data) ? data : [];
-};
-
-const comboStyle = (width) => ({ ...styles.formSelect, width, maxWidth: '100%', flexGrow: 1, marginBottom: 0 });
 
 function getBadgeVariant(status) {
     const s = (status || '').toLowerCase();
@@ -33,44 +21,10 @@ function getBadgeVariant(status) {
     return 'yellow';
 }
 
-function loadTournaments(setTournaments) {
-    tournamentService.getAll(1, 100).then(res => {
-        const activos = lista(res).filter(t => !ESTADOS_TORNEO_CERRADO.includes(String(t.estado || '').toLowerCase()));
-        setTournaments(soloTorneosConPartidos(activos));
-    }).catch(err => console.error(err));
-}
-
-function loadRegions(setRegions) {
-    regionService.getAll({ limit: 100 }).then(res => {
-        setRegions(lista(res).slice().sort((a, b) => a.id_region - b.id_region));
-    }).catch(err => console.error(err));
-}
-
-function loadTeams(torneo, region, setTeams) {
-    if (!torneo) {
-        setTeams([]);
-        return;
-    }
-    const params = { id_torneo: torneo, limit: 100, include_cerradas: 'true' };
-    if (region) params.id_region = region;
-    teamService.getEnrolled(params).then(res => {
-        setTeams(lista(res).slice().sort((a, b) => String(a.equipo_nombre).localeCompare(String(b.equipo_nombre), 'es', { numeric: true })));
-    }).catch(err => {
-        console.error(err);
-        setTeams([]);
-    });
-}
-
 async function loadMatches(filtros, setMatches, setLoading) {
     try {
         setLoading(true);
-        const params = { limit: 100 };
-        if (filtros.estado) params.estado = filtros.estado;
-        if (filtros.torneo) params.id_torneo = filtros.torneo;
-        if (filtros.region) params.id_region = filtros.region;
-        if (filtros.equipoA) params.id_equipo = filtros.equipoA;
-        if (filtros.equipoB) params.id_equipo_rival = filtros.equipoB;
-        const res = await matchService.getAll(params);
+        const res = await matchService.getAll(paramsDeFiltros(filtros));
         const data = res.data || res || [];
         setMatches(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -89,72 +43,9 @@ async function deleteMatch(match, setMatches) {
     }
 }
 
-function renderTeamCombo({ label, value, teams, excluir, disabled, onChange }) {
-    return h('select', {
-        value,
-        disabled,
-        'aria-label': label,
-        title: disabled ? 'Elegí un torneo para ver sus equipos' : label,
-        onChange: (e) => onChange(e.target.value),
-        style: comboStyle('220px')
-    },
-        h('option', { value: '' }, disabled ? `${label}: elegí un torneo` : `${label}: todos`),
-        teams
-            .filter(t => String(t.id_equipo) !== String(excluir))
-            .map(t => h('option', { key: t.id_equipo, value: String(t.id_equipo) }, t.equipo_nombre))
-    );
-}
-
-function renderFilters({ filtros, cambiar, regions, tournaments, teams, onNavigate }) {
-    const sinTorneo = !filtros.torneo;
+function renderFilters({ filtrosPartidos, onNavigate }) {
     return h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
-        h('select', {
-            value: filtros.region,
-            'aria-label': 'Región',
-            onChange: (e) => cambiar({ region: e.target.value, equipoA: '', equipoB: '' }),
-            style: comboStyle('170px')
-        },
-            h('option', { value: '' }, 'Todas las regiones'),
-            regions.map(r => h('option', { key: r.id_region, value: String(r.id_region) }, r.nombre))
-        ),
-        h('select', {
-            value: filtros.torneo,
-            'aria-label': 'Torneo',
-            onChange: (e) => cambiar({ torneo: e.target.value, equipoA: '', equipoB: '' }),
-            style: comboStyle('220px')
-        },
-            h('option', { value: '' }, 'Todos los torneos activos'),
-            tournaments.map(t => h('option', { key: t.id_torneo || t.id, value: String(t.id_torneo || t.id) }, `${t.nombre || t.name} (${t.disciplina_nombre || ''})`))
-        ),
-        renderTeamCombo({
-            label: 'Equipo A',
-            value: filtros.equipoA,
-            teams,
-            excluir: filtros.equipoB,
-            disabled: sinTorneo,
-            onChange: (v) => cambiar({ equipoA: v })
-        }),
-        renderTeamCombo({
-            label: 'Equipo B',
-            value: filtros.equipoB,
-            teams,
-            excluir: filtros.equipoA,
-            disabled: sinTorneo,
-            onChange: (v) => cambiar({ equipoB: v })
-        }),
-        h('select', {
-            value: filtros.estado,
-            'aria-label': 'Estado',
-            onChange: (e) => cambiar({ estado: e.target.value }),
-            style: comboStyle('160px')
-        },
-            h('option', { value: '' }, 'Todos los estados'),
-            h('option', { value: 'Pendiente' }, 'Pendiente'),
-            h('option', { value: 'Programado' }, 'Programado'),
-            h('option', { value: 'En Juego' }, 'En Juego'),
-            h('option', { value: 'Finalizado' }, 'Finalizado'),
-            h('option', { value: 'Cancelado' }, 'Cancelado')
-        ),
+        renderFiltrosPartidos(filtrosPartidos),
         h('button', { style: styles.buttonPrimary, onClick: () => onNavigate('matches-new') }, h(IconPlus), 'Nuevo Partido')
     );
 }
@@ -221,21 +112,9 @@ function renderMatchesTable({ loading, matches, onNavigate, setMatches }) {
 
 export function MatchListPage({ onNavigate }) {
     const [matches, setMatches] = useState([]);
-    const [tournaments, setTournaments] = useState([]);
-    const [regions, setRegions] = useState([]);
-    const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filtros, setFiltros] = useState({ region: '', torneo: '', equipoA: '', equipoB: '', estado: '' });
-    const cambiar = (parcial) => setFiltros(prev => ({ ...prev, ...parcial }));
-
-    useEffect(() => {
-        loadTournaments(setTournaments);
-        loadRegions(setRegions);
-    }, []);
-
-    useEffect(() => {
-        loadTeams(filtros.torneo, filtros.region, setTeams);
-    }, [filtros.torneo, filtros.region]);
+    const filtrosPartidos = useFiltrosPartidos();
+    const { filtros } = filtrosPartidos;
 
     useEffect(() => {
         loadMatches(filtros, setMatches, setLoading);
@@ -248,7 +127,7 @@ export function MatchListPage({ onNavigate }) {
 
         h(Card, null,
             h(CardHeader, { title: 'Partidos' },
-                renderFilters({ filtros, cambiar, regions, tournaments, teams, onNavigate })
+                renderFilters({ filtrosPartidos, onNavigate })
             ),
 
             renderMatchesTable({ loading, matches, onNavigate, setMatches })

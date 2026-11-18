@@ -7,8 +7,7 @@ import { Table, TableHeader, TableHeaderCell, TableRow, TableCell } from '../../
 import { IconGamepad } from '../../components/icons/index.js';
 import matchService from '../../services/matchService.js';
 import { estadoFechaPartido, formatearFecha } from '../../services/dateService.js';
-import tournamentService from '../../services/tournamentService.js';
-import disciplineService from '../../services/disciplineService.js';
+import { useFiltrosPartidos, paramsDeFiltros, renderFiltrosPartidos } from '../../components/matches/FiltrosPartidos.js';
 import { ROUTES } from '../../config/constants.js';
 import { esAdministrador } from '../../services/roles.js';
 
@@ -23,27 +22,9 @@ function getBadgeVariant(status) {
     return 'yellow';
 }
 
-function loadDisciplines(setDisciplines) {
-    disciplineService.getAll().then(res => {
-        const data = res.data || res || [];
-        setDisciplines(Array.isArray(data) ? data : []);
-    }).catch(err => console.error('Error loading disciplines:', err));
-}
-
-function loadTournaments(setTournaments) {
-    tournamentService.getAll(1, 100).then(res => {
-        const data = res.data || res || [];
-        setTournaments(Array.isArray(data) ? data : []);
-    }).catch(err => console.error('Error loading tournaments:', err));
-}
-
-function loadMatches(filters, setMatches, setLoading) {
+function loadMatches(filtros, setMatches, setLoading) {
     setLoading(true);
-    const params = { limit: 100 };
-    if (filters.id_disciplina) params.id_disciplina = filters.id_disciplina;
-    if (filters.id_torneo) params.id_torneo = filters.id_torneo;
-    if (filters.estado) params.estado = filters.estado;
-    matchService.getMine(params)
+    matchService.getMine(paramsDeFiltros(filtros))
         .then(res => {
             const data = res.data || res || [];
             setMatches(Array.isArray(data) ? data : []);
@@ -52,48 +33,9 @@ function loadMatches(filters, setMatches, setLoading) {
         .finally(() => setLoading(false));
 }
 
-function getFilteredTournaments(tournaments, idDisciplina) {
-    if (!idDisciplina) return tournaments;
-    return tournaments.filter(t => String(t.id_disciplina || t.idDisciplina) === String(idDisciplina));
-}
-
-function renderEstadoOptions() {
-    return [
-        h('option', { value: '' }, 'Todos los estados'),
-        h('option', { value: 'Pendiente' }, 'Pendiente'),
-        h('option', { value: 'Programado' }, 'Programado'),
-        h('option', { value: 'En Juego' }, 'En Juego'),
-        h('option', { value: 'Finalizado' }, 'Finalizado'),
-        h('option', { value: 'Cancelado' }, 'Cancelado')
-    ];
-}
-
-function renderFilters({ filters, setFilters, disciplines, tournaments, onRefresh }) {
-    const filteredTournaments = getFilteredTournaments(tournaments, filters.id_disciplina);
+function renderFilters({ filtrosPartidos, onRefresh }) {
     return h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
-        h('select', {
-            value: filters.id_disciplina,
-            onChange: (e) => setFilters({ id_disciplina: e.target.value, id_torneo: '', estado: filters.estado }),
-            style: { ...styles.formSelect, width: '200px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
-        },
-            h('option', { value: '' }, 'Todos los deportes'),
-            disciplines.map(d => h('option', { key: d.id_disciplina, value: String(d.id_disciplina) }, d.nombre))
-        ),
-        h('select', {
-            value: filters.id_torneo,
-            onChange: (e) => setFilters({ ...filters, id_torneo: e.target.value }),
-            style: { ...styles.formSelect, width: '220px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
-        },
-            h('option', { value: '' }, 'Todos los torneos'),
-            filteredTournaments.map(t => h('option', { key: t.id_torneo || t.id, value: String(t.id_torneo || t.id) }, `${t.nombre || t.name} (${t.disciplina_nombre || ''})`))
-        ),
-        h('select', {
-            value: filters.estado,
-            onChange: (e) => setFilters({ ...filters, estado: e.target.value }),
-            style: { ...styles.formSelect, width: '160px', maxWidth: '100%', flexGrow: 1, marginBottom: 0 }
-        },
-            renderEstadoOptions()
-        ),
+        renderFiltrosPartidos(filtrosPartidos),
         h('button', { style: styles.buttonPrimary, onClick: () => onRefresh() }, h(IconGamepad, { size: 16 }), 'Actualizar')
     );
 }
@@ -311,22 +253,16 @@ function useMatchActions(refresh, onNavigate) {
 export function MisPartidosPage({ user, onNavigate }) {
     const isAdmin = esAdministrador(user);
     const subtitle = isAdmin
-        ? 'Todos los partidos con filtros por deporte, torneo y estado'
+        ? 'Todos los partidos con filtros por región, torneo, equipos y estado'
         : 'Partidos donde estás asignado como árbitro';
-    const [disciplines, setDisciplines] = useState([]);
-    const [tournaments, setTournaments] = useState([]);
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState({ id_disciplina: '', id_torneo: '', estado: '' });
+    const filtrosPartidos = useFiltrosPartidos();
+    const { filtros } = filtrosPartidos;
 
     const refresh = useCallback(() => {
-        loadMatches(filters, setMatches, setLoading);
-    }, [filters]);
-
-    useEffect(() => {
-        loadDisciplines(setDisciplines);
-        loadTournaments(setTournaments);
-    }, []);
+        loadMatches(filtros, setMatches, setLoading);
+    }, [filtros]);
 
     useEffect(() => {
         refresh();
@@ -346,7 +282,7 @@ export function MisPartidosPage({ user, onNavigate }) {
         ),
         h(Card, null,
             h(CardHeader, { title: 'Mis Partidos' },
-                renderFilters({ filters, setFilters, disciplines, tournaments, onRefresh: refresh })
+                renderFilters({ filtrosPartidos, onRefresh: refresh })
             ),
             renderMatchesTable({
                 loading,
