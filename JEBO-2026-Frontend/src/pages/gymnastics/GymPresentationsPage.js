@@ -4,7 +4,7 @@ import { Card, CardHeader } from '../../components/ui/Card.js';
 import { Badge } from '../../components/ui/Badge.js';
 import { Modal, Notification } from '../../components/ui/Modal.js';
 import { Table, TableHeader, TableHeaderCell, TableRow, TableCell, TableActions } from '../../components/ui/Table.js';
-import { IconPlus, IconTrash, IconEye } from '../../components/icons/index.js';
+import { IconPlus, IconTrash, IconEye, IconEdit } from '../../components/icons/index.js';
 import presentacionService from '../../services/presentacionService.js';
 import tournamentService from '../../services/tournamentService.js';
 import disciplineService from '../../services/disciplineService.js';
@@ -23,8 +23,31 @@ const modalFormStyle = {
     overflowY: 'auto'
 };
 
-function FormNuevoEncuentro({ torneo, equipos, jueces, cargandoEquipos, onElegirTorneo, onCancelar, onGuardar, guardando }) {
-    const [form, setForm] = useState({ id_torneo: '', orden: '', fecha_hora: '', equipo: '', jueces: [] });
+function aFechaHoraLocal(valor) {
+    if (!valor) return '';
+    const d = new Date(valor);
+    if (isNaN(d.getTime())) return '';
+    const dos = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}T${dos(d.getHours())}:${dos(d.getMinutes())}`;
+}
+
+function formDesdePresentacion(p) {
+    if (!p) return { id_torneo: '', orden: '', fecha_hora: '', equipo: '', jueces: [] };
+    const staff = (p.staff || [])
+        .filter(s => s.rol === 'JUEZ_PRESIDENTE' || s.rol === 'JUEZ')
+        .sort((a, b) => (a.rol === 'JUEZ_PRESIDENTE' ? -1 : 0) - (b.rol === 'JUEZ_PRESIDENTE' ? -1 : 0));
+    return {
+        id_torneo: String(p.id_torneo ?? ''),
+        orden: String(p.orden ?? ''),
+        fecha_hora: aFechaHoraLocal(p.fecha_hora),
+        equipo: p.participantes && p.participantes[0] ? String(p.participantes[0].id_equipo) : '',
+        jueces: staff.map(s => s.id_usuario)
+    };
+}
+
+function FormNuevoEncuentro({ torneo, equipos, jueces, cargandoEquipos, onElegirTorneo, onCancelar, onGuardar, guardando, inicial }) {
+    const editando = Boolean(inicial);
+    const [form, setForm] = useState(() => formDesdePresentacion(inicial));
 
     const cambiarTorneo = (id) => {
         setForm(f => ({ ...f, id_torneo: id, equipo: '' }));
@@ -64,6 +87,7 @@ function FormNuevoEncuentro({ torneo, equipos, jueces, cargandoEquipos, onElegir
                 h('select', {
                     value: form.id_torneo,
                     onChange: e => cambiarTorneo(e.target.value),
+                    disabled: editando,
                     style: styles.formSelect
                 },
                     h('option', { value: '' }, 'Elegir torneo...'),
@@ -149,7 +173,7 @@ function FormNuevoEncuentro({ torneo, equipos, jueces, cargandoEquipos, onElegir
                 style: styles.buttonPrimary,
                 disabled: faltaAlgo || guardando,
                 onClick: enviar
-            }, guardando ? 'Guardando...' : 'Crear encuentro')
+            }, guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear encuentro')
         )
     );
 }
@@ -194,6 +218,7 @@ function GymPresentationsPage({ onNavigate, user }) {
     const [notif, setNotif] = useState(null);
 
     const [modalAbierto, setModalAbierto] = useState(false);
+    const [presentacionAEditar, setPresentacionAEditar] = useState(null);
     const [equiposTorneo, setEquiposTorneo] = useState([]);
     const [cargandoEquipos, setCargandoEquipos] = useState(false);
     const [jueces, setJueces] = useState([]);
@@ -233,15 +258,38 @@ function GymPresentationsPage({ onNavigate, user }) {
 
     useEffect(() => { if (notif) { const t = setTimeout(() => setNotif(null), 3000); return () => clearTimeout(t); } }, [notif]);
 
-    const abrirAlta = async () => {
-        setModalAbierto(true);
-        setEquiposTorneo([]);
+    const cargarJueces = async () => {
         try {
             const ju = await userService.getAll({ rol: 'Juez' });
             setJueces(Array.isArray(ju) ? ju : ju.data || []);
         } catch (err) {
             setNotif({ message: 'No se pudo cargar el jurado: ' + err.message, type: 'error' });
         }
+    };
+
+    const abrirAlta = async () => {
+        setPresentacionAEditar(null);
+        setModalAbierto(true);
+        setEquiposTorneo([]);
+        await cargarJueces();
+    };
+
+    const abrirEdicion = async (p) => {
+        try {
+            const res = await presentacionService.getById(p.id_presentacion);
+            const detalle = res.data && res.data.id_presentacion ? res.data : res;
+            setEquiposTorneo([]);
+            setPresentacionAEditar(detalle);
+            setModalAbierto(true);
+            await Promise.all([cargarJueces(), onElegirTorneo(detalle.id_torneo)]);
+        } catch (err) {
+            setNotif({ message: 'No se pudo abrir el encuentro: ' + err.message, type: 'error' });
+        }
+    };
+
+    const cerrarModal = () => {
+        setModalAbierto(false);
+        setPresentacionAEditar(null);
     };
 
     const onElegirTorneo = async (idTorneo) => {
@@ -256,6 +304,21 @@ function GymPresentationsPage({ onNavigate, user }) {
             setNotif({ message: 'No se pudieron cargar los tríos: ' + err.message, type: 'error' });
         } finally {
             setCargandoEquipos(false);
+        }
+    };
+
+    const guardarEdicion = async (payload) => {
+        setGuardando(true);
+        try {
+            const { id_torneo, id_disciplina } = presentacionAEditar;
+            await presentacionService.update(presentacionAEditar.id_presentacion, { ...payload, id_torneo, id_disciplina });
+            cerrarModal();
+            setNotif({ message: 'Encuentro actualizado', type: 'success' });
+            await fetchPresentaciones();
+        } catch (err) {
+            setNotif({ message: 'No se pudo guardar: ' + err.message, type: 'error' });
+        } finally {
+            setGuardando(false);
         }
     };
 
@@ -367,6 +430,11 @@ function GymPresentationsPage({ onNavigate, user }) {
                         title: p.estado === 'EN_CURSO' ? 'Evaluar' : 'Ver hoja'
                     }, h(IconEye)),
                     esAdmin && p.estado === 'PROGRAMADA' && h('button', {
+                        style: { ...styles.buttonSuccess, padding: '6px' },
+                        onClick: () => abrirEdicion(p),
+                        title: 'Editar'
+                    }, h(IconEdit)),
+                    esAdmin && p.estado === 'PROGRAMADA' && h('button', {
                         style: { ...styles.buttonDanger, padding: '6px' },
                         onClick: () => pedirEliminar(p),
                         title: 'Eliminar'
@@ -435,19 +503,22 @@ function GymPresentationsPage({ onNavigate, user }) {
 
         modalAbierto && h('div', {
             style: styles.modalOverlay,
-            onClick: () => setModalAbierto(false)
+            onClick: cerrarModal
         },
             h('div', { style: modalFormStyle, onClick: e => e.stopPropagation() },
-                h('h3', { style: styles.modalTitle }, 'Nuevo encuentro'),
+                h('h3', { style: styles.modalTitle },
+                    presentacionAEditar ? `Editar encuentro N° ${presentacionAEditar.orden}` : 'Nuevo encuentro'),
                 h(FormNuevoEncuentro, {
-                    torneo: torneosEvaluacion,
+                    key: presentacionAEditar ? presentacionAEditar.id_presentacion : 'nuevo',
+                    torneo: presentacionAEditar ? tournaments : torneosEvaluacion,
                     equipos: equiposTorneo,
                     jueces,
                     cargandoEquipos,
                     onElegirTorneo,
                     guardando,
-                    onCancelar: () => setModalAbierto(false),
-                    onGuardar: guardarNueva
+                    inicial: presentacionAEditar,
+                    onCancelar: cerrarModal,
+                    onGuardar: presentacionAEditar ? guardarEdicion : guardarNueva
                 })
             )
         ),

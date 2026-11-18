@@ -38,6 +38,15 @@ class PresentacionService {
     return presentacion;
   }
 
+  async findByIdConDetalle(id, context = {}) {
+    const presentacion = await this.findById(id, context);
+    const [participantes, staff] = await Promise.all([
+      PresentacionParticipanteRepository.findByPresentacion(id),
+      StaffPresentacionRepository.findByPresentacion(id)
+    ]);
+    return { ...presentacion, participantes, staff };
+  }
+
   async create(data, context = {}) {
     const { id_torneo, id_disciplina, participantes, staff, ...resto } = data;
 
@@ -126,6 +135,13 @@ class PresentacionService {
     const { id_torneo, id_disciplina, participantes, staff, ...resto } = data;
 
     assertUnSoloTrio(participantes);
+
+    if (resto.orden) {
+      const existe = await PresentacionRepository.findAll({ id_torneo: presentacion.id_torneo, orden: resto.orden });
+      if (existe.some(p => p.id_presentacion !== presentacion.id_presentacion)) {
+        throw new BusinessError('Ya existe una presentación con ese orden en el torneo');
+      }
+    }
 
     const actualizada = await PresentacionRepository.update(id, resto);
 

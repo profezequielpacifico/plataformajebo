@@ -24,7 +24,7 @@ async function list(req, res, next) {
 async function getById(req, res, next) {
   try {
     const id = parseInt(req.params.id, 10);
-    const data = await presentacionService.findById(id, {
+    const data = await presentacionService.findByIdConDetalle(id, {
       userId: req.user.id_usuario,
       rol: req.user.rol
     });

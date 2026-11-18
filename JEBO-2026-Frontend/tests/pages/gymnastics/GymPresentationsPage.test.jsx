@@ -10,7 +10,7 @@ import userService from '../../../src/services/userService.js';
 import teamService from '../../../src/services/teamService.js';
 
 vi.mock('../../../src/services/presentacionService.js', () => ({
-  default: { getAll: vi.fn(), getById: vi.fn(), create: vi.fn(), updateEstado: vi.fn(), delete: vi.fn() }
+  default: { getAll: vi.fn(), getById: vi.fn(), create: vi.fn(), update: vi.fn(), updateEstado: vi.fn(), delete: vi.fn() }
 }));
 vi.mock('../../../src/services/tournamentService.js', () => ({
   default: { getAll: vi.fn() }
@@ -355,6 +355,57 @@ describe('pantallas de Gimnasia Artística', () => {
 
         expect(presentacionService.delete).not.toHaveBeenCalled();
         expect(screen.queryByRole('heading', { name: 'Eliminar presentación' })).not.toBeInTheDocument();
+      });
+    });
+
+    describe('edicion de la presentacion', () => {
+      const DETALLE = {
+        ...PRESENTACIONES[2],
+        fecha_hora: null,
+        participantes: [{ id_equipo: 6, rol: 'GRUPO', orden_salida: 1 }],
+        staff: [{ id_usuario: 41, rol: 'JUEZ_PRESIDENTE', nombre: 'Juez Uno' }]
+      };
+
+      beforeEach(() => {
+        presentacionService.getById.mockResolvedValue({ data: DETALLE });
+        presentacionService.update.mockResolvedValue({ data: DETALLE });
+      });
+
+      it('ofrece Editar solo en las programadas', async () => {
+        render(<GymPresentationsPage onNavigate={vi.fn()} user={ADMIN} />);
+        await screen.findByText('Trío A - Gimnasia');
+        expect(screen.getAllByTitle('Editar')).toHaveLength(2);
+      });
+
+      it('no le ofrece Editar al juez', async () => {
+        render(<GymPresentationsPage onNavigate={vi.fn()} user={JUEZ} />);
+        await screen.findByText('Trío A - Gimnasia');
+        expect(screen.queryByTitle('Editar')).not.toBeInTheDocument();
+      });
+
+      it('abre el formulario con los datos cargados y guarda los cambios', async () => {
+        const user = userEvent.setup();
+        presentacionService.getAll.mockResolvedValue({ data: [PRESENTACIONES[2]] });
+        render(<GymPresentationsPage onNavigate={vi.fn()} user={ADMIN} />);
+        await screen.findByText('PROGRAMADA');
+
+        await user.click(screen.getByTitle('Editar'));
+
+        expect(await screen.findByRole('heading', { name: 'Editar encuentro N° 3' })).toBeInTheDocument();
+        expect(screen.getByDisplayValue('3')).toBeInTheDocument();
+        await screen.findByRole('option', { name: 'Trío A — Escuela 1' });
+        expect(screen.getByRole('checkbox')).toBeChecked();
+
+        await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(presentacionService.update).toHaveBeenCalledWith(3, expect.objectContaining({
+          id_torneo: 32,
+          id_disciplina: 11,
+          orden: 3,
+          participantes: [{ id_equipo: 6, rol: 'GRUPO', orden_salida: 1 }],
+          staff: [{ id_usuario: 41, rol: 'JUEZ_PRESIDENTE' }]
+        })));
+        expect(await screen.findByText('Encuentro actualizado')).toBeInTheDocument();
       });
     });
 
