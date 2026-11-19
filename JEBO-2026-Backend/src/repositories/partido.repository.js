@@ -124,7 +124,7 @@ module.exports = {
   fechaDeHoy: () => knex.raw(
     "SELECT (now() AT TIME ZONE 'America/Argentina/Buenos_Aires')::date::text AS hoy"
   ).then(r => r.rows[0].hoy),
-  cerrarResultado: (id) => knex.raw(`
+  cerrarResultado: (id, db = knex) => db.raw(`
     UPDATE partido p
     SET goles_local     = COALESCE(m.puntos_local, 0),
         goles_visitante = COALESCE(m.puntos_visitante, 0),

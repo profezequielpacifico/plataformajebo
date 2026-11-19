@@ -497,6 +497,31 @@ describe('evento.service con sets', () => {
     expect(ER.anular).toHaveBeenCalled();
   });
 
+  it('anula bajo el lock del partido y lee los sets despues de tomarlo', async () => {
+    ER.findById.mockResolvedValue({ ...EVENTO, numero_periodo: 2 });
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'EN_JUEGO' }], 2));
+
+    await eventoService.anular(1, 500, { motivo_anulacion: 'error' }, ctx);
+
+    expect(knexMock.__trx.raw).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [1]);
+    const dentro = PS.estado.mock.calls.findIndex((c) => c[1] === knexMock.__trx);
+    expect(dentro).toBeGreaterThanOrEqual(0);
+    expect(knexMock.__trx.raw.mock.invocationCallOrder[0]).toBeLessThan(PS.estado.mock.invocationCallOrder[dentro]);
+    expect(ER.anular).toHaveBeenCalledWith(500, expect.objectContaining({ motivo_anulacion: 'error' }), knexMock.__trx);
+  });
+
+  it('si el resultado se cerro mientras esperaba el lock, no anula', async () => {
+    PR.findById
+      .mockResolvedValueOnce(partido({ marcador_por_periodos: true }))
+      .mockResolvedValue(partido({ marcador_por_periodos: true, resultado_cargado: true }));
+    ER.findById.mockResolvedValue({ ...EVENTO, numero_periodo: 2 });
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'CERRADO' }], null));
+
+    await expect(eventoService.anular(1, 500, { motivo_anulacion: 'error' }, ctx))
+      .rejects.toThrow('El resultado del partido ya está cerrado');
+    expect(ER.anular).not.toHaveBeenCalled();
+  });
+
   it('con el resultado cerrado no anula', async () => {
     PR.findById.mockResolvedValue(partido({ marcador_por_periodos: true, resultado_cargado: true }));
     ER.findById.mockResolvedValue({ ...EVENTO, numero_periodo: 2 });

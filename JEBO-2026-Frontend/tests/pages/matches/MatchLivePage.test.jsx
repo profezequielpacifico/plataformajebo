@@ -558,6 +558,33 @@ describe('MatchLivePage', () => {
       expect(await screen.findByRole('columnheader', { name: 'Set' })).toBeInTheDocument();
     });
 
+    it('solo deja anular los puntos del set en juego', async () => {
+      matchService.getLive.mockResolvedValue(EN_SET_2());
+      matchService.getEvents.mockResolvedValue(EVENTOS([
+        EVENTO({ id_evento: 2, numero_evento: 2, numero_periodo: 2 }),
+        EVENTO({ id_evento: 1, numero_evento: 1, numero_periodo: 1 })
+      ]));
+      renderPage();
+
+      const filas = await screen.findAllByRole('row');
+      const fila = (n) => filas.find((f) => within(f).queryByText(`#${n}`));
+      expect(within(fila(2)).getByRole('button', { name: 'Anular' })).toBeInTheDocument();
+      expect(within(fila(1)).queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument();
+    });
+
+    it('con el resultado cerrado no deja anular ningun punto', async () => {
+      matchService.getLive.mockResolvedValue(LIVE_SETS(
+        [set(1, 'CERRADO', 25, 20, 10), set(2, 'CERRADO', 25, 18, 10)],
+        { local: 2, jugados: 2, ganador: 10, definido: true },
+        { resultado_cargado: true }
+      ));
+      matchService.getEvents.mockResolvedValue(EVENTOS([EVENTO({ numero_periodo: 2 })]));
+      renderPage();
+
+      await screen.findByRole('columnheader', { name: 'Set' });
+      expect(screen.queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument();
+    });
+
     it('la recarga automatica no cierra el modal de confirmacion', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {

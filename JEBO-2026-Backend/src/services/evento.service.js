@@ -100,8 +100,8 @@ class EventoService {
     return sets.resumen.enJuego;
   }
 
-  async _assertPeriodoAbierto(partido, evento) {
-    const sets = await periodoService.estado(partido);
+  async _assertPeriodoAbierto(partido, evento, trx) {
+    const sets = await periodoService.estado(partido, trx);
     if (!sets) return;
     if (partido.resultado_cargado) {
       throw new BusinessError('El resultado del partido ya está cerrado');
@@ -118,6 +118,19 @@ class EventoService {
     return EventoRepository.findByPartido({ id_partido: idPartido, ...params });
   }
 
+  _anularEnSet(idPartido, idEvento, datos, context) {
+    return knex.transaction(async (trx) => {
+      await trx.raw('SELECT pg_advisory_xact_lock(?)', [Number(idPartido)]);
+      const partido = await PartidoRepository.findById(idPartido, { alcance: context.alcance });
+      const evento = await EventoRepository.findById(idEvento);
+      if (evento.estado === ESTADOS_EVENTO.ANULADO) {
+        throw new BusinessError('El evento ya está anulado');
+      }
+      await this._assertPeriodoAbierto(partido, evento, trx);
+      return EventoRepository.anular(idEvento, datos, trx);
+    });
+  }
+
   async anular(idPartido, idEvento, data, context = {}) {
     const partido = await PartidoRepository.findById(idPartido, { alcance: context.alcance });
     if (!partido) throw new NotFoundError('Partido no encontrado');
@@ -132,15 +145,14 @@ class EventoService {
     }
 
     await this._assertArbitroAsignado(idPartido, context.userId, context.rol);
-    await this._assertPeriodoAbierto(partido, evento);
 
     const motivo = typeof data.motivo_anulacion === 'string' ? data.motivo_anulacion.trim() : '';
     if (!motivo) throw new ValidationError('El motivo de anulación es obligatorio');
 
-    const actualizado = await EventoRepository.anular(idEvento, {
-      anulado_por: context.userId,
-      motivo_anulacion: motivo
-    });
+    const datos = { anulado_por: context.userId, motivo_anulacion: motivo };
+    const actualizado = await periodoService.estado(partido)
+      ? await this._anularEnSet(idPartido, idEvento, datos, context)
+      : await EventoRepository.anular(idEvento, datos);
 
     await bitacoraService.log({
       userId: context.userId,

@@ -201,7 +201,7 @@ function columnaQuien(ev) {
     return h('span', { style: { color: '#9ca3af' } }, 'desconocido');
 }
 
-function TablaEventos({ eventos, anotacion, offset, busy, onAnular, conSets }) {
+function TablaEventos({ eventos, anotacion, offset, busy, onAnular, conSets, anulable = () => true }) {
     if (!eventos.length) {
         return h('div', { style: { padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' } },
             'Todavía no hay eventos en este partido.');
@@ -240,7 +240,7 @@ function TablaEventos({ eventos, anotacion, offset, busy, onAnular, conSets }) {
                     : null
             ),
             h(TableCell, { align: 'right' },
-                ev.estado === 'ANULADO' ? null : h('button', {
+                ev.estado === 'ANULADO' || !anulable(ev) ? null : h('button', {
                     style: {
                         ...styles.buttonOutline,
                         padding: '5px 10px',
@@ -487,6 +487,10 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
             h(TablaEventos, {
                 eventos, anotacion, offset, busy,
                 conSets: Boolean(periodos),
+                anulable: (ev) => !periodos || (
+                    !(partido.resultado_cargado || cerrado)
+                    && !periodos.lista.some((p) => Number(p.numero) === Number(ev.numero_periodo) && p.estado === 'CERRADO')
+                ),
                 onAnular: (ev) => { setAnulando(ev); setMotivo(''); }
             })
         ),

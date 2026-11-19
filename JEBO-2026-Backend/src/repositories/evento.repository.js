@@ -80,8 +80,8 @@ module.exports = {
       .where('e.idempotency_key', idempotency_key)
       .first(),
 
-  anular: (id_evento, { anulado_por, motivo_anulacion }) =>
-    knex('evento_partido')
+  anular: (id_evento, { anulado_por, motivo_anulacion }, db = knex) =>
+    db('evento_partido')
       .where('id_evento', id_evento)
       .update({
         estado: 'ANULADO',

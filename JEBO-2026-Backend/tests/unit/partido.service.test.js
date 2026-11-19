@@ -82,7 +82,8 @@ jest.mock('../../src/config/knex', () => {
     return qb;
   });
   knexMock.fn = jest.fn();
-  knexMock.raw = jest.fn(() => ({ then: (r) => Promise.resolve(r ? undefined : undefined) }));
+  knexMock.raw = jest.fn(() => ({ then: (r) => Promise.resolve(r ? r(undefined) : undefined) }));
+  knexMock.transaction = jest.fn((cb) => cb(knexMock));
   knexMock.TIPO = 'mock';
   knexMock.__setInscriptos = (v) => { INSCRITOS = v; };
   knexMock.__setTipoCompetencia = (tipo, nombre = 'Gimnasia Artística') => {
@@ -466,7 +467,7 @@ describe('partido.service', () => {
 
       const r = await partidoService.updateResult(1, CTX_ARBITRO);
 
-      expect(PR.cerrarResultado).toHaveBeenCalledWith(1);
+      expect(PR.cerrarResultado).toHaveBeenCalledWith(1, knexMock);
       expect(r.goles_local).toBe(3);
       expect(r.goles_visitante).toBe(1);
     });
@@ -495,7 +496,7 @@ describe('partido.service', () => {
       PR.cerrarResultado.mockResolvedValue(conReloj());
 
       await partidoService.updateResult(1, CTX_ADMIN);
-      expect(PR.cerrarResultado).toHaveBeenCalledWith(1);
+      expect(PR.cerrarResultado).toHaveBeenCalledWith(1, knexMock);
     });
 
     it('exige que el reloj se haya iniciado alguna vez', async () => {
@@ -829,8 +830,48 @@ describe('partido.service', () => {
 
       const r = await partidoService.updateResult(1, CTX_ARBITRO);
 
-      expect(PR.cerrarResultado).toHaveBeenCalledWith(1);
+      expect(PR.cerrarResultado).toHaveBeenCalledWith(1, knexMock);
       expect(r.goles_local).toBe(2);
+    });
+
+    it('cierra el resultado por sets bajo el lock del partido', async () => {
+      PR.findById.mockResolvedValue(porSets());
+      PS.estado.mockResolvedValue(sets({ local: 2, visitante: 0, ganador: 100, enJuego: null, definido: true }));
+      PR.cerrarResultado.mockResolvedValue(porSets({ goles_local: 2, goles_visitante: 0 }));
+
+      await partidoService.updateResult(1, CTX_ARBITRO);
+
+      expect(knexMock.raw).toHaveBeenCalledWith('SELECT pg_advisory_xact_lock(?)', [1]);
+      expect(PS.estado).toHaveBeenCalledWith(expect.objectContaining({ id_partido: 1 }), knexMock);
+    });
+
+    it('si otro pedido cerro el resultado mientras esperaba el lock, no lo vuelve a cerrar', async () => {
+      PR.findById
+        .mockResolvedValueOnce(porSets())
+        .mockResolvedValue(porSets({ resultado_cargado: true }));
+      PS.estado.mockResolvedValue(sets({ local: 2, visitante: 0, ganador: 100, enJuego: null, definido: true }));
+
+      await expect(partidoService.updateResult(1, CTX_ARBITRO)).rejects.toThrow(/ya está cerrado/);
+      expect(PR.cerrarResultado).not.toHaveBeenCalled();
+    });
+
+    it('un partido con sets sigue por sets aunque la disciplina se haya desmarcado', async () => {
+      PR.findById.mockResolvedValue(porSets({ marcador_por_periodos: false }));
+      PS.estado.mockResolvedValue(sets({ local: 1, visitante: 1, ganador: null, enJuego: 3, definido: false }));
+
+      await expect(partidoService.updateResult(1, CTX_ARBITRO)).rejects.toThrow(/set 3 está en juego/);
+      expect(PR.cerrarResultado).not.toHaveBeenCalled();
+    });
+
+    it('el partido en vivo trae los sets aunque la disciplina se haya desmarcado', async () => {
+      PR.findById.mockResolvedValue(porSets({ marcador_por_periodos: false, nombre_periodo: 'Set' }));
+      RR.segundosActuales.mockResolvedValue({ reloj_estado: 'PENDIENTE', segundos_actuales: 0 });
+      PS.estado.mockResolvedValue(sets({ local: 1, visitante: 0, ganador: null, enJuego: 2, definido: false }));
+      knexMock.raw.mockReturnValueOnce(Promise.resolve({ rows: [{ server_time: '2026-11-19T12:00:00Z' }] }));
+
+      const r = await partidoService.findLive(1, CTX_ARBITRO);
+
+      expect(r.periodos.resumen.enJuego).toBe(2);
     });
 
     it('no cierra el resultado con un set en juego', async () => {

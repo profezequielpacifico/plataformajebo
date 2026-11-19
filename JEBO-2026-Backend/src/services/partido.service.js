@@ -78,7 +78,7 @@ class PartidoService {
         acumulado_seg: reloj.reloj_acumulado_seg,
         segundos: Number(reloj.segundos_actuales) || 0
       },
-      periodos: partido.marcador_por_periodos ? await periodoService.estado(partido) : null,
+      periodos: await periodoService.estado(partido),
       server_time: rows[0].server_time
     };
   }
@@ -238,14 +238,17 @@ class PartidoService {
     if (partido.estado === ESTADOS_PARTIDO.FINALIZADO) {
       throw new BusinessError('No se puede modificar un partido finalizado');
     }
-    const sets = partido.marcador_por_periodos ? await periodoService.estado(partido) : null;
-    if (sets) {
-      this._assertSetsDefinidos(partido, sets);
-    } else if (partido.reloj_estado === ESTADOS_RELOJ.PENDIENTE) {
-      throw new BusinessError('Debe iniciar el reloj del partido antes de cerrar el resultado');
-    }
-
-    const sellado = await PartidoRepository.cerrarResultado(id);
+    const sellado = await knex.transaction(async (trx) => {
+      await trx.raw('SELECT pg_advisory_xact_lock(?)', [Number(id)]);
+      const actual = await this.findById(id, context);
+      const sets = await periodoService.estado(actual, trx);
+      if (sets) {
+        this._assertSetsDefinidos(actual, sets);
+      } else if (actual.reloj_estado === ESTADOS_RELOJ.PENDIENTE) {
+        throw new BusinessError('Debe iniciar el reloj del partido antes de cerrar el resultado');
+      }
+      return PartidoRepository.cerrarResultado(id, trx);
+    });
 
     await bitacoraService.log({
       userId: context.userId, action: 'SELLAR_RESULTADO_PARTIDO', entity: 'Partido',
