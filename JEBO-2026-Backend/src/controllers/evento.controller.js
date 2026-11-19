@@ -1,5 +1,6 @@
 const { HTTP_STATUS } = require('../constants');
 const { eventoService, relojService } = require('../services/evento.service');
+const { periodoService } = require('../services/periodo.service');
 const { formatResponse, formatPaginatedResponse, soloCampos, bindAll } = require('../utils');
 
 const CAMPOS_EVENTO = [
@@ -76,6 +77,24 @@ class EventoController {
         this._context(req)
       );
       res.status(HTTP_STATUS.OK).json(formatResponse(data, 'Reloj actualizado'));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async cerrarPeriodo(req, res, next) {
+    try {
+      const data = await periodoService.cerrar(req.params.id, req.body.numero, this._context(req));
+      res.status(HTTP_STATUS.OK).json(formatResponse(data, 'Set terminado'));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async abrirPeriodo(req, res, next) {
+    try {
+      const data = await periodoService.abrirTercero(req.params.id, this._context(req));
+      res.status(HTTP_STATUS.OK).json(formatResponse(data, 'Set abierto'));
     } catch (err) {
       next(err);
     }

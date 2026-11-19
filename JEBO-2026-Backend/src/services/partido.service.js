@@ -7,6 +7,7 @@ const disponibilidadService = require('./disponibilidad.service');
 const autorizacionService = require('./autorizacion.service');
 const { assertTorneoAceptaPartidos } = require('./tipoCompetencia.service');
 const logger = require('../config/logger');
+const { periodoService } = require('./periodo.service');
 
 class PartidoService {
   async findAll(params) {
@@ -45,6 +46,9 @@ class PartidoService {
         torneo: partido.torneo,
         id_disciplina: partido.id_disciplina,
         disciplina_nombre: partido.disciplina_nombre,
+        marcador_por_periodos: Boolean(partido.marcador_por_periodos),
+        nombre_periodo: partido.nombre_periodo || null,
+        resultado_cargado: Boolean(partido.resultado_cargado),
         fecha: partido.fecha,
         hora: partido.hora,
         cancha_nombre: partido.cancha_nombre,
@@ -74,8 +78,22 @@ class PartidoService {
         acumulado_seg: reloj.reloj_acumulado_seg,
         segundos: Number(reloj.segundos_actuales) || 0
       },
+      periodos: partido.marcador_por_periodos ? await periodoService.estado(partido) : null,
       server_time: rows[0].server_time
     };
+  }
+
+  _assertSetsDefinidos(partido, sets) {
+    const nombre = sets.nombre.toLowerCase();
+    if (partido.resultado_cargado) {
+      throw new BusinessError('El resultado del partido ya está cerrado');
+    }
+    if (sets.resumen.enJuego) {
+      throw new BusinessError(`El ${nombre} ${sets.resumen.enJuego} está en juego: terminalo antes de cerrar el partido`);
+    }
+    if (!sets.resumen.ganador) {
+      throw new BusinessError(`Ningún equipo ganó dos ${nombre === 'set' ? 'sets' : 'períodos'} todavía`);
+    }
   }
 
   async _recalcularPosiciones(idTorneo) {
@@ -220,7 +238,10 @@ class PartidoService {
     if (partido.estado === ESTADOS_PARTIDO.FINALIZADO) {
       throw new BusinessError('No se puede modificar un partido finalizado');
     }
-    if (partido.reloj_estado === ESTADOS_RELOJ.PENDIENTE) {
+    const sets = partido.marcador_por_periodos ? await periodoService.estado(partido) : null;
+    if (sets) {
+      this._assertSetsDefinidos(partido, sets);
+    } else if (partido.reloj_estado === ESTADOS_RELOJ.PENDIENTE) {
       throw new BusinessError('Debe iniciar el reloj del partido antes de cerrar el resultado');
     }
 
@@ -284,6 +305,9 @@ class PartidoService {
     }
 
     const result = await PartidoRepository.updateStatus(id, estado);
+    if (estado === ESTADOS_PARTIDO.EN_JUEGO) {
+      await periodoService.abrirPrimeroSiCorresponde(partido);
+    }
     if (result.estado === ESTADOS_PARTIDO.FINALIZADO) {
       await RelojRepository.finalizar(id);
       await this._recalcularPosiciones(result.id_torneo);

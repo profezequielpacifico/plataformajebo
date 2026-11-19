@@ -31,6 +31,9 @@ jest.mock('../../src/repositories', () => ({
   }
 }));
 jest.mock('../../src/services/bitacora.service', () => ({ log: jest.fn() }));
+jest.mock('../../src/services/periodo.service', () => ({
+  periodoService: { estado: jest.fn(), abrirPrimeroSiCorresponde: jest.fn() }
+}));
 jest.mock('../../src/services/disponibilidad.service', () => ({ createDisponibilidad: jest.fn() }));
 jest.mock('../../src/config/logger', () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }));
 
@@ -112,6 +115,7 @@ const partidoBase = (over = {}) => ({
 });
 
 const knexMock = require('../../src/config/knex');
+const { periodoService: PS } = require('../../src/services/periodo.service');
 
 describe('partido.service', () => {
   beforeEach(() => {
@@ -790,6 +794,86 @@ describe('partido.service', () => {
 
       await partidoService.delete(1, { userId: 3, rol: ROLES.PROFESOR });
       expect(PR.delete).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('partidos por sets', () => {
+    const porSets = (over = {}) => partidoBase({
+      estado: ESTADOS_PARTIDO.EN_JUEGO,
+      reloj_estado: ESTADOS_RELOJ.PENDIENTE,
+      marcador_por_periodos: true,
+      ...over
+    });
+    const sets = (resumen) => ({ nombre: 'Set', max: 3, lista: [], resumen });
+
+    beforeEach(() => {
+      SR.findByPartido.mockResolvedValue([ARBITRO]);
+      PS.estado.mockResolvedValue(null);
+    });
+
+    it('al pasar a En Juego intenta abrir el set 1', async () => {
+      const HOY = '2026-09-30';
+      PR.fechaDeHoy.mockResolvedValue(HOY);
+      PR.findById.mockResolvedValue(porSets({ fecha: HOY, estado: ESTADOS_PARTIDO.PROGRAMADO }));
+      PR.updateStatus.mockResolvedValue(porSets({ fecha: HOY }));
+
+      await partidoService.updateStatus(1, ESTADOS_PARTIDO.EN_JUEGO, CTX_ARBITRO);
+
+      expect(PS.abrirPrimeroSiCorresponde).toHaveBeenCalledWith(expect.objectContaining({ id_partido: 1 }));
+    });
+
+    it('cierra el resultado 2-0 sin haber usado el reloj', async () => {
+      PR.findById.mockResolvedValue(porSets());
+      PS.estado.mockResolvedValue(sets({ local: 2, visitante: 0, ganador: 100, enJuego: null, definido: true }));
+      PR.cerrarResultado.mockResolvedValue(porSets({ goles_local: 2, goles_visitante: 0 }));
+
+      const r = await partidoService.updateResult(1, CTX_ARBITRO);
+
+      expect(PR.cerrarResultado).toHaveBeenCalledWith(1);
+      expect(r.goles_local).toBe(2);
+    });
+
+    it('no cierra el resultado con un set en juego', async () => {
+      PR.findById.mockResolvedValue(porSets());
+      PS.estado.mockResolvedValue(sets({ local: 1, visitante: 1, ganador: null, enJuego: 3, definido: false }));
+
+      await expect(partidoService.updateResult(1, CTX_ARBITRO)).rejects.toThrow(/en juego/);
+      expect(PR.cerrarResultado).not.toHaveBeenCalled();
+    });
+
+    it('no cierra el resultado sin un ganador', async () => {
+      PR.findById.mockResolvedValue(porSets());
+      PS.estado.mockResolvedValue(sets({ local: 1, visitante: 0, ganador: null, enJuego: null, definido: false }));
+
+      await expect(partidoService.updateResult(1, CTX_ARBITRO)).rejects.toBeInstanceOf(BusinessError);
+      expect(PR.cerrarResultado).not.toHaveBeenCalled();
+    });
+
+    it('un partido sin sets sigue exigiendo el reloj', async () => {
+      PR.findById.mockResolvedValue(porSets({ marcador_por_periodos: false }));
+
+      await expect(partidoService.updateResult(1, CTX_ARBITRO)).rejects.toThrow(/reloj/);
+      expect(PR.cerrarResultado).not.toHaveBeenCalled();
+    });
+
+    it('un partido por sets cerrado no se vuelve a cerrar', async () => {
+      PR.findById.mockResolvedValue(porSets({ resultado_cargado: true }));
+      PS.estado.mockResolvedValue(sets({ local: 2, visitante: 0, ganador: 100, enJuego: null, definido: true }));
+
+      await expect(partidoService.updateResult(1, CTX_ARBITRO)).rejects.toBeInstanceOf(BusinessError);
+      expect(PR.cerrarResultado).not.toHaveBeenCalled();
+    });
+
+    it('el partido en vivo trae los sets', async () => {
+      PR.findById.mockResolvedValue(porSets({ nombre_periodo: 'Set' }));
+      RR.segundosActuales.mockResolvedValue({ reloj_estado: 'PENDIENTE', segundos_actuales: 0 });
+      PS.estado.mockResolvedValue(sets({ local: 1, visitante: 0, ganador: null, enJuego: 2, definido: false }));
+      knexMock.raw.mockReturnValueOnce(Promise.resolve({ rows: [{ server_time: '2026-11-19T12:00:00Z' }] }));
+
+      const r = await partidoService.findLive(1, CTX_ARBITRO);
+
+      expect(r.periodos.resumen.enJuego).toBe(2);
+      expect(r.partido).toMatchObject({ marcador_por_periodos: true, nombre_periodo: 'Set', resultado_cargado: false });
     });
   });
 });

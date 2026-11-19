@@ -8,7 +8,8 @@ const fs = require('fs');
 
 const CAMPOS_DISCIPLINA = [
   'nombre', 'jugadores_por_equipo', 'descripcion', 'tipo_competencia',
-  'puntos_victoria', 'puntos_empate', 'puntos_derrota'
+  'puntos_victoria', 'puntos_empate', 'puntos_derrota',
+  'marcador_por_periodos', 'nombre_periodo', 'max_periodos'
 ];
 
 class DisciplinaController {

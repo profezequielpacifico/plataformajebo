@@ -117,8 +117,8 @@ class PeriodoService {
     return PeriodoRepository.abrir(partido.id_partido, 1, trx);
   }
 
-  async estado(partido) {
-    const lista = await PeriodoRepository.listar(partido.id_partido);
+  async estado(partido, trx = knex) {
+    const lista = await PeriodoRepository.listar(partido.id_partido, trx);
     if (lista.length === 0) return null;
     return {
       nombre: partido.nombre_periodo || 'Set',

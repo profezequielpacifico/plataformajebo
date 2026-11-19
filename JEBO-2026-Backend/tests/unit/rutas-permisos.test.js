@@ -71,6 +71,8 @@ const MAPA = [
   ['evento.routes.js | POST /:id/clock', 'operarPartido'],
   ['evento.routes.js | POST /:id/events', 'operarPartido'],
   ['evento.routes.js | PATCH /:id/events/:idEvento/anular', 'operarPartido'],
+  ['evento.routes.js | POST /:id/periods/close', 'operarPartido'],
+  ['evento.routes.js | POST /:id/periods/open', 'operarPartido'],
   ['presentacion.routes.js | POST /', 'gestionarPresentacion'],
   ['presentacion.routes.js | GET /:id', 'gestionarPresentacion'],
   ['presentacion.routes.js | PUT /:id', 'gestionarPresentacion'],
@@ -125,7 +127,7 @@ describe('mapa de permisos por endpoint (F1.4)', () => {
       requireAdminOrAbove: 46,
       requireSuperAdmin: 14,
       gestionarPresentacion: 8,
-      operarPartido: 6,
+      operarPartido: 8,
       evaluarPresentacion: 4,
       gestionarEquipoPropio: 5
     });

@@ -31,7 +31,7 @@ module.exports = {
       .where('e.id_evento', id_evento)
       .first(),
 
-  registrar: async (knexTx, { id_partido, id_equipo, id_usuario_arbitro, registrado_por, idempotency_key }) =>
+  registrar: async (knexTx, { id_partido, id_equipo, id_usuario_arbitro, registrado_por, idempotency_key, numero_periodo }) =>
     knexTx.raw(
       `
       WITH reloj AS (
@@ -54,11 +54,11 @@ module.exports = {
       INSERT INTO evento_partido (
         id_partido, numero_evento, tipo_evento, id_equipo,
         id_usuario_arbitro, registrado_por, segundos_partido,
-        idempotency_key, estado
+        idempotency_key, estado, numero_periodo
       )
       SELECT
         ?, numero.n, 'ANOTACION', ?, ?, ?,
-        reloj.segundos, ?, 'CONFIRMADO'
+        reloj.segundos, ?, 'CONFIRMADO', ?
       FROM reloj, numero
       RETURNING *
       `,
@@ -69,7 +69,8 @@ module.exports = {
         id_equipo,
         id_usuario_arbitro,
         registrado_por,
-        idempotency_key || null
+        idempotency_key || null,
+        numero_periodo ?? null
       ]
     ).then((r) => r.rows[0]),
 

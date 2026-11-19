@@ -21,6 +21,9 @@ jest.mock('../../src/repositories', () => ({
 }));
 
 jest.mock('../../src/services/bitacora.service', () => ({ log: jest.fn() }));
+jest.mock('../../src/services/periodo.service', () => ({
+  periodoService: { estado: jest.fn() }
+}));
 jest.mock('../../src/config/knex', () => {
   const trx = Object.assign(jest.fn(), {
     raw: jest.fn().mockResolvedValue(undefined)
@@ -36,6 +39,7 @@ jest.mock('../../src/config/knex', () => {
 const { PartidoRepository: PR, EventoRepository: ER, StaffPartidoRepository: SR, RelojRepository: RR } =
   require('../../src/repositories');
 const bitacoraService = require('../../src/services/bitacora.service');
+const { periodoService: PS } = require('../../src/services/periodo.service');
 const knexMock = require('../../src/config/knex');
 
 const ARBITRO = { id_usuario: 7 };
@@ -66,6 +70,7 @@ const EVENTO = {
 describe('evento.service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    PS.estado.mockResolvedValue(null);
     PR.findById.mockResolvedValue(partido());
     SR.findByPartido.mockResolvedValue([ARBITRO]);
     ER.findById.mockResolvedValue(EVENTO);
@@ -422,5 +427,83 @@ describe('relojService', () => {
         ['acumulado_seg', 'estado', 'iniciado_en', 'segundos'].sort()
       );
     });
+  });
+});
+
+describe('evento.service con sets', () => {
+  const sets = (lista, enJuego) => ({
+    nombre: 'Set', max: 3, lista, resumen: { enJuego, local: 0, visitante: 0, ganador: null }
+  });
+  const ctx = { ...CTX_ARBITRO, alcance: ALCANCE };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    knexMock.transaction.mockImplementation((cb) => cb(knexMock.__trx));
+    knexMock.__trx.raw.mockResolvedValue(undefined);
+    PR.findById.mockResolvedValue(partido({ marcador_por_periodos: true }));
+    SR.findByPartido.mockResolvedValue([ARBITRO]);
+    ER.findByIdempotencyKey.mockResolvedValue(undefined);
+    ER.registrar.mockResolvedValue(EVENTO);
+    ER.findById.mockResolvedValue(EVENTO);
+    ER.anular.mockResolvedValue({ ...EVENTO, estado: 'ANULADO' });
+  });
+
+  it('graba el punto en el set que esta en juego', async () => {
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'EN_JUEGO' }], 2));
+
+    await eventoService.registrar(1, { id_equipo: 100 }, ctx);
+
+    expect(ER.registrar.mock.calls[0][1]).toMatchObject({ numero_periodo: 2 });
+  });
+
+  it('sin un set en juego no registra', async () => {
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'CERRADO' }], null));
+
+    await expect(eventoService.registrar(1, { id_equipo: 100 }, ctx)).rejects.toThrow('No hay un set en juego');
+    expect(ER.registrar).not.toHaveBeenCalled();
+  });
+
+  it('con el resultado cerrado no registra', async () => {
+    PR.findById.mockResolvedValue(partido({ marcador_por_periodos: true, resultado_cargado: true }));
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'CERRADO' }], null));
+
+    await expect(eventoService.registrar(1, { id_equipo: 100 }, ctx)).rejects.toBeInstanceOf(BusinessError);
+    expect(ER.registrar).not.toHaveBeenCalled();
+  });
+
+  it('un partido de disciplina por sets que arranco con el contador viejo registra sin set', async () => {
+    PS.estado.mockResolvedValue(null);
+
+    await eventoService.registrar(1, { id_equipo: 100 }, ctx);
+
+    expect(ER.registrar.mock.calls[0][1]).toMatchObject({ numero_periodo: null });
+  });
+
+  it('no anula un punto de un set cerrado', async () => {
+    ER.findById.mockResolvedValue({ ...EVENTO, numero_periodo: 1 });
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'EN_JUEGO' }], 2));
+
+    await expect(eventoService.anular(1, 500, { motivo_anulacion: 'error' }, ctx))
+      .rejects.toThrow('El set ya está cerrado');
+    expect(ER.anular).not.toHaveBeenCalled();
+  });
+
+  it('anula un punto del set en juego', async () => {
+    ER.findById.mockResolvedValue({ ...EVENTO, numero_periodo: 2 });
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'EN_JUEGO' }], 2));
+
+    await eventoService.anular(1, 500, { motivo_anulacion: 'error' }, ctx);
+
+    expect(ER.anular).toHaveBeenCalled();
+  });
+
+  it('con el resultado cerrado no anula', async () => {
+    PR.findById.mockResolvedValue(partido({ marcador_por_periodos: true, resultado_cargado: true }));
+    ER.findById.mockResolvedValue({ ...EVENTO, numero_periodo: 2 });
+    PS.estado.mockResolvedValue(sets([{ numero: 1, estado: 'CERRADO' }, { numero: 2, estado: 'CERRADO' }], null));
+
+    await expect(eventoService.anular(1, 500, { motivo_anulacion: 'error' }, ctx))
+      .rejects.toBeInstanceOf(BusinessError);
+    expect(ER.anular).not.toHaveBeenCalled();
   });
 });

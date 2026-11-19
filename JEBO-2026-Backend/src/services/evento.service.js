@@ -3,6 +3,7 @@ const { PartidoRepository, EventoRepository, RelojRepository, StaffPartidoReposi
 const { NotFoundError, BusinessError, ForbiddenError, ValidationError } = require('../utils/errors');
 const { ESTADOS_PARTIDO, ESTADOS_RELOJ, ESTADOS_EVENTO, TIPOS_EVENTO, ROLES } = require('../constants');
 const bitacoraService = require('./bitacora.service');
+const { periodoService } = require('./periodo.service');
 
 async function assertArbitroAsignado(idPartido, userId, rol) {
   if (rol === ROLES.ADMIN || rol === ROLES.SUPERADMIN) return null;
@@ -56,9 +57,11 @@ class EventoService {
 
     const evento = await knex.transaction(async (trx) => {
       await trx.raw('SELECT pg_advisory_xact_lock(?)', [Number(idPartido)]);
+      const numeroPeriodo = await this._periodoParaRegistrar(partido, trx);
       return EventoRepository.registrar(trx, {
         id_partido: partido.id_partido,
         id_equipo: idEquipo,
+        numero_periodo: numeroPeriodo,
 
         id_usuario_arbitro: idArbitro,
         registrado_por: context.userId,
@@ -85,6 +88,30 @@ class EventoService {
     return EventoRepository.findById(evento.id_evento);
   }
 
+  async _periodoParaRegistrar(partido, trx) {
+    const sets = await periodoService.estado(partido, trx);
+    if (!sets) return null;
+    if (partido.resultado_cargado) {
+      throw new BusinessError('El resultado del partido ya está cerrado');
+    }
+    if (!sets.resumen.enJuego) {
+      throw new BusinessError(`No hay un ${sets.nombre.toLowerCase()} en juego`);
+    }
+    return sets.resumen.enJuego;
+  }
+
+  async _assertPeriodoAbierto(partido, evento) {
+    const sets = await periodoService.estado(partido);
+    if (!sets) return;
+    if (partido.resultado_cargado) {
+      throw new BusinessError('El resultado del partido ya está cerrado');
+    }
+    const periodo = sets.lista.find((p) => Number(p.numero) === Number(evento.numero_periodo));
+    if (periodo && periodo.estado === 'CERRADO') {
+      throw new BusinessError(`El ${sets.nombre.toLowerCase()} ya está cerrado`);
+    }
+  }
+
   async findByPartido(idPartido, params, context = {}) {
     const partido = await PartidoRepository.findById(idPartido, { alcance: context.alcance });
     if (!partido) throw new NotFoundError('Partido no encontrado');
@@ -105,6 +132,7 @@ class EventoService {
     }
 
     await this._assertArbitroAsignado(idPartido, context.userId, context.rol);
+    await this._assertPeriodoAbierto(partido, evento);
 
     const motivo = typeof data.motivo_anulacion === 'string' ? data.motivo_anulacion.trim() : '';
     if (!motivo) throw new ValidationError('El motivo de anulación es obligatorio');

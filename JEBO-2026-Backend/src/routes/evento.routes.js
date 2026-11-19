@@ -34,4 +34,13 @@ router.patch('/:id/events/:idEvento/anular', authenticate, operarPartido, [
     .withMessage('El motivo de anulación es obligatorio')
 ], validate, eventoController.anular);
 
+router.post('/:id/periods/close', authenticate, operarPartido, [
+  param('id').isInt().withMessage('Partido inválido'),
+  body('numero').isInt({ min: 1 }).withMessage('Set inválido')
+], validate, eventoController.cerrarPeriodo);
+
+router.post('/:id/periods/open', authenticate, operarPartido, [
+  param('id').isInt().withMessage('Partido inválido')
+], validate, eventoController.abrirPeriodo);
+
 module.exports = router;
