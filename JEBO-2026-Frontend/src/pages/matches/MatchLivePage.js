@@ -7,6 +7,7 @@ import { Table, TableHeader, TableHeaderCell, TableRow, TableCell } from '../../
 import matchService from '../../services/matchService.js';
 import { ROUTES } from '../../config/constants.js';
 import { esAdministrador } from '../../services/roles.js';
+import { PanelSets, pluralPeriodo } from './PanelSets.js';
 
 const { createElement: h } = React;
 
@@ -200,7 +201,7 @@ function columnaQuien(ev) {
     return h('span', { style: { color: '#9ca3af' } }, 'desconocido');
 }
 
-function TablaEventos({ eventos, anotacion, offset, busy, onAnular }) {
+function TablaEventos({ eventos, anotacion, offset, busy, onAnular, conSets }) {
     if (!eventos.length) {
         return h('div', { style: { padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' } },
             'Todavía no hay eventos en este partido.');
@@ -209,6 +210,7 @@ function TablaEventos({ eventos, anotacion, offset, busy, onAnular }) {
     return h(Table, null,
         h(TableHeader, null,
             h(TableHeaderCell, { style: { width: '46px' } }, '#'),
+            conSets ? h(TableHeaderCell, { style: { width: '46px' } }, 'Set') : null,
             h(TableHeaderCell, null, 'Equipo'),
             h(TableHeaderCell, { style: { width: '70px' } }, anotacion),
             h(TableHeaderCell, null, 'Árbitro'),
@@ -219,6 +221,7 @@ function TablaEventos({ eventos, anotacion, offset, busy, onAnular }) {
 
         eventos.map(ev => h(TableRow, { key: ev.id_evento },
             h(TableCell, { style: { color: '#9ca3af' } }, `#${ev.numero_evento}`),
+            conSets ? h(TableCell, null, ev.numero_periodo == null ? '—' : String(ev.numero_periodo)) : null,
             h(TableCell, null, ev.equipo_nombre || '—'),
             h(TableCell, { style: { fontVariantNumeric: 'tabular-nums' } },
                 ev.segundos_partido == null ? '—' : formatearReloj(ev.segundos_partido)),
@@ -309,6 +312,23 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
         );
     };
 
+    const nombreSet = live?.periodos?.nombre || 'Set';
+
+    const cerrarSet = (numero) => correr(
+        () => matchService.closePeriod(matchId, numero),
+        `${nombreSet} ${numero} terminado`
+    );
+
+    const abrirTercero = () => correr(
+        () => matchService.openPeriod(matchId),
+        `${nombreSet} 3 en juego`
+    );
+
+    const cerrarPartido = () => correr(
+        () => matchService.updateResult(matchId, {}),
+        'Partido cerrado. Falta finalizarlo desde la pantalla de partidos.'
+    );
+
     const sellar = () => {
         setSellando(true);
         correr(
@@ -331,8 +351,10 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
     const marcador = live.marcador || {};
     const anotacion = nombreAnotacion(partido.disciplina_nombre);
 
-    const local = Number(marcador.local) || 0;
-    const visitante = Number(marcador.visitante) || 0;
+    const periodos = live.periodos || null;
+    const plural = periodos ? pluralPeriodo(periodos.nombre) : null;
+    const local = Number(periodos ? periodos.resumen?.local : marcador.local) || 0;
+    const visitante = Number(periodos ? periodos.resumen?.visitante : marcador.visitante) || 0;
 
     const cerrado = partido.estado === 'Finalizado' || partido.estado === 'Cancelado';
     const jugable = partido.estado === 'En Juego' && !cerrado;
@@ -380,7 +402,9 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
 
                 role: 'status',
                 'aria-live': 'polite',
-                'aria-label': `Marcador: ${equipos.local?.nombre || 'local'} ${local}, ${equipos.visitante?.nombre || 'visitante'} ${visitante}`,
+                'aria-label': periodos
+                    ? `Marcador: ${equipos.local?.nombre || 'local'} ${local} ${plural}, ${equipos.visitante?.nombre || 'visitante'} ${visitante} ${plural}`
+                    : `Marcador: ${equipos.local?.nombre || 'local'} ${local}, ${equipos.visitante?.nombre || 'visitante'} ${visitante}`,
                 style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '18px 0 4px' }
             },
                 h('div', { style: { flex: 1, textAlign: 'center' } },
@@ -398,13 +422,39 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
 
             h('div', {
                 style: { textAlign: 'center', fontSize: '11px', color: '#9ca3af', paddingBottom: '6px' }
-            }, 'El marcador se cuenta solo: cada anotación registrada suma uno. No se escribe a mano.'),
+            }, periodos
+                ? `Marcador de ${plural}. Los puntos de cada ${periodos.nombre.toLowerCase()} se cuentan solos: cada punto registrado suma uno.`
+                : 'El marcador se cuenta solo: cada anotación registrada suma uno. No se escribe a mano.'),
 
             h(RelojPanel, {
                 reloj, segundos, partido, busy, onAccion: accionReloj
             }),
 
-            h('div', { style: { display: 'flex', gap: '12px', padding: '14px 0 6px' } },
+            periodos
+                ? h(PanelSets, {
+                    periodos,
+                    equipos,
+                    jugable,
+                    resultadoCerrado: Boolean(partido.resultado_cargado) || cerrado,
+                    busy,
+                    onCerrarSet: cerrarSet,
+                    onAbrirTercero: abrirTercero,
+                    onCerrarPartido: cerrarPartido,
+                    botonesPunto: h('div', { style: { display: 'flex', gap: '12px', padding: '10px 0 4px' } },
+                        h(BotonAnotacion, {
+                            equipo: `${anotacion} ${equipos.local?.nombre || 'local'}`,
+                            disabled: busy,
+                            onClick: () => registrar(equipos.local?.id)
+                        }),
+                        h(BotonAnotacion, {
+                            equipo: `${anotacion} ${equipos.visitante?.nombre || 'visitante'}`,
+                            disabled: busy,
+                            onClick: () => registrar(equipos.visitante?.id)
+                        }))
+                })
+                : null,
+
+            periodos ? null : h('div', { style: { display: 'flex', gap: '12px', padding: '14px 0 6px' } },
                 jugable
                     ? [
                         h(BotonAnotacion, {
@@ -436,11 +486,12 @@ export function MatchLivePage({ matchId, onNavigate, user }) {
                 }, 'Actualizar')),
             h(TablaEventos, {
                 eventos, anotacion, offset, busy,
+                conSets: Boolean(periodos),
                 onAnular: (ev) => { setAnulando(ev); setMotivo(''); }
             })
         ),
 
-        h(Card, null,
+        periodos ? null : h(Card, null,
             h(CardHeader, { title: 'Cerrar el resultado' }),
             h('div', { style: { fontSize: '13px', color: '#4b5563', marginBottom: '12px' } },
                 'Cerrar el resultado congela el marcador derivado y deja registrado quien lo cerro. ',

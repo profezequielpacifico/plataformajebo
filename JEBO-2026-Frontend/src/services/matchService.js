@@ -49,6 +49,14 @@ export const matchService = {
         return api.patch(`/matches/${id}/events/${idEvento}/anular`, data);
     },
 
+    async closePeriod(id, numero) {
+        return api.post(`/matches/${id}/periods/close`, { numero });
+    },
+
+    async openPeriod(id) {
+        return api.post(`/matches/${id}/periods/open`);
+    },
+
     async clockAction(id, accion) {
         return api.post(`/matches/${id}/clock`, { accion });
     },

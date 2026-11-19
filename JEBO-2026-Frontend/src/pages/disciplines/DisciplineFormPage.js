@@ -7,6 +7,8 @@ import disciplineService from '../../services/disciplineService.js';
 
 const { createElement: h } = React;
 
+const MAX_PERIODOS = 3;
+
 export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false }) {
     const isEdit = !!disciplineId && !readOnly;
     const [formData, setFormData] = useState({
@@ -17,6 +19,8 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
         puntos_victoria: 2,
         puntos_empate: 1,
         puntos_derrota: 1,
+        marcador_por_periodos: false,
+        nombre_periodo: 'Set',
         reglamento: ''
     });
     const [loading, setLoading] = useState(isEdit);
@@ -44,6 +48,8 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
                     puntos_victoria: d.puntos_victoria ?? 2,
                     puntos_empate: d.puntos_empate ?? 1,
                     puntos_derrota: d.puntos_derrota ?? 1,
+                    marcador_por_periodos: Boolean(d.marcador_por_periodos),
+                    nombre_periodo: d.nombre_periodo || 'Set',
                     reglamento: d.reglamento || ''
                 });
             } catch {
@@ -87,6 +93,7 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
         setIsSaving(true);
         setError('');
         try {
+            const porPeriodos = formData.tipo_competencia === 'MARCADOR' && formData.marcador_por_periodos;
             const payload = {
                 nombre: formData.nombre.trim(),
                 descripcion: formData.descripcion.trim(),
@@ -94,7 +101,10 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
                 tipo_competencia: formData.tipo_competencia,
                 puntos_victoria: Number(formData.puntos_victoria),
                 puntos_empate: Number(formData.puntos_empate),
-                puntos_derrota: Number(formData.puntos_derrota)
+                puntos_derrota: Number(formData.puntos_derrota),
+                marcador_por_periodos: porPeriodos,
+                nombre_periodo: porPeriodos ? formData.nombre_periodo : null,
+                max_periodos: porPeriodos ? MAX_PERIODOS : null
             };
             if (isEdit) {
                 await disciplineService.update(disciplineId, payload);
@@ -187,6 +197,30 @@ export function DisciplineFormPage({ onNavigate, disciplineId, readOnly = false 
                     ),
                     !readOnly && h('div', { style: { fontSize: '12px', color: '#6b7280', marginTop: '6px' } },
                         'Al cambiarlos se recalculan las tablas por etapa. La clasificación general del torneo se actualiza con el próximo partido que termine.')
+                ),
+                formData.tipo_competencia === 'MARCADOR' && h('div', { style: styles.formGroup },
+                    h('label', { htmlFor: 'marcador_por_periodos', style: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151' } },
+                        h('input', {
+                            id: 'marcador_por_periodos',
+                            type: 'checkbox',
+                            checked: formData.marcador_por_periodos,
+                            onChange: (e) => setFormData({ ...formData, marcador_por_periodos: e.target.checked }),
+                            disabled: readOnly
+                        }),
+                        'Se juega por sets o períodos (al mejor de 3)'),
+                    formData.marcador_por_periodos && h('div', { style: { marginTop: '10px', maxWidth: '240px' } },
+                        h('label', { htmlFor: 'nombre_periodo', style: { fontSize: '13px', color: '#4b5563', display: 'block', marginBottom: '4px' } }, 'Cada parte se llama'),
+                        h('select', {
+                            id: 'nombre_periodo',
+                            value: formData.nombre_periodo,
+                            onChange: (e) => setFormData({ ...formData, nombre_periodo: e.target.value }),
+                            style: styles.formInput,
+                            disabled: readOnly
+                        },
+                            h('option', { value: 'Set' }, 'Set'),
+                            h('option', { value: 'Período' }, 'Período'))),
+                    !readOnly && h('div', { style: { fontSize: '12px', color: '#6b7280', marginTop: '6px' } },
+                        'El árbitro termina cada parte a mano. Gana el partido el primero que gana dos. Afecta solo a los partidos que empiecen después del cambio.')
                 ),
                 h('div', { style: styles.formGroup },
                     h('label', { style: styles.formLabel }, 'Descripción'),

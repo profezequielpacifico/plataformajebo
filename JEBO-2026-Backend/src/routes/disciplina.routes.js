@@ -16,7 +16,10 @@ router.post('/', authenticate, requireAdminOrAbove, [
   body('tipo_competencia').optional().isIn(['MARCADOR', 'EVALUACION'])
     .withMessage('Tipo de competencia inválido'),
   body(['puntos_victoria', 'puntos_empate', 'puntos_derrota']).optional().isInt({ min: 0, max: 100 })
-    .withMessage('Los puntos deben ser un entero entre 0 y 100')
+    .withMessage('Los puntos deben ser un entero entre 0 y 100'),
+  body('marcador_por_periodos').optional().isBoolean(),
+  body('nombre_periodo').optional({ nullable: true }).isIn(['Set', 'Período']),
+  body('max_periodos').optional({ nullable: true }).isInt({ min: 3, max: 3 })
 ], validate, disciplinaController.create);
 
 router.post('/:id/reglamento', authenticate, requireAdminOrAbove, limitarCuerpo, uploadReglamento.single('reglamento'), verificarContenido, disciplinaController.uploadReglamento);
@@ -27,7 +30,10 @@ router.put('/:id', authenticate, requireAdminOrAbove, [
   body('tipo_competencia').optional().isIn(['MARCADOR', 'EVALUACION'])
     .withMessage('Tipo de competencia inválido'),
   body(['puntos_victoria', 'puntos_empate', 'puntos_derrota']).optional().isInt({ min: 0, max: 100 })
-    .withMessage('Los puntos deben ser un entero entre 0 y 100')
+    .withMessage('Los puntos deben ser un entero entre 0 y 100'),
+  body('marcador_por_periodos').optional().isBoolean(),
+  body('nombre_periodo').optional({ nullable: true }).isIn(['Set', 'Período']),
+  body('max_periodos').optional({ nullable: true }).isInt({ min: 3, max: 3 })
 ], validate, disciplinaController.update);
 
 router.delete('/:id', authenticate, requireAdminOrAbove, disciplinaController.delete);

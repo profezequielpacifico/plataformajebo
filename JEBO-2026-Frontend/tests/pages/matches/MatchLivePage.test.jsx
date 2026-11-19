@@ -12,7 +12,9 @@ vi.mock('../../../src/services/matchService.js', () => ({
     createEvent: vi.fn(),
     annulEvent: vi.fn(),
     clockAction: vi.fn(),
-    updateResult: vi.fn()
+    updateResult: vi.fn(),
+    closePeriod: vi.fn(),
+    openPeriod: vi.fn()
   }
 }));
 
@@ -416,5 +418,167 @@ describe('MatchLivePage', () => {
     await esperarCarga();
 
     expect(screen.getByRole('button', { name: new RegExp(`${palabra} Local FC`, 'i') })).toBeInTheDocument();
+  });
+
+  describe('partido por sets', () => {
+    const set = (numero, estado, puntos_local, puntos_visitante, id_equipo_ganador = null) =>
+      ({ numero, estado, puntos_local, puntos_visitante, id_equipo_ganador });
+    const resumen = (over) => ({
+      local: 0, visitante: 0, jugados: 0, enJuego: null, ganador: null,
+      puedeAbrirTercero: false, definido: false, ...over
+    });
+    const LIVE_SETS = (lista, res, partido = {}) => {
+      const base = LIVE({ partido: { disciplina_nombre: 'Voley Jebo 2026', marcador_por_periodos: true, nombre_periodo: 'Set', resultado_cargado: false, ...partido } });
+      base.data.equipos = { local: { id: 10, nombre: 'Región 1' }, visitante: { id: 20, nombre: 'Región 4' } };
+      base.data.reloj = { ...base.data.reloj, estado: 'PENDIENTE' };
+      base.data.periodos = { nombre: 'Set', max: 3, lista, resumen: resumen(res) };
+      return base;
+    };
+    const EN_SET_2 = () => LIVE_SETS(
+      [set(1, 'CERRADO', 25, 20, 10), set(2, 'EN_JUEGO', 12, 9)],
+      { local: 1, jugados: 1, enJuego: 2 }
+    );
+    const DOS_A_CERO = () => LIVE_SETS(
+      [set(1, 'CERRADO', 25, 20, 10), set(2, 'CERRADO', 25, 18, 10)],
+      { local: 2, jugados: 2, ganador: 10, puedeAbrirTercero: true, definido: true }
+    );
+
+    beforeEach(() => {
+      matchService.closePeriod.mockResolvedValue({ data: {} });
+      matchService.openPeriod.mockResolvedValue({ data: {} });
+    });
+
+    it('muestra el marcador de sets, los sets cerrados y el set en juego', async () => {
+      matchService.getLive.mockResolvedValue(EN_SET_2());
+      renderPage();
+
+      const marcador = await screen.findByRole('status');
+      expect(marcador).toHaveAccessibleName(/Región 1 1 sets, Región 4 0 sets/);
+      expect(screen.getByText('Set 1: 25–20')).toBeInTheDocument();
+      const enJuego = screen.getByTestId('set-en-juego');
+      expect(within(enJuego).getByText('Set 2')).toBeInTheDocument();
+      expect(within(enJuego).getByText('12')).toBeInTheDocument();
+      expect(within(enJuego).getByText('9')).toBeInTheDocument();
+    });
+
+    it('terminar el set pide confirmacion y manda el numero del set', async () => {
+      const user = userEvent.setup();
+      matchService.getLive.mockResolvedValue(EN_SET_2());
+      renderPage();
+
+      await user.click(await screen.findByRole('button', { name: 'Terminar set 2' }));
+      expect(screen.getByText('¿Terminar el set 2 con 12–9? Lo gana Región 1. No se puede deshacer.')).toBeInTheDocument();
+      expect(matchService.closePeriod).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Terminar set' }));
+      await waitFor(() => expect(matchService.closePeriod).toHaveBeenCalledWith(7, 2));
+    });
+
+    it('un set empatado no se puede terminar', async () => {
+      matchService.getLive.mockResolvedValue(LIVE_SETS(
+        [set(1, 'CERRADO', 25, 20, 10), set(2, 'EN_JUEGO', 5, 5)],
+        { local: 1, jugados: 1, enJuego: 2 }
+      ));
+      renderPage();
+
+      expect(await screen.findByRole('button', { name: 'Terminar set 2' })).toBeDisabled();
+      expect(screen.getByText('No se puede terminar un set empatado')).toBeInTheDocument();
+    });
+
+    it('con 2-0 deja jugar el set 3', async () => {
+      const user = userEvent.setup();
+      matchService.getLive.mockResolvedValue(DOS_A_CERO());
+      renderPage();
+
+      await user.click(await screen.findByRole('button', { name: 'Jugar set 3' }));
+      await waitFor(() => expect(matchService.openPeriod).toHaveBeenCalledWith(7));
+    });
+
+    it('terminar el partido 2-0 pide dos confirmaciones', async () => {
+      const user = userEvent.setup();
+      matchService.getLive.mockResolvedValue(DOS_A_CERO());
+      renderPage();
+
+      await user.click(await screen.findByRole('button', { name: 'Terminar partido 2–0' }));
+      expect(screen.getByText('¿Terminar el partido sin jugar el set 3?')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Sí, terminar' }));
+      expect(matchService.updateResult).not.toHaveBeenCalled();
+
+      expect(screen.getByText('Confirmá otra vez: Región 1 gana 2–0. No se puede deshacer.')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Terminar partido' }));
+      await waitFor(() => expect(matchService.updateResult).toHaveBeenCalledWith(7, {}));
+    });
+
+    it('cancelar la segunda confirmacion no cierra el partido', async () => {
+      const user = userEvent.setup();
+      matchService.getLive.mockResolvedValue(DOS_A_CERO());
+      renderPage();
+
+      await user.click(await screen.findByRole('button', { name: 'Terminar partido 2–0' }));
+      await user.click(screen.getByRole('button', { name: 'Sí, terminar' }));
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(matchService.updateResult).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Confirmá otra vez/)).not.toBeInTheDocument();
+    });
+
+    it('con 2-1 cierra el partido con una confirmacion', async () => {
+      const user = userEvent.setup();
+      matchService.getLive.mockResolvedValue(LIVE_SETS(
+        [set(1, 'CERRADO', 25, 20, 10), set(2, 'CERRADO', 20, 25, 20), set(3, 'CERRADO', 15, 10, 10)],
+        { local: 2, visitante: 1, jugados: 3, ganador: 10, definido: true }
+      ));
+      renderPage();
+
+      await user.click(await screen.findByRole('button', { name: 'Cerrar partido 2–1' }));
+      expect(screen.getByText('¿Cerrar el partido 2–1? Gana Región 1. No se puede deshacer.')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Cerrar partido' }));
+      await waitFor(() => expect(matchService.updateResult).toHaveBeenCalledWith(7, {}));
+    });
+
+    it('con el resultado cerrado no ofrece sumar puntos ni cerrar', async () => {
+      matchService.getLive.mockResolvedValue(LIVE_SETS(
+        [set(1, 'CERRADO', 25, 20, 10), set(2, 'CERRADO', 25, 18, 10)],
+        { local: 2, jugados: 2, ganador: 10, puedeAbrirTercero: true, definido: true },
+        { resultado_cargado: true }
+      ));
+      renderPage();
+
+      expect(await screen.findByText(/Resultado cerrado 2–0/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Jugar set 3/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Punto/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Cerrar resultado/ })).not.toBeInTheDocument();
+    });
+
+    it('el historial muestra en que set fue cada punto', async () => {
+      matchService.getLive.mockResolvedValue(EN_SET_2());
+      matchService.getEvents.mockResolvedValue(EVENTOS([EVENTO({ numero_periodo: 2 })]));
+      renderPage();
+
+      expect(await screen.findByRole('columnheader', { name: 'Set' })).toBeInTheDocument();
+    });
+
+    it('la recarga automatica no cierra el modal de confirmacion', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        matchService.getLive.mockResolvedValue(EN_SET_2());
+        renderPage();
+
+        await user.click(await screen.findByRole('button', { name: 'Terminar set 2' }));
+        await vi.advanceTimersByTimeAsync(15000);
+        await waitFor(() => expect(matchService.getLive).toHaveBeenCalledTimes(2));
+
+        expect(screen.getByText(/¿Terminar el set 2 con 12–9\?/)).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('un partido sin sets sigue con la pantalla de siempre', async () => {
+      renderPage();
+      expect(await screen.findByRole('button', { name: /Cerrar resultado 1 - 0/ })).toBeInTheDocument();
+      expect(screen.queryByTestId('set-en-juego')).not.toBeInTheDocument();
+    });
   });
 });
