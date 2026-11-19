@@ -131,7 +131,7 @@ describe('mapa de permisos por endpoint (F1.4)', () => {
       evaluarPresentacion: 4,
       gestionarEquipoPropio: 5
     });
-    expect(actual.length).toBe(83);
+    expect(actual.length).toBe(85);
   });
 
   it('ningun endpoint del mapa perdio su permiso', () => {
