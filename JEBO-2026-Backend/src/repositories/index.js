@@ -25,6 +25,7 @@ const posicionRepository = require('./posicion.repository');
 const presentacionRepository = require('./presentacion.repository');
 const presentacionParticipanteRepository = require('./presentacion_participante.repository');
 const relojRepository = require('./reloj.repository');
+const periodoRepository = require('./periodo.repository');
 const regionRepository = require('./region.repository');
 const reglamentoRepository = require('./reglamento.repository');
 const rolRepository = require('./rol.repository');
@@ -61,6 +62,7 @@ module.exports = {
   PresentacionRepository: presentacionRepository,
   PresentacionParticipanteRepository: presentacionParticipanteRepository,
   RelojRepository: relojRepository,
+  PeriodoRepository: periodoRepository,
   RegionRepository: regionRepository,
   ReglamentoRepository: reglamentoRepository,
   RolRepository: rolRepository,
