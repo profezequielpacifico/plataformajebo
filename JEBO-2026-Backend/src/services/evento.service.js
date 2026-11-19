@@ -203,5 +203,6 @@ class RelojService {
 
 module.exports = {
   eventoService: new EventoService(),
-  relojService: new RelojService()
+  relojService: new RelojService(),
+  assertArbitroAsignado
 };
