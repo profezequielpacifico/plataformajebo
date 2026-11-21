@@ -20,6 +20,7 @@ services:
       retries: 20
 
   api:
+    image: jebo/api:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -67,6 +68,7 @@ services:
       start_period: 40s
 
   web:
+    image: jebo/web:latest
     build:
       context: ../JEBO-2026-Frontend
       dockerfile: Dockerfile
@@ -89,6 +91,7 @@ services:
       - no-new-privileges:true
 
   fixture:
+    image: jebo/fixture:latest
     build:
       context: ../JEBO-Fixture
       dockerfile: Dockerfile
